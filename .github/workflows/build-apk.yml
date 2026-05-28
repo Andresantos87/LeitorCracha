@@ -22,6 +22,9 @@ jobs:
       - name: Configura Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Cria local.properties com caminho do SDK
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
       - name: Instala Gradle 8.7
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/gradle.zip
@@ -29,7 +32,10 @@ jobs:
           echo "/opt/gradle/gradle-8.7/bin" >> $GITHUB_PATH
 
       - name: Builda o APK (debug)
-        run: gradle :app:assembleDebug --no-daemon
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
 
       - name: Faz upload do APK
         uses: actions/upload-artifact@v4
