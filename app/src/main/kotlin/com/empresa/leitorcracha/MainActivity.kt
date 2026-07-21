@@ -8,161 +8,217 @@ import android.nfc.tech.MifareClassic
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.zxing.integration.android.IntentIntegrator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Body
+import retrofit2.http.POST
+
+// --- RETROFIT API INTERFACE ---
+data class PresencaRequest(
+    val id_treinamento: String,
+    val identificador_lido: String,
+    val modo_registro: String
+)
+data class PresencaResponse(val success: Boolean, val data: Any?, val error: String?)
+
+interface ApiService {
+    @POST("api/registrar")
+    suspend fun registrarPresenca(@Body request: PresencaRequest): PresencaResponse
+}
+// -----------------------------
 
 class MainActivity : AppCompatActivity() {
 
-    // Chave de acesso do Setor 0 do crachá da empresa: B5B3E365A73B
+    // Chave de acesso do Setor 0
     private val COMPANY_KEY = byteArrayOf(
         0xB5.toByte(), 0xB3.toByte(), 0xE3.toByte(),
         0x65.toByte(), 0xA7.toByte(), 0x3B.toByte()
     )
 
     private lateinit var nfcAdapter: NfcAdapter
-    private lateinit var tvTitle: TextView
-    private lateinit var tvSubtitle: TextView
     private lateinit var tvStatus: TextView
     private lateinit var tvResult: TextView
     private lateinit var progressBar: ProgressBar
-    private lateinit var btnScan: Button
+    private lateinit var btnScanNfc: Button
+    private lateinit var btnScanQr: Button
+    private lateinit var etTreinamentoId: EditText
 
     private var isWaitingForTag = false
+
+    // Configuração da API (Troque o IP pelo IP local do seu computador na rede Wi-Fi)
+    private val api = Retrofit.Builder()
+        .baseUrl("http://192.168.0.100:3000/") // IMPORTANTE: Mudar para o IP do seu PC
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+        .create(ApiService::class.java)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        tvTitle     = findViewById(R.id.tvTitle)
-        tvSubtitle  = findViewById(R.id.tvSubtitle)
         tvStatus    = findViewById(R.id.tvStatus)
         tvResult    = findViewById(R.id.tvResult)
         progressBar = findViewById(R.id.progressBar)
-        btnScan     = findViewById(R.id.btnScan)
+        btnScanNfc  = findViewById(R.id.btnScan)
+        btnScanQr   = findViewById(R.id.btnScanQr)
+        etTreinamentoId = findViewById(R.id.etTreinamentoId)
 
         val adapter = NfcAdapter.getDefaultAdapter(this)
-        if (adapter == null) {
-            showError("NFC não é suportado neste dispositivo.")
-            btnScan.isEnabled = false
-            return
-        }
-        nfcAdapter = adapter
-
-        if (!nfcAdapter.isEnabled) {
-            showError("NFC está desabilitado. Ative nas Configurações do celular.")
-            btnScan.isEnabled = false
-            return
+        if (adapter != null && adapter.isEnabled) {
+            nfcAdapter = adapter
+            btnScanNfc.isEnabled = true
+        } else {
+            btnScanNfc.text = "NFC INDISPONÍVEL"
         }
 
-        btnScan.setOnClickListener {
+        btnScanNfc.setOnClickListener {
+            if (etTreinamentoId.text.isBlank()) {
+                Toast.makeText(this, "Preencha o ID do Treinamento", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             isWaitingForTag = true
-            tvStatus.text  = "Aproxime o crachá na traseira do celular..."
-            tvStatus.setTextColor(getColor(R.color.colorSubtitle))
+            tvStatus.text  = "Aproxime o crachá..."
             tvResult.visibility = View.GONE
             progressBar.visibility = View.VISIBLE
-            btnScan.isEnabled = false
+            btnScanNfc.isEnabled = false
+        }
+
+        btnScanQr.setOnClickListener {
+            if (etTreinamentoId.text.isBlank()) {
+                Toast.makeText(this, "Preencha o ID do Treinamento", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            // Inicia o leitor de QR Code
+            val integrator = IntentIntegrator(this)
+            integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+            integrator.setPrompt("Aponte para o QR Code (RUT)")
+            integrator.setCameraId(0) // Câmera traseira
+            integrator.setBeepEnabled(true)
+            integrator.initiateScan()
         }
     }
 
+    // --- LEITURA NFC ---
     override fun onResume() {
         super.onResume()
         if (!::nfcAdapter.isInitialized) return
         val intent = Intent(this, javaClass).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        val pending = PendingIntent.getActivity(
-            this, 0, intent, PendingIntent.FLAG_MUTABLE
-        )
+        val pending = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_MUTABLE)
         val techLists = arrayOf(arrayOf(MifareClassic::class.java.name))
         nfcAdapter.enableForegroundDispatch(this, pending, null, techLists)
     }
-
     override fun onPause() {
         super.onPause()
-        if (::nfcAdapter.isInitialized) {
-            nfcAdapter.disableForegroundDispatch(this)
-        }
+        if (::nfcAdapter.isInitialized) nfcAdapter.disableForegroundDispatch(this)
     }
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (!isWaitingForTag) return
         val tag = intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG) ?: return
-        processTag(tag)
+        processNfcTag(tag)
     }
 
-    private fun processTag(tag: Tag) {
+    private fun processNfcTag(tag: Tag) {
         CoroutineScope(Dispatchers.IO).launch {
-            val outcome = try {
-                val mifare = MifareClassic.get(tag)
-                    ?: throw Exception("Cartão não é compatível com Mifare Classic.")
-
+            try {
+                val mifare = MifareClassic.get(tag) ?: throw Exception("Cartão incompatível.")
                 mifare.connect()
-
-                // Tenta Chave A, depois Chave B — ambas com a senha da empresa
-                val authOk = mifare.authenticateSectorWithKeyA(0, COMPANY_KEY)
-                    || mifare.authenticateSectorWithKeyB(0, COMPANY_KEY)
-
+                val authOk = mifare.authenticateSectorWithKeyA(0, COMPANY_KEY) || mifare.authenticateSectorWithKeyB(0, COMPANY_KEY)
                 if (!authOk) {
                     mifare.close()
-                    throw Exception(
-                        "Autenticação negada.\n" +
-                        "Setor 0 não aceitou a senha B5B3E365A73B\n" +
-                        "com Chave A nem Chave B.\n\n" +
-                        "Verifique com o TI se a chave é a correta."
-                    )
+                    throw Exception("Autenticação NFC negada.")
                 }
-
-                // Lê o Bloco 1 (índice absoluto = 1, dentro do Setor 0)
                 val raw = mifare.readBlock(1)
                 mifare.close()
+                if (raw == null || raw.size < 6) throw Exception("Sem dados no crachá.")
 
-                if (raw == null || raw.size < 6) {
-                    throw Exception("Autenticação OK, mas bloco 1 sem dados.")
-                }
-
-                // Converte os 6 primeiros bytes de unsigned byte para decimal (2 dígitos cada)
                 val matricula = buildString {
                     for (i in 0 until 6) {
-                        val unsigned = raw[i].toInt() and 0xFF   // converte para 0-255
-                        append(unsigned.toString().padStart(2, '0'))
+                        append((raw[i].toInt() and 0xFF).toString().padStart(2, '0'))
                     }
                 }
-
-                Result.success(matricula)
-
+                
+                enviarParaServidor(matricula, "NFC")
+                
             } catch (e: Exception) {
-                Result.failure(e)
-            }
-
-            withContext(Dispatchers.Main) {
-                isWaitingForTag   = false
-                progressBar.visibility = View.GONE
-                btnScan.isEnabled = true
-                tvResult.visibility = View.VISIBLE
-
-                if (outcome.isSuccess) {
-                    val matricula = outcome.getOrNull()!!
-                    tvStatus.text = "✅  Leitura concluída!"
-                    tvStatus.setTextColor(getColor(R.color.colorSuccess))
-                    tvResult.text = matricula
-                    tvResult.setTextColor(getColor(R.color.colorSuccess))
-                } else {
-                    val msg = outcome.exceptionOrNull()?.message ?: "Erro desconhecido"
-                    tvStatus.text = "❌  Falha na leitura"
-                    tvStatus.setTextColor(getColor(R.color.colorError))
-                    tvResult.text = msg
-                    tvResult.setTextColor(getColor(R.color.colorError))
-                }
+                mostrarErro(e.message ?: "Erro NFC")
             }
         }
     }
 
-    private fun showError(msg: String) {
-        tvStatus.text = msg
-        tvStatus.setTextColor(getColor(R.color.colorError))
+    // --- LEITURA QR CODE ---
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
+        if (result != null) {
+            if (result.contents == null) {
+                mostrarErro("Leitura de QR cancelada")
+            } else {
+                val rut = result.contents
+                CoroutineScope(Dispatchers.IO).launch {
+                    enviarParaServidor(rut, "QR_CODE")
+                }
+            }
+        } else {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
+    // --- COMUNICAÇÃO COM A API ---
+    private suspend fun enviarParaServidor(identificador: String, modo: String) {
+        withContext(Dispatchers.Main) {
+            isWaitingForTag = false
+            progressBar.visibility = View.VISIBLE
+            tvStatus.text = "Enviando dados..."
+            tvResult.text = identificador
+            tvResult.visibility = View.VISIBLE
+        }
+
+        try {
+            val req = PresencaRequest(
+                id_treinamento = etTreinamentoId.text.toString(),
+                identificador_lido = identificador,
+                modo_registro = modo
+            )
+            val res = api.registrarPresenca(req)
+
+            withContext(Dispatchers.Main) {
+                progressBar.visibility = View.GONE
+                btnScanNfc.isEnabled = true
+                if (res.success) {
+                    tvStatus.text = "✅ Presença Registrada!"
+                    tvStatus.setTextColor(getColor(R.color.colorSuccess))
+                } else {
+                    tvStatus.text = "❌ Erro: ${res.error}"
+                    tvStatus.setTextColor(getColor(R.color.colorError))
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                progressBar.visibility = View.GONE
+                btnScanNfc.isEnabled = true
+                tvStatus.text = "❌ Falha de Conexão: O Painel Web está rodando?"
+                tvStatus.setTextColor(getColor(R.color.colorError))
+            }
+        }
+    }
+
+    private suspend fun mostrarErro(msg: String) {
+        withContext(Dispatchers.Main) {
+            isWaitingForTag = false
+            progressBar.visibility = View.GONE
+            btnScanNfc.isEnabled = true
+            tvStatus.text = msg
+            tvStatus.setTextColor(getColor(R.color.colorError))
+        }
     }
 }

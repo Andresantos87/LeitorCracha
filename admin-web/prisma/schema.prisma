@@ -1,0 +1,50 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model UsuarioAdmin {
+  id     String @id @default(uuid())
+  email  String @unique
+  planta String // "Guaíba" ou "Santa Fé"
+}
+
+model Treinamento {
+  id               String   @id @default(uuid())
+  nome             String
+  data             DateTime @default(now())
+  instrutor_email  String
+  status_encerrado Boolean  @default(false)
+  created_at       DateTime @default(now())
+
+  registros RegistroPresenca[]
+}
+
+model Colaborador {
+  matricula  String   @id
+  rut        String?  @unique
+  nome       String
+  planta     String?
+  updated_at DateTime @default(now())
+}
+
+model RegistroPresenca {
+  id                    String   @id @default(uuid())
+  id_treinamento        String
+  identificador_lido    String   // Matrícula ou RUT lido no crachá/QR
+  data_hora             DateTime @default(now())
+  assinatura_url        String?
+  modo_registro         String?  // 'NFC', 'QR_CODE', 'MANUAL', 'LINK_REMOTO'
+
+  treinamento Treinamento @relation(fields: [id_treinamento], references: [id], onDelete: Cascade)
+
+  @@unique([id_treinamento, identificador_lido])
+}

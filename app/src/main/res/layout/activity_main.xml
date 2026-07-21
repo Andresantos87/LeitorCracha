@@ -118,20 +118,50 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Botão -->
+    <EditText
+        android:id="@+id/etTreinamentoId"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginBottom="16dp"
+        android:background="@android:color/white"
+        android:hint="ID do Treinamento"
+        android:textColor="@android:color/black"
+        android:padding="12dp"
+        app:layout_constraintBottom_toTopOf="@id/btnScanQr"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Botão QR Code -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnScanQr"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginBottom="16dp"
+        android:text="LER QR CODE (RUT)"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:textColor="@color/colorBackground"
+        app:backgroundTint="#3B82F6"
+        app:cornerRadius="16dp"
+        app:layout_constraintBottom_toTopOf="@id/btnScan"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Botão NFC -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnScan"
         android:layout_width="0dp"
         android:layout_height="56dp"
-        android:text="@string/btn_scan"
-        android:textSize="17sp"
+        android:layout_marginBottom="24dp"
+        android:text="AGUARDANDO CRACHÁ NFC..."
+        android:textSize="15sp"
         android:textStyle="bold"
         android:textColor="@color/colorBackground"
         app:backgroundTint="@color/colorAccent"
         app:cornerRadius="16dp"
+        android:enabled="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="24dp"/>
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
