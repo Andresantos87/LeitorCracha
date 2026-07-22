@@ -36,18 +36,50 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Card de status/resultado -->
+    <LinearLayout
+        android:id="@+id/llConfig"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/tvSubtitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        
+        <EditText
+            android:id="@+id/etServerIp"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="50dp"
+            android:background="@android:color/white"
+            android:hint="IP do Servidor (ex: 192.168.0.100)"
+            android:textColorHint="#999999"
+            android:textColor="@android:color/black"
+            android:padding="12dp"
+            android:textSize="14sp"
+            android:inputType="textUri" />
+            
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveIp"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginStart="8dp"
+            android:text="SALVAR IP"
+            app:backgroundTint="#10B981"
+            app:cornerRadius="8dp" />
+    </LinearLayout>
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardResult"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="40dp"
-        android:layout_marginBottom="40dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
         app:cardBackgroundColor="@color/colorCard"
         app:cardCornerRadius="24dp"
         app:cardElevation="8dp"
-        app:layout_constraintTop_toBottomOf="@id/tvSubtitle"
-        app:layout_constraintBottom_toTopOf="@id/btnScan"
+        app:layout_constraintTop_toBottomOf="@id/llConfig"
+        app:layout_constraintBottom_toTopOf="@id/llSession"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -103,7 +135,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:textColor="@color/colorSuccess"
-                android:textSize="32sp"
+                android:textSize="22sp"
                 android:textStyle="bold"
                 android:gravity="center"
                 android:letterSpacing="0.1"
@@ -118,18 +150,37 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-    <EditText
-        android:id="@+id/etTreinamentoId"
+    <LinearLayout
+        android:id="@+id/llSession"
         android:layout_width="0dp"
-        android:layout_height="56dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:layout_marginBottom="16dp"
-        android:background="@android:color/white"
-        android:hint="ID do Treinamento"
-        android:textColor="@android:color/black"
-        android:padding="12dp"
         app:layout_constraintBottom_toTopOf="@id/btnScanQr"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tvSessionId"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:background="@android:color/white"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:text="Nenhuma sessão vinculada"
+            android:textColor="@android:color/black"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScanSession"
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:layout_marginStart="8dp"
+            android:text="VINCULAR"
+            app:backgroundTint="#8B5CF6"
+            app:cornerRadius="8dp" />
+    </LinearLayout>
 
     <!-- Botão QR Code -->
     <com.google.android.material.button.MaterialButton

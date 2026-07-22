@@ -18,24 +18,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.Body
-import retrofit2.http.POST
-
-// --- RETROFIT API INTERFACE ---
-data class PresencaRequest(
-    val id_treinamento: String,
-    val identificador_lido: String,
-    val modo_registro: String
-)
-data class PresencaResponse(val success: Boolean, val data: Any?, val error: String?)
-
-interface ApiService {
-    @POST("api/registrar")
-    suspend fun registrarPresenca(@Body request: PresencaRequest): PresencaResponse
-}
-// -----------------------------
+import kotlinx.coroutines.tasks.await
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import java.net.HttpURLConnection
+import java.net.URL
+import java.io.InputStreamReader
+import org.json.JSONArray
+import org.json.JSONObject
+import android.content.Context
+import android.content.SharedPreferences
 
 class MainActivity : AppCompatActivity() {
 
@@ -51,27 +44,49 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var btnScanNfc: Button
     private lateinit var btnScanQr: Button
-    private lateinit var etTreinamentoId: EditText
+    private lateinit var tvSessionId: TextView
+    private lateinit var btnScanSession: Button
+    
+    // Novas variáveis
+    private lateinit var etServerIp: EditText
+    private lateinit var btnSaveIp: Button
+    private lateinit var sharedPrefs: SharedPreferences
 
     private var isWaitingForTag = false
+    private var currentScanMode = ""
+    private var treinamentoIdStr = ""
 
-    // Configuração da API (Troque o IP pelo IP local do seu computador na rede Wi-Fi)
-    private val api = Retrofit.Builder()
-        .baseUrl("http://192.168.0.100:3000/") // IMPORTANTE: Mudar para o IP do seu PC
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-        .create(ApiService::class.java)
+    // Instância do Firebase Firestore
+    private val db = Firebase.firestore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        
+        sharedPrefs = getSharedPreferences("CrachaPrefs", Context.MODE_PRIVATE)
 
         tvStatus    = findViewById(R.id.tvStatus)
         tvResult    = findViewById(R.id.tvResult)
         progressBar = findViewById(R.id.progressBar)
         btnScanNfc  = findViewById(R.id.btnScan)
         btnScanQr   = findViewById(R.id.btnScanQr)
-        etTreinamentoId = findViewById(R.id.etTreinamentoId)
+        tvSessionId = findViewById(R.id.tvSessionId)
+        btnScanSession = findViewById(R.id.btnScanSession)
+        
+        etServerIp = findViewById(R.id.etServerIp)
+        btnSaveIp = findViewById(R.id.btnSaveIp)
+        
+        // Carregar IP salvo
+        val savedIp = sharedPrefs.getString("SERVER_IP", "")
+        if (!savedIp.isNullOrEmpty()) {
+            etServerIp.setText(savedIp)
+        }
+        
+        btnSaveIp.setOnClickListener {
+            val ip = etServerIp.text.toString().trim()
+            sharedPrefs.edit().putString("SERVER_IP", ip).apply()
+            Toast.makeText(this, "IP Salvo: $ip", Toast.LENGTH_SHORT).show()
+        }
 
         val adapter = NfcAdapter.getDefaultAdapter(this)
         if (adapter != null && adapter.isEnabled) {
@@ -81,9 +96,19 @@ class MainActivity : AppCompatActivity() {
             btnScanNfc.text = "NFC INDISPONÍVEL"
         }
 
+        btnScanSession.setOnClickListener {
+            currentScanMode = "SESSION"
+            val integrator = IntentIntegrator(this)
+            integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+            integrator.setPrompt("Escaneie o QR Code no Painel Web")
+            integrator.setCameraId(0)
+            integrator.setBeepEnabled(true)
+            integrator.initiateScan()
+        }
+
         btnScanNfc.setOnClickListener {
-            if (etTreinamentoId.text.isBlank()) {
-                Toast.makeText(this, "Preencha o ID do Treinamento", Toast.LENGTH_SHORT).show()
+            if (treinamentoIdStr.isBlank()) {
+                Toast.makeText(this, "Vincule a uma sessão primeiro!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             isWaitingForTag = true
@@ -94,15 +119,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnScanQr.setOnClickListener {
-            if (etTreinamentoId.text.isBlank()) {
-                Toast.makeText(this, "Preencha o ID do Treinamento", Toast.LENGTH_SHORT).show()
+            if (treinamentoIdStr.isBlank()) {
+                Toast.makeText(this, "Vincule a uma sessão primeiro!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            // Inicia o leitor de QR Code
+            currentScanMode = "RUT"
             val integrator = IntentIntegrator(this)
             integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
             integrator.setPrompt("Aponte para o QR Code (RUT)")
-            integrator.setCameraId(0) // Câmera traseira
+            integrator.setCameraId(0)
             integrator.setBeepEnabled(true)
             integrator.initiateScan()
         }
@@ -161,11 +186,18 @@ class MainActivity : AppCompatActivity() {
         val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
         if (result != null) {
             if (result.contents == null) {
-                mostrarErro("Leitura de QR cancelada")
+                mostrarErro("Leitura cancelada")
             } else {
-                val rut = result.contents
-                CoroutineScope(Dispatchers.IO).launch {
-                    enviarParaServidor(rut, "QR_CODE")
+                val scannedData = result.contents
+                if (currentScanMode == "SESSION") {
+                    treinamentoIdStr = scannedData
+                    tvSessionId.text = "Sessão: $treinamentoIdStr"
+                    tvStatus.text = "✅ Sessão vinculada"
+                    tvStatus.setTextColor(getColor(R.color.colorSuccess))
+                } else if (currentScanMode == "RUT") {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        enviarParaServidor(scannedData, "QR_CODE")
+                    }
                 }
             }
         } else {
@@ -173,40 +205,90 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // --- COMUNICAÇÃO COM A API ---
+    // --- BUSCA NA API LOCAL ---
+    private suspend fun buscarNomeNaAPI(identificador: String): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val ip = sharedPrefs.getString("SERVER_IP", "")
+                if (ip.isNullOrEmpty()) return@withContext null
+                
+                val urlString = "http://$ip:3000/api/buscar-colaborador?cpf=$identificador"
+                val url = URL(urlString)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.connectTimeout = 3000
+                conn.readTimeout = 3000
+
+                if (conn.responseCode == 200) {
+                    val reader = InputStreamReader(conn.inputStream)
+                    val response = reader.readText()
+                    reader.close()
+                    
+                    val jsonArray = JSONArray(response)
+                    if (jsonArray.length() > 0) {
+                        val obj = jsonArray.getJSONObject(0)
+                        return@withContext obj.optString("nome", null)
+                    }
+                }
+                null
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    // --- COMUNICAÇÃO COM O FIREBASE CLOUD ---
     private suspend fun enviarParaServidor(identificador: String, modo: String) {
+        val nomeEncontrado = buscarNomeNaAPI(identificador)
+        val textoExibicao = nomeEncontrado ?: identificador
+
         withContext(Dispatchers.Main) {
             isWaitingForTag = false
             progressBar.visibility = View.VISIBLE
             tvStatus.text = "Enviando dados..."
-            tvResult.text = identificador
+            tvResult.text = textoExibicao
             tvResult.visibility = View.VISIBLE
         }
 
         try {
-            val req = PresencaRequest(
-                id_treinamento = etTreinamentoId.text.toString(),
-                identificador_lido = identificador,
-                modo_registro = modo
+            // Referência ao documento de presença no Firebase
+            val docRef = db.collection("treinamentos")
+                           .document(treinamentoIdStr)
+                           .collection("presencas")
+                           .document(identificador)
+            
+            // Verifica se já existe para evitar duplicação local
+            val snapshot = docRef.get().await()
+            if (snapshot.exists()) {
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    btnScanNfc.isEnabled = true
+                    tvStatus.text = "❌ Já Registrado!"
+                    tvStatus.setTextColor(getColor(R.color.colorError))
+                }
+                return@withContext
+            }
+            
+            // Salva na nuvem
+            val data = hashMapOf(
+                "identificador_lido" to identificador,
+                "modo_registro" to modo,
+                "data_registro" to FieldValue.serverTimestamp()
             )
-            val res = api.registrarPresenca(req)
+            
+            docRef.set(data).await()
 
             withContext(Dispatchers.Main) {
                 progressBar.visibility = View.GONE
                 btnScanNfc.isEnabled = true
-                if (res.success) {
-                    tvStatus.text = "✅ Presença Registrada!"
-                    tvStatus.setTextColor(getColor(R.color.colorSuccess))
-                } else {
-                    tvStatus.text = "❌ Erro: ${res.error}"
-                    tvStatus.setTextColor(getColor(R.color.colorError))
-                }
+                tvStatus.text = "✅ Presença Registrada na Nuvem!"
+                tvStatus.setTextColor(getColor(R.color.colorSuccess))
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
                 progressBar.visibility = View.GONE
                 btnScanNfc.isEnabled = true
-                tvStatus.text = "❌ Falha de Conexão: O Painel Web está rodando?"
+                tvStatus.text = "❌ Erro ao Salvar: ${e.message}"
                 tvStatus.setTextColor(getColor(R.color.colorError))
             }
         }

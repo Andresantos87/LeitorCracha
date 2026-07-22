@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1033583878405",
+    "project_id": "treinamentoscmpc",
+    "storage_bucket": "treinamentoscmpc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1033583878405:android:a226026219a5363485d76c",
+        "android_client_info": {
+          "package_name": "com.empresa.leitorcracha"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdb803SS1zhySl1vhCRp3ACZC51zN0Xac"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
