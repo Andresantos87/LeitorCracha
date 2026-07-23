@@ -266,7 +266,7 @@ class MainActivity : AppCompatActivity() {
                     tvStatus.text = "❌ Já Registrado!"
                     tvStatus.setTextColor(getColor(R.color.colorError))
                 }
-                return@withContext
+                return
             }
             
             // Salva na nuvem
