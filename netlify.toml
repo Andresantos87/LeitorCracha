@@ -1,0 +1,3 @@
+[build]
+  base = "admin-web"
+  command = "npm run build"
