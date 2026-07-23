@@ -190,7 +190,8 @@ class MainActivity : AppCompatActivity() {
             } else {
                 val scannedData = result.contents
                 if (currentScanMode == "SESSION") {
-                    treinamentoIdStr = scannedData
+                    // Se o QR for uma URL (ex: https://.../registrar/ABC), pegamos apenas o ID final
+                    treinamentoIdStr = scannedData.substringAfterLast("/")
                     tvSessionId.text = "Sessão: $treinamentoIdStr"
                     tvStatus.text = "✅ Sessão vinculada"
                     tvStatus.setTextColor(getColor(R.color.colorSuccess))

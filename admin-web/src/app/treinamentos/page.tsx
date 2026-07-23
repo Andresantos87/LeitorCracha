@@ -568,8 +568,8 @@ export default function Treinamentos() {
               <p className="text-xs text-slate-400 mb-4">Peça aos alunos para escanearem a tela</p>
               
               <div className="bg-white p-3 rounded-lg shadow-inner">
-                {/* Aqui idealmente apontamos para a URL real de produção */}
-                <QRCodeSVG value={`http://localhost:3000/registrar/${selectedTreinamento.id}`} size={150} level="H" />
+                {/* QR Code com a URL real do ambiente (Netlify) */}
+                <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/registrar/${selectedTreinamento.id}`} size={150} level="H" />
               </div>
               
               <div className="mt-4 bg-amber-900/20 border border-amber-900/50 rounded-lg p-3 text-[10px] text-amber-200/80 text-left">
