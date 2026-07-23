@@ -294,8 +294,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun mostrarErro(msg: String) {
-        withContext(Dispatchers.Main) {
+    private fun mostrarErro(msg: String) {
+        runOnUiThread {
             isWaitingForTag = false
             progressBar.visibility = View.GONE
             btnScanNfc.isEnabled = true
