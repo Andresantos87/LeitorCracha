@@ -140,7 +140,7 @@ class MainActivity : AppCompatActivity() {
                 val nomesList = mutableListOf<String>()
                 val idsList = mutableListOf<String>()
                 
-                for (doc in snapshot.docs) {
+                for (doc in snapshot.documents) {
                     val nome = doc.getString("nome") ?: "Turma Sem Nome"
                     val turma = doc.getString("turma") ?: ""
                     val display = if (turma.isNotBlank()) "$nome ($turma)" else nome
