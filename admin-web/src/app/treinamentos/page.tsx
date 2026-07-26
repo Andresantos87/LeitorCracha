@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon } from "lucide-react";
+import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import SignatureCanvas from "react-signature-canvas";
 
@@ -8,6 +8,7 @@ export default function Treinamentos() {
   const [treinamentos, setTreinamentos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [expandedPastas, setExpandedPastas] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [nomeTreinamento, setNomeTreinamento] = useState("");
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
@@ -190,59 +191,123 @@ export default function Treinamentos() {
       </div>
 
       {!selectedTreinamento && (
-        <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900/50 border-b border-slate-700 text-slate-300">
-              <tr>
-                <th className="px-6 py-4 font-medium">Nome do Treinamento</th>
-                <th className="px-6 py-4 font-medium">Turma</th>
-                <th className="px-6 py-4 font-medium">ID da Sessão</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium">Presenças</th>
-                <th className="px-6 py-4 font-medium text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700/50 text-slate-300">
-              {loading ? (
-                <tr><td colSpan={5} className="p-8 text-center text-slate-400">Carregando...</td></tr>
-              ) : treinamentos.length === 0 ? (
-                <tr><td colSpan={5} className="p-8 text-center text-slate-400">Nenhum treinamento criado ainda. Clique em Novo Treinamento!</td></tr>
-              ) : treinamentos.map(t => (
-                <tr 
-                  key={t.id} 
-                  onClick={() => setSelectedId(t.id)}
-                  className={`transition-colors cursor-pointer hover:bg-slate-800/50 border-l-4 border-transparent`}
-                >
-                  <td className="px-6 py-4 font-medium text-white">{t.nome}</td>
-                  <td className="px-6 py-4 text-slate-300 font-semibold">{t.turma || "-"}</td>
-                  <td className="px-6 py-4 text-slate-400 font-mono text-xs">{t.id}</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800">
-                      <PlayCircle className="h-3.5 w-3.5" /> Ativo
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-blue-400">{t._count.registros} pessoas</td>
-                  <td className="px-6 py-4 text-right flex items-center justify-end space-x-2">
-                    <button 
-                      onClick={(e) => exportarCSV(t.id, e)}
-                      className="flex items-center space-x-2 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:text-white bg-emerald-900/30 hover:bg-emerald-800/50 rounded-lg transition-colors border border-emerald-800/50"
-                      title="Exportar para Excel (CSV)"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      <span>Baixar Excel</span>
-                    </button>
-                    <button 
-                      onClick={(e) => excluirTreinamento(t.id, e)}
-                      className="flex items-center p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-                      title="Excluir Treinamento"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+          {loading ? (
+            <div className="p-12 text-center bg-slate-800/50 rounded-xl border border-slate-700 text-slate-400">
+              Carregando pastas de treinamento...
+            </div>
+          ) : treinamentos.length === 0 ? (
+            <div className="p-12 text-center bg-slate-800/50 rounded-xl border border-slate-700 text-slate-400">
+              Nenhum treinamento criado ainda. Clique em "Novo Treinamento" acima!
+            </div>
+          ) : (
+            Object.entries(
+              treinamentos.reduce((acc: { [key: string]: any[] }, curr: any) => {
+                const nome = curr.nome || "Outros / Sem Nome";
+                if (!acc[nome]) acc[nome] = [];
+                acc[nome].push(curr);
+                return acc;
+              }, {})
+            ).map(([nomeCurso, turmasList]) => {
+              const isExpanded = expandedPastas.includes(nomeCurso);
+              const totalPessoas = turmasList.reduce((sum, t) => sum + (t._count?.registros || 0), 0);
+
+              return (
+                <div key={nomeCurso} className="bg-slate-900/80 rounded-2xl border border-slate-700/80 overflow-hidden shadow-lg transition-all">
+                  {/* Cabeçalho da Pasta (Acordeão) */}
+                  <div 
+                    onClick={() => {
+                      if (isExpanded) {
+                        setExpandedPastas(expandedPastas.filter(p => p !== nomeCurso));
+                      } else {
+                        setExpandedPastas([...expandedPastas, nomeCurso]);
+                      }
+                    }}
+                    className="p-5 bg-slate-800/90 hover:bg-slate-800 cursor-pointer flex items-center justify-between transition-colors select-none border-b border-transparent hover:border-slate-700"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shadow-inner">
+                        {isExpanded ? <FolderOpen className="h-6 w-6" /> : <Folder className="h-6 w-6" />}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-extrabold text-white tracking-wide flex items-center gap-2">
+                          {nomeCurso}
+                          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                            {turmasList.length} {turmasList.length === 1 ? "turma" : "turmas"}
+                          </span>
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Total de {totalPessoas} presenças registradas nesta pasta
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
+                        {isExpanded ? "Ocultar turmas" : "Ver turmas"}
+                      </span>
+                      <div className={`p-2 rounded-lg bg-slate-700/50 text-slate-300 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
+                        <ChevronDown className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tabela Interna das Turmas daquela Pasta */}
+                  {isExpanded && (
+                    <div className="bg-slate-950/50 p-2 sm:p-4 border-t border-slate-700/60 animate-in slide-in-from-top-2 duration-200">
+                      <table className="w-full text-left text-sm">
+                        <thead className="text-xs uppercase text-slate-400 border-b border-slate-800">
+                          <tr>
+                            <th className="px-4 py-3 font-semibold">Turma / Identificador</th>
+                            <th className="px-4 py-3 font-semibold">ID da Sessão</th>
+                            <th className="px-4 py-3 font-semibold">Status</th>
+                            <th className="px-4 py-3 font-semibold">Presenças</th>
+                            <th className="px-4 py-3 font-semibold text-right">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                          {turmasList.map(t => (
+                            <tr 
+                              key={t.id}
+                              onClick={() => setSelectedId(t.id)}
+                              className="transition-colors cursor-pointer hover:bg-slate-800/60 group"
+                            >
+                              <td className="px-4 py-3.5 font-bold text-white group-hover:text-sky-300 transition-colors">
+                                {t.turma || "Turma Principal / Única"}
+                              </td>
+                              <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{t.id}</td>
+                              <td className="px-4 py-3.5">
+                                <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800">
+                                  <PlayCircle className="h-3 w-3" /> Ativo
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 font-bold text-sky-400">{t._count.registros} pessoas</td>
+                              <td className="px-4 py-3.5 text-right flex items-center justify-end space-x-2" onClick={e => e.stopPropagation()}>
+                                <button 
+                                  onClick={(e) => exportarCSV(t.id, e)}
+                                  className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:text-white bg-emerald-900/30 hover:bg-emerald-800/50 rounded-lg transition-colors border border-emerald-800/50"
+                                  title="Exportar para Excel (CSV)"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  <span>Excel</span>
+                                </button>
+                                <button 
+                                  onClick={(e) => excluirTreinamento(t.id, e)}
+                                  className="flex items-center p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                                  title="Excluir Turma"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       )}
 
