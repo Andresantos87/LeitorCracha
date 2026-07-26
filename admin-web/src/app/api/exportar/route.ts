@@ -28,11 +28,14 @@ export async function GET(req: Request) {
     const presencasSnap = await getDocs(q);
 
     // Gerar CSV
-    const cabecalho = "NOME_TREINAMENTO,ID_TREINAMENTO,IDENTIFICADOR_LIDO,MODO_LEITURA,DATA_HORA\n";
+    const cabecalho = "NOME_TREINAMENTO,ID_TREINAMENTO,IDENTIFICADOR_LIDO,NOME_COLABORADOR,EMPRESA_PLANTA,MODO_LEITURA,ASSINATURA_REGISTRADA,DATA_HORA\n";
     const linhas = presencasSnap.docs.map(p => {
       const pData = p.data();
       const dataFormatada = pData.data_registro?.toDate()?.toISOString() || new Date().toISOString();
-      return `"${treinamento.nome}","${id}","${pData.identificador_lido}","${pData.modo_registro}","${dataFormatada}"`;
+      const nomeColab = pData.nome || "Desconhecido";
+      const empresaColab = pData.planta || pData.empresa || "Não informado";
+      const assinado = pData.assinaturaBase64 || pData.assinatura ? "SIM (Assinado)" : "NÃO";
+      return `"${treinamento.nome}","${id}","${pData.identificador_lido}","${nomeColab}","${empresaColab}","${pData.modo_registro}","${assinado}","${dataFormatada}"`;
     }).join("\n");
 
     const csvStr = cabecalho + linhas;

@@ -32,6 +32,11 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.io.InputStreamReader
 import org.json.JSONObject
+import org.json.JSONArray
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
+import android.widget.EditText
+import android.widget.FrameLayout
 
 class MainActivity : AppCompatActivity() {
 
@@ -47,6 +52,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var btnScanNfc: Button
     private lateinit var btnScanQr: Button
+    private lateinit var btnManualRegister: Button
     private lateinit var tvSessionId: TextView
     private lateinit var btnScanSession: Button
     private lateinit var btnSelectSession: Button
@@ -67,6 +73,7 @@ class MainActivity : AppCompatActivity() {
         progressBar      = findViewById(R.id.progressBar)
         btnScanNfc       = findViewById(R.id.btnScan)
         btnScanQr        = findViewById(R.id.btnScanQr)
+        btnManualRegister = findViewById(R.id.btnManualRegister)
         tvSessionId      = findViewById(R.id.tvSessionId)
         btnScanSession   = findViewById(R.id.btnScanSession)
         btnSelectSession = findViewById(R.id.btnSelectSession)
@@ -122,6 +129,232 @@ class MainActivity : AppCompatActivity() {
             integrator.setBeepEnabled(true)
             integrator.initiateScan()
         }
+
+        // Botão de registro manual na tela
+        btnManualRegister.setOnClickListener {
+            if (treinamentoIdStr.isBlank()) {
+                Toast.makeText(this, "Selecione uma turma primeiro!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            abrirDialogoRegistroManual()
+        }
+    }
+
+    // --- DIÁLOGO DE REGISTRO MANUAL COM ASSINATURA NA TELA ---
+    private fun abrirDialogoRegistroManual() {
+        val dialog = Dialog(this)
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_manual_register, null)
+        dialog.setContentView(view)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        val etSearchQuery = view.findViewById<EditText>(R.id.etSearchQuery)
+        val btnSearchColab = view.findViewById<Button>(R.id.btnSearchColab)
+        val tvSearchStatus = view.findViewById<TextView>(R.id.tvSearchStatus)
+        val etNomeColaborador = view.findViewById<EditText>(R.id.etNomeColaborador)
+        val actvEmpresa = view.findViewById<AutoCompleteTextView>(R.id.actvEmpresa)
+        val etIdColaborador = view.findViewById<EditText>(R.id.etIdColaborador)
+        val llSignatureContainer = view.findViewById<FrameLayout>(R.id.llSignatureContainer)
+        val btnClearSig = view.findViewById<Button>(R.id.btnClearSig)
+        val btnCancelManual = view.findViewById<Button>(R.id.btnCancelManual)
+        val btnConfirmManual = view.findViewById<Button>(R.id.btnConfirmManual)
+
+        // Adicionar o quadro de assinatura customizado programaticamente
+        val signatureView = SignatureView(this)
+        llSignatureContainer.addView(signatureView, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ))
+
+        // Lista padrão de empresas no banco
+        val defaultEmpresas = mutableListOf(
+            "CMPC", "CMPC - GUAÍBA", "CMPC - SAPUCAIA", "TERCEIRO / PRESTADOR", "VISITANTE",
+            "METSA", "VALMET", "POYRY", "ANDRITZ", "SIEMENS", "ABB", "WEG", "KONEKRANES"
+        )
+        val adapterEmpresas = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, defaultEmpresas)
+        actvEmpresa.setAdapter(adapterEmpresas)
+        actvEmpresa.setOnClickListener { actvEmpresa.showDropDown() }
+
+        // Carregar empresas do banco em background
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val url = URL("https://treinamentocmpc.netlify.app/api/empresas")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.connectTimeout = 4000
+                if (conn.responseCode == 200) {
+                    val reader = InputStreamReader(conn.inputStream)
+                    val response = reader.readText()
+                    reader.close()
+                    val json = JSONObject(response)
+                    if (json.optBoolean("success", false)) {
+                        val array = json.optJSONArray("data")
+                        if (array != null && array.length() > 0) {
+                            val listaBanco = mutableListOf<String>()
+                            for (i in 0 until array.length()) {
+                                listaBanco.add(array.getString(i))
+                            }
+                            withContext(Dispatchers.Main) {
+                                val novoAdapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_dropdown_item_1line, listaBanco)
+                                actvEmpresa.setAdapter(novoAdapter)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Mantém a lista padrão
+            }
+        }
+
+        // Buscar colaborador por nome ou ID
+        btnSearchColab.setOnClickListener {
+            val query = etSearchQuery.text.toString().trim()
+            if (query.length < 3) {
+                Toast.makeText(this, "Digite ao menos 3 caracteres para buscar!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            tvSearchStatus.text = "⏳ Buscando no banco de dados..."
+            tvSearchStatus.setTextColor(Color.parseColor("#38BDF8"))
+            btnSearchColab.isEnabled = false
+
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val urlString = "https://treinamentocmpc.netlify.app/api/buscar-colaborador?id=${java.net.URLEncoder.encode(query, "UTF-8")}"
+                    val url = URL(urlString)
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.requestMethod = "GET"
+                    conn.connectTimeout = 5000
+                    
+                    if (conn.responseCode == 200) {
+                        val reader = InputStreamReader(conn.inputStream)
+                        val resp = reader.readText()
+                        reader.close()
+                        val json = JSONObject(resp)
+                        if (json.optBoolean("success", false)) {
+                            val array = json.optJSONArray("data")
+                            if (array != null && array.length() > 0) {
+                                val obj = array.getJSONObject(0)
+                                val nomeEnc = obj.optString("nome", "")
+                                val plantaEnc = obj.optString("planta", obj.optString("empresa", ""))
+                                val idEnc = obj.optString("identificador", "")
+                                
+                                withContext(Dispatchers.Main) {
+                                    etNomeColaborador.setText(nomeEnc)
+                                    if (plantaEnc.isNotBlank() && plantaEnc != "Outros") actvEmpresa.setText(plantaEnc)
+                                    etIdColaborador.setText(idEnc)
+                                    tvSearchStatus.text = "✅ Colaborador encontrado e preenchido!"
+                                    tvSearchStatus.setTextColor(Color.parseColor("#4ADE80"))
+                                    btnSearchColab.isEnabled = true
+                                }
+                                return@launch
+                            }
+                        }
+                    }
+                    withContext(Dispatchers.Main) {
+                        tvSearchStatus.text = "ℹ️ Não encontrado. Preencha os campos manualmente e assine."
+                        tvSearchStatus.setTextColor(Color.parseColor("#FACC15"))
+                        btnSearchColab.isEnabled = true
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        tvSearchStatus.text = "⚠️ Erro na busca. Preencha manualmente e assine."
+                        tvSearchStatus.setTextColor(Color.parseColor("#F87171"))
+                        btnSearchColab.isEnabled = true
+                    }
+                }
+            }
+        }
+
+        btnClearSig.setOnClickListener {
+            signatureView.clear()
+        }
+
+        btnCancelManual.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        btnConfirmManual.setOnClickListener {
+            val nome = etNomeColaborador.text.toString().trim()
+            val empresa = actvEmpresa.text.toString().trim()
+            val idInformado = etIdColaborador.text.toString().trim()
+
+            if (nome.isBlank()) {
+                Toast.makeText(this, "Por favor, informe o Nome Completo!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (empresa.isBlank()) {
+                Toast.makeText(this, "Por favor, informe ou selecione a Empresa/Planta!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (signatureView.isSignatureEmpty()) {
+                Toast.makeText(this, "⚠️ A ASSINATURA NA TELA É OBRIGATÓRIA!", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
+            val sigBase64 = signatureView.getBase64Signature()
+            if (sigBase64 == null) {
+                Toast.makeText(this, "Erro ao gerar imagem da assinatura.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val idParaSalvar = if (idInformado.isNotBlank()) idInformado else "MAN_APK_" + System.currentTimeMillis()
+
+            btnConfirmManual.isEnabled = false
+            btnConfirmManual.text = "SALVANDO..."
+            tvStatus.text = "Salvando presença e assinatura..."
+            progressBar.visibility = View.VISIBLE
+
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val docRef = db.collection("treinamentos")
+                        .document(treinamentoIdStr)
+                        .collection("presencas")
+                        .document(idParaSalvar)
+
+                    val snap = docRef.get().await()
+                    if (snap.exists()) {
+                        withContext(Dispatchers.Main) {
+                            progressBar.visibility = View.GONE
+                            btnConfirmManual.isEnabled = true
+                            btnConfirmManual.text = "CONFIRMAR E ASSINAR"
+                            Toast.makeText(this@MainActivity, "❌ Este colaborador já foi registrado nesta turma!", Toast.LENGTH_LONG).show()
+                        }
+                        return@launch
+                    }
+
+                    val dados = hashMapOf(
+                        "identificador_lido" to idParaSalvar,
+                        "nome" to nome,
+                        "planta" to empresa,
+                        "empresa" to empresa,
+                        "modo_registro" to "MANUAL_APK",
+                        "assinaturaBase64" to sigBase64,
+                        "data_registro" to FieldValue.serverTimestamp()
+                    )
+
+                    docRef.set(dados).await()
+
+                    withContext(Dispatchers.Main) {
+                        progressBar.visibility = View.GONE
+                        Toast.makeText(this@MainActivity, "✅ Presença com Assinatura registrada!", Toast.LENGTH_LONG).show()
+                        tvStatus.text = "✅ Registro Manual efetuado com sucesso!"
+                        tvStatus.setTextColor(getColor(R.color.colorSuccess))
+                        tvResult.text = "$nome ($empresa)"
+                        tvResult.visibility = View.VISIBLE
+                        dialog.dismiss()
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        progressBar.visibility = View.GONE
+                        btnConfirmManual.isEnabled = true
+                        btnConfirmManual.text = "CONFIRMAR E ASSINAR"
+                        Toast.makeText(this@MainActivity, "❌ Erro ao salvar na nuvem: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
+        dialog.show()
     }
 
     // --- SELETOR DE SESSÕES EM 2 ETAPAS (PASTAS / CURSOS ➔ TURMAS) ---
