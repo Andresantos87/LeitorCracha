@@ -23,6 +23,7 @@ export default function Treinamentos() {
   const [colabResults, setColabResults] = useState<any[]>([]);
   const [selectedColab, setSelectedColab] = useState<any>(null);
   const [isSearchingId, setIsSearchingId] = useState(false);
+  const [userRole, setUserRole] = useState("admin");
   
   // Signature
   const sigCanvas = useRef<any>(null);
@@ -35,6 +36,11 @@ export default function Treinamentos() {
 
   useEffect(() => {
     carregarTreinamentos();
+    fetch("/api/auth").then(res => res.json()).then(json => {
+      if (json.success && json.session) {
+        setUserRole(json.session.role || "leitor");
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -151,10 +157,23 @@ export default function Treinamentos() {
 
   const excluirTreinamento = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Tem certeza que deseja excluir este treinamento permanentemente?")) return;
+    if (!confirm("Tem certeza que deseja excluir esta turma permanentemente?")) return;
     
-    await fetch(`/api/treinamentos?id=${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/treinamentos?id=${id}`, { method: "DELETE" });
+    const json = await res.json();
+    if (!json.success) alert(json.error || "Erro ao excluir turma.");
     if (selectedId === id) setSelectedId(null);
+    carregarTreinamentos();
+  };
+
+  const excluirPasta = async (nomeCurso: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`ATENÇÃO ADMINISTRADOR: Tem certeza que deseja excluir TODO o curso '${nomeCurso}' e TODAS as suas turmas permanentemente?`)) return;
+    
+    const res = await fetch(`/api/treinamentos?nome=${encodeURIComponent(nomeCurso)}`, { method: "DELETE" });
+    const json = await res.json();
+    if (!json.success) alert(json.error || "Erro ao excluir curso.");
+    setSelectedId(null);
     carregarTreinamentos();
   };
 
@@ -269,6 +288,16 @@ export default function Treinamentos() {
                         <Plus className="h-3.5 w-3.5" />
                         <span className="hidden md:inline">Nova Turma aqui</span>
                       </button>
+                      {userRole === 'admin' && (
+                        <button 
+                          type="button"
+                          onClick={(e) => excluirPasta(nomeCurso, e)}
+                          className="p-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-lg transition-all border border-red-500/30 flex items-center justify-center shadow-sm"
+                          title={`Excluir curso completo (${nomeCurso}) e todas as turmas`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
                         {isExpanded ? "Ocultar turmas" : "Ver turmas"}
                       </span>
@@ -317,13 +346,15 @@ export default function Treinamentos() {
                                   <Download className="h-3.5 w-3.5" />
                                   <span>Excel</span>
                                 </button>
-                                <button 
-                                  onClick={(e) => excluirTreinamento(t.id, e)}
-                                  className="flex items-center p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-                                  title="Excluir Turma"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
+                                {userRole === 'admin' && (
+                                  <button 
+                                    onClick={(e) => excluirTreinamento(t.id, e)}
+                                    className="flex items-center p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                                    title="Excluir Turma (Apenas Admin)"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}

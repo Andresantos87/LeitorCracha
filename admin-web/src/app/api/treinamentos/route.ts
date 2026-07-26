@@ -71,17 +71,28 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const session = await import("@/lib/auth").then(m => m.getSession());
+    if (session && session.role !== 'admin' && session.role !== 'gestor') {
+      return NextResponse.json({ success: false, error: "Apenas Administradores ou Gestores têm permissão para excluir treinamentos." }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const nome = searchParams.get("nome");
     
-    if (!id) return NextResponse.json({ success: false, error: "ID não fornecido" }, { status: 400 });
+    const { doc, deleteDoc, collection, query, where, getDocs } = await import("firebase/firestore");
 
-    const { doc, deleteDoc } = await import("firebase/firestore");
-    await deleteDoc(doc(db, "treinamentos", id));
+    if (nome) {
+      const q = query(collection(db, "treinamentos"), where("nome", "==", nome));
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, "treinamentos", d.id)));
+      await Promise.all(deletePromises);
+      return NextResponse.json({ success: true, deletedCount: snapshot.size });
+    }
     
-    // Obs: Em produção real, deveríamos apagar a subcoleção 'presencas' também, 
-    // mas o Firestore não apaga subcoleções automaticamente. 
-    // Como é um MVP, apagar o documento principal já o remove da lista.
+    if (!id) return NextResponse.json({ success: false, error: "ID ou Nome não fornecido" }, { status: 400 });
+
+    await deleteDoc(doc(db, "treinamentos", id));
     
     return NextResponse.json({ success: true });
   } catch (error: any) {

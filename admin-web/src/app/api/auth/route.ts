@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { login, logout } from '@/lib/auth';
+import { login, logout, getSession } from '@/lib/auth';
+
+export async function GET() {
+  try {
+    const session = await getSession();
+    return NextResponse.json({ success: true, session: session || null });
+  } catch (error) {
+    return NextResponse.json({ success: false, session: null }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   try {
