@@ -124,38 +124,37 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // --- SELETOR DE SESSÕES VIA FIRESTORE ---
+    // --- SELETOR DE SESSÕES EM 2 ETAPAS (PASTAS / CURSOS ➔ TURMAS) ---
     private fun abrirSeletorDeSessao() {
-        tvStatus.text = "Buscando turmas na nuvem..."
+        tvStatus.text = "Buscando cursos na nuvem..."
         progressBar.visibility = View.VISIBLE
         
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val snapshot = db.collection("treinamentos")
                     .orderBy("data", Query.Direction.DESCENDING)
-                    .limit(15)
+                    .limit(50)
                     .get()
                     .await()
                 
                 if (snapshot.isEmpty) {
-                    mostrarErro("Nenhuma turma encontrada na nuvem.")
+                    mostrarErro("Nenhum treinamento encontrado na nuvem.")
                     return@launch
                 }
                 
-                val nomesList = mutableListOf<String>()
-                val idsList = mutableListOf<String>()
-                
+                // Agrupa os documentos de turmas pelo Nome do Curso
+                val cursosMap = mutableMapOf<String, MutableList<com.google.firebase.firestore.DocumentSnapshot>>()
                 for (doc in snapshot.documents) {
-                    val nome = doc.getString("nome") ?: "Turma Sem Nome"
-                    val turma = doc.getString("turma") ?: ""
-                    val display = if (turma.isNotBlank()) "$nome ($turma)" else nome
-                    nomesList.add(display)
-                    idsList.add(doc.id)
+                    val nomeCurso = doc.getString("nome") ?: "Treinamento Sem Nome"
+                    if (!cursosMap.containsKey(nomeCurso)) {
+                        cursosMap[nomeCurso] = mutableListOf()
+                    }
+                    cursosMap[nomeCurso]?.add(doc)
                 }
                 
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
-                    tvStatus.text = "Selecione uma turma abaixo"
+                    tvStatus.text = "Selecione a pasta do curso"
                     
                     val dialog = Dialog(this@MainActivity)
                     val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.dialog_select_session, null)
@@ -163,28 +162,68 @@ class MainActivity : AppCompatActivity() {
                     dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                     dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     
+                    val tvIcon = view.findViewById<TextView>(R.id.tvDialogIcon)
+                    val tvTitle = view.findViewById<TextView>(R.id.tvDialogTitle)
+                    val tvSub = view.findViewById<TextView>(R.id.tvDialogSubtitle)
                     val container = view.findViewById<LinearLayout>(R.id.llSessionsContainer)
+                    val btnBack = view.findViewById<Button>(R.id.btnBackDialog)
                     val btnCancel = view.findViewById<Button>(R.id.btnCancelDialog)
-                    
-                    for (i in nomesList.indices) {
-                        val itemView = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_session_option, container, false)
-                        val tvName = itemView.findViewById<TextView>(R.id.tvOptionName)
-                        val tvSub = itemView.findViewById<TextView>(R.id.tvOptionSubtitle)
-                        
-                        tvName.text = nomesList[i]
-                        tvSub.visibility = View.GONE
-                        
-                        itemView.setOnClickListener {
-                            treinamentoIdStr = idsList[i]
-                            tvSessionId.text = nomesList[i]
-                            tvStatus.text = "✅ Turma selecionada com sucesso!"
-                            tvStatus.setTextColor(getColor(R.color.colorSuccess))
-                            dialog.dismiss()
+
+                    fun renderizarPastas() {
+                        container.removeAllViews()
+                        tvIcon.text = "📁"
+                        tvTitle.text = "SELECIONE O TREINAMENTO"
+                        tvSub.text = "Toque em uma pasta para ver as turmas"
+                        btnBack.visibility = View.GONE
+
+                        for ((cursoNome, docsList) in cursosMap) {
+                            val itemView = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_session_option, container, false)
+                            val tvName = itemView.findViewById<TextView>(R.id.tvOptionName)
+                            val tvSubtitle = itemView.findViewById<TextView>(R.id.tvOptionSubtitle)
+                            
+                            tvName.text = cursoNome
+                            tvSubtitle.text = "${docsList.size} turma(s) disponível(is)"
+                            tvSubtitle.visibility = View.VISIBLE
+                            tvSubtitle.setTextColor(Color.parseColor("#38BDF8"))
+                            
+                            itemView.setOnClickListener {
+                                // Passo 2: Mostrar turmas deste curso
+                                container.removeAllViews()
+                                tvIcon.text = "🎯"
+                                tvTitle.text = cursoNome.uppercase()
+                                tvSub.text = "Selecione a turma ativa para vincular ao leitor:"
+                                btnBack.visibility = View.VISIBLE
+                                
+                                for (doc in docsList) {
+                                    val turmaItemView = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_session_option, container, false)
+                                    val tvTurmaName = turmaItemView.findViewById<TextView>(R.id.tvOptionName)
+                                    val tvTurmaSub = turmaItemView.findViewById<TextView>(R.id.tvOptionSubtitle)
+                                    
+                                    val nomeTurma = doc.getString("turma") ?: ""
+                                    tvTurmaName.text = if (nomeTurma.isNotBlank()) nomeTurma else "Turma Principal"
+                                    tvTurmaSub.text = "ID: ${doc.id.take(8)}..."
+                                    tvTurmaSub.visibility = View.VISIBLE
+                                    tvTurmaSub.setTextColor(Color.parseColor("#94A3B8"))
+                                    
+                                    turmaItemView.setOnClickListener {
+                                        treinamentoIdStr = doc.id
+                                        val display = if (nomeTurma.isNotBlank()) "$cursoNome ($nomeTurma)" else cursoNome
+                                        tvSessionId.text = display
+                                        tvStatus.text = "✅ Turma selecionada com sucesso!"
+                                        tvStatus.setTextColor(getColor(R.color.colorSuccess))
+                                        dialog.dismiss()
+                                    }
+                                    container.addView(turmaItemView)
+                                }
+                            }
+                            container.addView(itemView)
                         }
-                        container.addView(itemView)
                     }
-                    
+
+                    btnBack.setOnClickListener { renderizarPastas() }
                     btnCancel.setOnClickListener { dialog.dismiss() }
+
+                    renderizarPastas()
                     dialog.show()
                 }
             } catch (e: Exception) {
@@ -331,6 +370,7 @@ class MainActivity : AppCompatActivity() {
             
             val data = hashMapOf(
                 "identificador_lido" to identificador,
+                "nome" to (nomeEncontrado ?: ""),
                 "modo_registro" to modo,
                 "data_registro" to FieldValue.serverTimestamp()
             )

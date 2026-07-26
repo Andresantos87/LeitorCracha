@@ -41,9 +41,9 @@ export async function GET(req: Request) {
       return {
         id: doc.id,
         ...p,
-        nome: user.nome || 'Desconhecido',
-        planta: user.planta || 'Desconhecida',
-        cargo: user.cargo || 'Não Informado',
+        nome: p.nome || user.nome || 'Desconhecido',
+        planta: p.planta || user.planta || 'Desconhecida',
+        cargo: p.cargo || user.cargo || 'Não Informado',
         data_registro: p.data_registro?.toDate()?.toISOString() || null
       };
     });
