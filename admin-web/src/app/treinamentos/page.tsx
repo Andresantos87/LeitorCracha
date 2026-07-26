@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown } from "lucide-react";
+import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import SignatureCanvas from "react-signature-canvas";
 
@@ -13,6 +13,7 @@ export default function Treinamentos() {
   const [nomeTreinamento, setNomeTreinamento] = useState("");
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createMode, setCreateMode] = useState<'EXISTING' | 'NEW'>('EXISTING');
 
   // States para assinatura manual
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -173,11 +174,22 @@ export default function Treinamentos() {
         </div>
         {!selectedTreinamento ? (
           <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg shadow-blue-900/20"
+            onClick={() => {
+              const cursos = Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean);
+              if (cursos.length > 0) {
+                setCreateMode('EXISTING');
+                setNomeTreinamento(cursos[0] as string);
+              } else {
+                setCreateMode('NEW');
+                setNomeTreinamento("");
+              }
+              setTurmaTreinamento("");
+              setIsModalOpen(true);
+            }}
+            className="flex items-center space-x-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-sky-600/30"
           >
-            <Plus className="h-4 w-4" />
-            <span>Novo Treinamento</span>
+            <FolderPlus className="h-4 w-4" />
+            <span>+ Cadastrar Curso / Turma</span>
           </button>
         ) : (
           <button 
@@ -242,6 +254,21 @@ export default function Treinamentos() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCreateMode('EXISTING');
+                          setNomeTreinamento(nomeCurso);
+                          setTurmaTreinamento("");
+                          setIsModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 bg-sky-500/20 hover:bg-sky-500 text-sky-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-sky-500/30 flex items-center gap-1.5 shadow-sm"
+                        title="Adicionar nova turma dentro deste treinamento"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span className="hidden md:inline">Nova Turma aqui</span>
+                      </button>
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
                         {isExpanded ? "Ocultar turmas" : "Ver turmas"}
                       </span>
@@ -413,55 +440,121 @@ export default function Treinamentos() {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-bold text-white mb-6">Criar Novo Treinamento</h3>
-            
-            <form onSubmit={handleCreateSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">Nome do Treinamento</label>
-                <input 
-                  type="text" 
-                  required
-                  autoFocus
-                  value={nomeTreinamento}
-                  onChange={e => setNomeTreinamento(e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 text-slate-200"
-                  placeholder="Ex: NR-10 Integração"
-                  list="treinamentos-existentes"
-                />
-                <datalist id="treinamentos-existentes">
-                  {Array.from(new Set(treinamentos.map(t => t.nome))).map(nome => (
-                    <option key={nome} value={nome} />
-                  ))}
-                </datalist>
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 sm:p-8 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+                  <FolderPlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-white tracking-wide">Cadastrar Turma / Treinamento</h3>
+                  <p className="text-xs text-slate-400">Organize em pastas ou crie um novo curso do zero</p>
+                </div>
               </div>
+            </div>
+            
+            {/* Seletor de Tipo (Curso Existente vs Novo Curso) */}
+            <div className="flex bg-slate-950 p-1 rounded-xl mb-6 border border-slate-800">
+              <button 
+                type="button"
+                onClick={() => {
+                  setCreateMode('EXISTING');
+                  const cursos = Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean);
+                  if (cursos.length > 0) setNomeTreinamento(cursos[0] as string);
+                }}
+                className={`flex-1 py-2.5 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all ${createMode === 'EXISTING' ? 'bg-sky-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+              >
+                <Folder className="h-3.5 w-3.5" /> Pasta Existente
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  setCreateMode('NEW');
+                  setNomeTreinamento("");
+                }}
+                className={`flex-1 py-2.5 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all ${createMode === 'NEW' ? 'bg-sky-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+              >
+                <Sparkles className="h-3.5 w-3.5" /> + Criar Novo Curso
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSubmit} className="space-y-5">
+              {createMode === 'EXISTING' ? (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>Selecione a Pasta / Curso</span>
+                    <span className="text-[10px] font-normal text-sky-400">Adicionando à pasta existente</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={nomeTreinamento}
+                      onChange={e => setNomeTreinamento(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium appearance-none cursor-pointer pr-10 shadow-inner"
+                    >
+                      {Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean).map((nome: any) => (
+                        <option key={nome} value={nome} className="bg-slate-900 py-2 text-white">
+                          📁 {nome}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
+                  </div>
+                  {Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean).length === 0 && (
+                    <p className="text-xs text-amber-400 mt-1">Nenhum curso cadastrado ainda. Clique na aba "+ Criar Novo Curso" acima!</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>Nome do Novo Curso / Pasta</span>
+                    <span className="text-[10px] font-normal text-emerald-400">Criando nova pasta</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    required
+                    autoFocus
+                    value={nomeTreinamento}
+                    onChange={e => setNomeTreinamento(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium placeholder:text-slate-600 shadow-inner"
+                    placeholder="Ex: NR-10 Integração Elétrica"
+                  />
+                  <p className="text-[11px] text-slate-400">Este nome criará a pasta principal onde todas as turmas deste curso ficarão organizadas.</p>
+                </div>
+              )}
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">Turma / Referência (Opcional)</label>
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>Nome / Código da Turma</span>
+                  <span className="text-[10px] font-normal text-slate-400">Identificador da sessão</span>
+                </label>
                 <input 
                   type="text"
+                  required
                   value={turmaTreinamento}
                   onChange={e => setTurmaTreinamento(e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 text-slate-200"
-                  placeholder="Ex: Turma A - Manhã"
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium placeholder:text-slate-600 shadow-inner"
+                  placeholder="Ex: Turma A - Manhã (26/07), ou Turma 01"
                 />
               </div>
 
-              <div className="pt-4 flex items-center justify-end space-x-3">
+              <div className="pt-4 flex items-center justify-end space-x-3 border-t border-slate-800/80 mt-6">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg font-medium transition-colors"
+                  className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                  disabled={isSubmitting || !nomeTreinamento.trim() || !turmaTreinamento.trim()}
+                  className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-sky-600/30 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
                 >
-                  {isSubmitting ? 'Criando...' : 'Criar Sala'}
+                  <PlusCircle className="h-4 w-4" />
+                  {isSubmitting ? 'Salvando...' : createMode === 'NEW' ? 'Cadastrar Novo Curso' : 'Adicionar Turma'}
                 </button>
               </div>
             </form>
