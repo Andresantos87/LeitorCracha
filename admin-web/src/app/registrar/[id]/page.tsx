@@ -210,10 +210,10 @@ export default function RegistrarPresenca() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col p-4 sm:p-6 animate-in fade-in duration-500">
-      <div className="w-full max-w-2xl mx-auto mt-4 sm:mt-8 flex-1">
+    <div className="min-h-screen bg-slate-950 flex flex-col p-1 sm:p-6 animate-in fade-in duration-500">
+      <div className="w-full max-w-2xl mx-auto mt-2 sm:mt-8 flex-1">
         
-        <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center justify-between gap-4 mb-6 px-2 sm:px-0">
           <div className="flex items-center gap-3">
             <div className="bg-blue-600/20 p-3 rounded-xl border border-blue-500/30">
               <UserCheck className="h-6 w-6 text-blue-400" />
@@ -234,7 +234,7 @@ export default function RegistrarPresenca() {
         </div>
 
         {pageUrl && (
-          <div className="sm:hidden flex items-center justify-center gap-3 mb-6 bg-slate-900 border border-slate-800 p-3 rounded-xl">
+          <div className="sm:hidden flex items-center justify-center gap-3 mb-6 bg-slate-900 border border-slate-800 p-3 rounded-xl mx-2">
             <div className="bg-white p-1 rounded-md">
               <QRCodeSVG value={pageUrl} size={50} level="H" />
             </div>
@@ -244,7 +244,7 @@ export default function RegistrarPresenca() {
           </div>
         )}
 
-        <div className="flex bg-slate-900 p-1 rounded-xl mb-6 border border-slate-800">
+        <div className="flex bg-slate-900 p-1 rounded-xl mb-6 border border-slate-800 mx-2 sm:mx-0">
           <button 
             onClick={() => setMode('MANUAL')}
             className={`flex-1 py-2 flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors ${mode === 'MANUAL' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-white'}`}
@@ -265,7 +265,7 @@ export default function RegistrarPresenca() {
           </button>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl min-h-[300px]">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-6 shadow-2xl min-h-[300px]">
           
           {mode === 'MANUAL' && (
             <form onSubmit={handleManualSubmit} className="space-y-6 animate-in fade-in">
@@ -292,25 +292,25 @@ export default function RegistrarPresenca() {
               </div>
 
               {/* Assinatura */}
-              <div className="mt-4 bg-slate-950/80 border border-slate-700 rounded-xl p-4 animate-in fade-in zoom-in-95 shadow-lg">
-                <div className="flex justify-between items-center mb-3">
+              <div className="mt-5 animate-in fade-in zoom-in-95">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
                   <span className="text-sm font-bold text-slate-200 flex items-center gap-2">
                     <PenTool className="h-4 w-4 text-sky-400" />
-                    Sua Assinatura (Escreva no quadro abaixo)
+                    Sua Assinatura (Escreva no quadro abaixo):
                   </span>
                   <button 
                     type="button" 
                     onClick={() => { sigCanvas.current?.clear(); setHasSignature(false); }}
-                    className="px-2.5 py-1 text-xs font-semibold text-red-400 hover:text-white bg-red-950/40 hover:bg-red-900/60 rounded-lg border border-red-900/50 transition-colors"
+                    className="self-end sm:self-auto px-3 py-1 text-xs font-semibold text-red-400 hover:text-white bg-red-950/40 hover:bg-red-900/60 rounded-lg border border-red-900/50 transition-colors"
                   >
-                    Limpar Assinatura
+                    🧹 Limpar Assinatura
                   </button>
                 </div>
-                <div className="bg-slate-900 rounded-xl overflow-hidden border-2 border-slate-600/80 shadow-inner">
+                <div className="bg-slate-950 rounded-xl overflow-hidden border-2 border-sky-500/60 shadow-inner">
                   <SignatureCanvas 
                     ref={sigCanvas} 
                     penColor="white"
-                    canvasProps={{className: 'w-full h-64 cursor-crosshair'}}
+                    canvasProps={{className: 'w-full h-80 cursor-crosshair'}}
                     onEnd={() => setHasSignature(true)}
                   />
                 </div>

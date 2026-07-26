@@ -664,25 +664,25 @@ export default function Treinamentos() {
               </div>
 
               {/* Assinatura */}
-              <div className="mt-4 bg-slate-950/80 border border-slate-700 rounded-xl p-4 animate-in fade-in zoom-in-95 shadow-lg">
-                <div className="flex justify-between items-center mb-3">
+              <div className="mt-5 animate-in fade-in zoom-in-95">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
                   <span className="text-sm font-bold text-slate-200 flex items-center gap-2">
                     <PenTool className="h-4 w-4 text-sky-400" />
-                    Assinatura do Colaborador (Faça no quadro abaixo)
+                    Assinatura do Colaborador (Faça no quadro abaixo):
                   </span>
                   <button 
                     type="button" 
                     onClick={() => { sigCanvas.current?.clear(); setHasSignature(false); }}
-                    className="px-2.5 py-1 text-xs font-semibold text-red-400 hover:text-white bg-red-950/40 hover:bg-red-900/60 rounded-lg border border-red-900/50 transition-colors"
+                    className="self-end sm:self-auto px-3 py-1 text-xs font-semibold text-red-400 hover:text-white bg-red-950/40 hover:bg-red-900/60 rounded-lg border border-red-900/50 transition-colors"
                   >
-                    Limpar Assinatura
+                    🧹 Limpar Assinatura
                   </button>
                 </div>
-                <div className="bg-slate-900 rounded-xl overflow-hidden border-2 border-slate-600/80 shadow-inner">
+                <div className="bg-slate-950 rounded-xl overflow-hidden border-2 border-sky-500/60 shadow-inner">
                   <SignatureCanvas 
                     ref={sigCanvas} 
                     penColor="white"
-                    canvasProps={{className: 'w-full h-64 cursor-crosshair'}}
+                    canvasProps={{className: 'w-full h-80 cursor-crosshair'}}
                     onEnd={() => setHasSignature(true)}
                   />
                 </div>
