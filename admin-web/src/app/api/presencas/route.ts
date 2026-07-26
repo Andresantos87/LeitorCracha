@@ -57,7 +57,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { treinamentoId, identificador, modo_registro = 'MANUAL', assinaturaBase64 = null } = await req.json();
+    const { treinamentoId, identificador, modo_registro = 'MANUAL', assinaturaBase64 = null, nome = null, planta = null, empresa = null } = await req.json();
 
     if (!treinamentoId || !identificador) {
       return NextResponse.json({ success: false, error: 'ID do treinamento e identificador são obrigatórios' }, { status: 400 });
@@ -81,6 +81,24 @@ export async function POST(req: Request) {
     
     if (assinaturaBase64) {
       dataToSave.assinaturaBase64 = assinaturaBase64;
+    }
+    if (nome) dataToSave.nome = nome;
+    if (planta || empresa) {
+      dataToSave.planta = planta || empresa;
+      dataToSave.empresa = planta || empresa;
+    }
+
+    // Se nome ou planta não foram enviados no body, busca no arquivo de colaboradores
+    if (!dataToSave.nome || !dataToSave.planta) {
+      const usersDict = loadUsers() || {};
+      const user = usersDict[identificador];
+      if (user) {
+        if (!dataToSave.nome && user.nome) dataToSave.nome = user.nome;
+        if (!dataToSave.planta && user.planta) {
+          dataToSave.planta = user.planta;
+          dataToSave.empresa = user.planta;
+        }
+      }
     }
 
     // Salva na subcoleção presencas
