@@ -11,7 +11,12 @@ import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import android.app.Dialog
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.google.zxing.integration.android.IntentIntegrator
 import kotlinx.coroutines.CoroutineScope
@@ -152,16 +157,35 @@ class MainActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     tvStatus.text = "Selecione uma turma abaixo"
                     
-                    val builder = AlertDialog.Builder(this@MainActivity)
-                    builder.setTitle("Selecione a Turma Ativa:")
-                    builder.setItems(nomesList.toTypedArray()) { _, which ->
-                        treinamentoIdStr = idsList[which]
-                        tvSessionId.text = nomesList[which]
-                        tvStatus.text = "✅ Turma selecionada com sucesso!"
-                        tvStatus.setTextColor(getColor(R.color.colorSuccess))
+                    val dialog = Dialog(this@MainActivity)
+                    val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.dialog_select_session, null)
+                    dialog.setContentView(view)
+                    dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                    dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    
+                    val container = view.findViewById<LinearLayout>(R.id.llSessionsContainer)
+                    val btnCancel = view.findViewById<Button>(R.id.btnCancelDialog)
+                    
+                    for (i in nomesList.indices) {
+                        val itemView = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_session_option, container, false)
+                        val tvName = itemView.findViewById<TextView>(R.id.tvOptionName)
+                        val tvSub = itemView.findViewById<TextView>(R.id.tvOptionSubtitle)
+                        
+                        tvName.text = nomesList[i]
+                        tvSub.visibility = View.GONE
+                        
+                        itemView.setOnClickListener {
+                            treinamentoIdStr = idsList[i]
+                            tvSessionId.text = nomesList[i]
+                            tvStatus.text = "✅ Turma selecionada com sucesso!"
+                            tvStatus.setTextColor(getColor(R.color.colorSuccess))
+                            dialog.dismiss()
+                        }
+                        container.addView(itemView)
                     }
-                    builder.setNegativeButton("Cancelar", null)
-                    builder.show()
+                    
+                    btnCancel.setOnClickListener { dialog.dismiss() }
+                    dialog.show()
                 }
             } catch (e: Exception) {
                 mostrarErro("Erro ao buscar turmas: ${e.message}")
