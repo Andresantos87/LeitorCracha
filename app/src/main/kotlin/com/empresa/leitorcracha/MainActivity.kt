@@ -418,7 +418,9 @@ class MainActivity : AppCompatActivity() {
                     val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.dialog_select_session, null)
                     dialog.setContentView(view)
                     dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-                    dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    val displayMetrics = resources.displayMetrics
+                    val dialogWidth = (displayMetrics.widthPixels * 0.92).toInt()
+                    dialog.window?.setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
                     
                     val tvIcon = view.findViewById<TextView>(R.id.tvDialogIcon)
                     val tvTitle = view.findViewById<TextView>(R.id.tvDialogTitle)
