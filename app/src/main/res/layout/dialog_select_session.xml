@@ -26,9 +26,10 @@
             android:layout_marginBottom="8dp">
 
             <TextView
+                android:id="@+id/tvDialogIcon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📚"
+                android:text="📁"
                 android:textSize="24sp"
                 android:layout_marginEnd="12dp"/>
 
@@ -39,18 +40,20 @@
                 android:orientation="vertical">
 
                 <TextView
+                    android:id="@+id/tvDialogTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="SELECIONE A TURMA"
+                    android:text="SELECIONE O TREINAMENTO"
                     android:textColor="#F8FAFC"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.05"/>
 
                 <TextView
+                    android:id="@+id/tvDialogSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Toque para vincular ao leitor"
+                    android:text="Toque em uma pasta para ver as turmas"
                     android:textColor="#94A3B8"
                     android:textSize="12sp"/>
             </LinearLayout>
@@ -77,12 +80,26 @@
                 android:orientation="vertical"/>
         </ScrollView>
 
+        <!-- Botão Voltar (Invisível no passo 1) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBackDialog"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="16dp"
+            android:text="⬅ VOLTAR PARA TREINAMENTOS"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="#F8FAFC"
+            android:visibility="gone"
+            app:backgroundTint="#0284C7"
+            app:cornerRadius="12dp"/>
+
         <!-- Botão Cancelar -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancelDialog"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:text="CANCELAR"
             android:textSize="13sp"
             android:textStyle="bold"
