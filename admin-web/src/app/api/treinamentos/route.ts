@@ -17,10 +17,15 @@ export async function GET() {
       const presencasRef = collection(db, "treinamentos", doc.id, "presencas");
       const countSnapshot = await getCountFromServer(presencasRef);
       
+      const isChileName = /laja|santa fe|pacifico|talca|nacimiento|cordillera|puente alto|valdivia|mininco|chile/i.test(data.nome || '') || /laja|santa fe|pacifico|talca|nacimiento|cordillera|puente alto|valdivia|mininco|chile/i.test(data.planta || '');
+      const paisFinal = data.pais || (isChileName ? 'CHILE' : 'BRASIL');
+      
       treinamentos.push({
         id: doc.id,
         nome: data.nome,
         turma: data.turma || "",
+        pais: paisFinal,
+        planta: data.planta || (paisFinal === 'CHILE' ? 'CHILE (SAT)' : 'GUAÍBA (RAINBOW)'),
         data: data.data?.toDate()?.toISOString() || new Date().toISOString(),
         instrutor_email: data.instrutor_email,
         status_encerrado: data.status_encerrado || false,
@@ -40,13 +45,15 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nome, instrutor_email, turma } = body;
+    const { nome, instrutor_email, turma, pais = 'BRASIL', planta = '' } = body;
     
     if (!nome) return NextResponse.json({ success: false, error: "Nome é obrigatório" }, { status: 400 });
 
     const docRef = await addDoc(collection(db, "treinamentos"), {
       nome,
       turma: turma || "",
+      pais: pais,
+      planta: planta || (pais === 'CHILE' ? 'CHILE (SAT)' : 'GUAÍBA (RAINBOW)'),
       instrutor_email: instrutor_email || "N/A",
       data: serverTimestamp(),
       status_encerrado: false
@@ -56,6 +63,8 @@ export async function POST(req: Request) {
       id: docRef.id,
       nome,
       turma: turma || "",
+      pais: pais,
+      planta: planta || (pais === 'CHILE' ? 'CHILE (SAT)' : 'GUAÍBA (RAINBOW)'),
       instrutor_email: instrutor_email || "N/A",
       data: new Date().toISOString(),
       status_encerrado: false,

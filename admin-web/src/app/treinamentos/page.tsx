@@ -14,6 +14,12 @@ export default function Treinamentos() {
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createMode, setCreateMode] = useState<'EXISTING' | 'NEW'>('EXISTING');
+  const [createPais, setCreatePais] = useState<'BRASIL' | 'CHILE'>('BRASIL');
+  const [createPlanta, setCreatePlanta] = useState("GUAÍBA (RAINBOW)");
+  const [filterPais, setFilterPais] = useState<'TODOS' | 'BRASIL' | 'CHILE'>('TODOS');
+  const [empresasDict, setEmpresasDict] = useState<{ brasil: string[], chile: string[], todas: string[] }>({ brasil: [], chile: [], todas: [] });
+  const [nomeAvulso, setNomeAvulso] = useState("");
+  const [empresaAvulsa, setEmpresaAvulsa] = useState("");
 
   // States para assinatura manual
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -39,6 +45,15 @@ export default function Treinamentos() {
     fetch("/api/auth").then(res => res.json()).then(json => {
       if (json.success && json.session) {
         setUserRole(json.session.role || "leitor");
+      }
+    }).catch(() => {});
+    fetch("/api/empresas").then(res => res.json()).then(json => {
+      if (json.success) {
+        setEmpresasDict({
+          brasil: json.brasil || json.data || [],
+          chile: json.chile || json.data || [],
+          todas: json.data || []
+        });
       }
     }).catch(() => {});
   }, []);
@@ -70,8 +85,8 @@ export default function Treinamentos() {
         const json = await res.json();
         if (json.success && json.data) {
           setColabResults(json.data);
-          // Auto-seleciona se for o único resultado e for exato
-          if (json.data.length === 1 && /^\d+$/.test(manualId)) {
+          // Auto-seleciona se for o único resultado e for ID/RUT (contém número)
+          if (json.data.length === 1 && /\d/.test(manualId)) {
              setSelectedColab(json.data[0]);
              setManualId(json.data[0].identificador);
           }
@@ -111,7 +126,7 @@ export default function Treinamentos() {
     await fetch("/api/treinamentos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome: nomeTreinamento, turma: turmaTreinamento, instrutor_email: "Admin Local" })
+      body: JSON.stringify({ nome: nomeTreinamento, turma: turmaTreinamento, pais: createPais, planta: createPlanta, instrutor_email: "Admin Local" })
     });
     
     setIsSubmitting(false);
@@ -138,7 +153,9 @@ export default function Treinamentos() {
       body: JSON.stringify({ 
         treinamentoId: selectedId, 
         identificador: manualId,
-        assinaturaBase64 
+        assinaturaBase64,
+        nome: nomeAvulso.trim() || undefined,
+        empresa: empresaAvulsa.trim() || undefined
       })
     });
     
@@ -147,6 +164,8 @@ export default function Treinamentos() {
       alert(json.error);
     } else {
       setManualId("");
+      setNomeAvulso("");
+      setEmpresaAvulsa("");
       setIsManualModalOpen(false);
       setHasSignature(false);
       sigCanvas.current?.clear();
@@ -223,17 +242,41 @@ export default function Treinamentos() {
 
       {!selectedTreinamento && (
         <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+          {/* Filtro por País (Brasil vs Chile) */}
+          <div className="flex flex-wrap items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 w-fit shadow-md">
+            <button
+              onClick={() => setFilterPais('TODOS')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all ${filterPais === 'TODOS' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            >
+              🌐 Todos os Países
+            </button>
+            <button
+              onClick={() => setFilterPais('BRASIL')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 ${filterPais === 'BRASIL' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            >
+              <span>🇧🇷</span> Brasil (Rainbow / Guaíba)
+            </button>
+            <button
+              onClick={() => setFilterPais('CHILE')}
+              className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 ${filterPais === 'CHILE' ? 'bg-red-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            >
+              <span>🇨🇱</span> Chile (SAT / Laja / Pacífico)
+            </button>
+          </div>
+
           {loading ? (
             <div className="p-12 text-center bg-slate-800/50 rounded-xl border border-slate-700 text-slate-400">
               Carregando pastas de treinamento...
             </div>
-          ) : treinamentos.length === 0 ? (
+          ) : treinamentos.filter(t => filterPais === 'TODOS' || t.pais === filterPais).length === 0 ? (
             <div className="p-12 text-center bg-slate-800/50 rounded-xl border border-slate-700 text-slate-400">
-              Nenhum treinamento criado ainda. Clique em "Novo Treinamento" acima!
+              Nenhum treinamento encontrado para este filtro.
             </div>
           ) : (
             Object.entries(
-              treinamentos.reduce((acc: { [key: string]: any[] }, curr: any) => {
+              treinamentos
+                .filter(t => filterPais === 'TODOS' || t.pais === filterPais)
+                .reduce((acc: { [key: string]: any[] }, curr: any) => {
                 const nome = curr.nome || "Outros / Sem Nome";
                 if (!acc[nome]) acc[nome] = [];
                 acc[nome].push(curr);
@@ -262,7 +305,8 @@ export default function Treinamentos() {
                       </div>
                       <div>
                         <h3 className="text-lg font-extrabold text-white tracking-wide flex items-center gap-2">
-                          {nomeCurso}
+                          <span>{turmasList[0]?.pais === 'CHILE' ? '🇨🇱' : '🇧🇷'}</span>
+                          <span>{nomeCurso}</span>
                           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
                             {turmasList.length} {turmasList.length === 1 ? "turma" : "turmas"}
                           </span>
@@ -328,7 +372,12 @@ export default function Treinamentos() {
                               className="transition-colors cursor-pointer hover:bg-slate-800/60 group"
                             >
                               <td className="px-4 py-3.5 font-bold text-white group-hover:text-sky-300 transition-colors">
-                                {t.turma || "Turma Principal / Única"}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span>{t.turma || "Turma Principal / Única"}</span>
+                                  <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">
+                                    🏢 {t.planta || (t.pais === 'CHILE' ? 'CHILE (SAT)' : 'GUAÍBA (RAINBOW)')}
+                                  </span>
+                                </div>
                               </td>
                               <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{t.id}</td>
                               <td className="px-4 py-3.5">
@@ -485,13 +534,40 @@ export default function Treinamentos() {
               </div>
             </div>
             
+            {/* Seletor de Planta / Unidade */}
+            <div className="mb-5 space-y-2">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">1. Selecione a Planta / Unidade do Treinamento *</label>
+              <select
+                value={createPlanta}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCreatePlanta(val);
+                  const isCh = ['LAJA (SAT)', 'SANTA FE (SAT)', 'PACIFICO (SAT)'].includes(val);
+                  const novoPais = isCh ? 'CHILE' : 'BRASIL';
+                  setCreatePais(novoPais);
+                  const cursos = Array.from(new Set(treinamentos.filter(t => t.pais === novoPais || t.planta === val).map(t => t.nome))).filter(Boolean);
+                  if (createMode === 'EXISTING' && cursos.length > 0) setNomeTreinamento(cursos[0] as string);
+                }}
+                className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-bold text-sm shadow-inner cursor-pointer"
+              >
+                <optgroup label="🇧🇷 Plantas Brasil (Rainbow)">
+                  <option value="GUAÍBA (RAINBOW)">🏢 Guaíba (Brasil)</option>
+                </optgroup>
+                <optgroup label="🇨🇱 Plantas Chile (SAT)">
+                  <option value="SANTA FE (SAT)">🏭 Santa Fe (Chile)</option>
+                  <option value="LAJA (SAT)">🏭 Laja (Chile)</option>
+                  <option value="PACIFICO (SAT)">🏭 Pacífico (Chile)</option>
+                </optgroup>
+              </select>
+            </div>
+
             {/* Seletor de Tipo (Curso Existente vs Novo Curso) */}
             <div className="flex bg-slate-950 p-1 rounded-xl mb-6 border border-slate-800">
               <button 
                 type="button"
                 onClick={() => {
                   setCreateMode('EXISTING');
-                  const cursos = Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean);
+                  const cursos = Array.from(new Set(treinamentos.filter(t => t.pais === createPais).map(t => t.nome))).filter(Boolean);
                   if (cursos.length > 0) setNomeTreinamento(cursos[0] as string);
                 }}
                 className={`flex-1 py-2.5 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all ${createMode === 'EXISTING' ? 'bg-sky-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
@@ -523,7 +599,7 @@ export default function Treinamentos() {
                       onChange={e => setNomeTreinamento(e.target.value)}
                       className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium appearance-none cursor-pointer pr-10 shadow-inner"
                     >
-                      {Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean).map((nome: any) => (
+                      {Array.from(new Set(treinamentos.filter(t => t.pais === createPais).map(t => t.nome))).filter(Boolean).map((nome: any) => (
                         <option key={nome} value={nome} className="bg-slate-900 py-2 text-white">
                           📁 {nome}
                         </option>
@@ -533,7 +609,7 @@ export default function Treinamentos() {
                       <ChevronDown className="h-4 w-4" />
                     </div>
                   </div>
-                  {Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean).length === 0 && (
+                  {Array.from(new Set(treinamentos.filter(t => t.pais === createPais).map(t => t.nome))).filter(Boolean).length === 0 && (
                     <p className="text-xs text-amber-400 mt-1">Nenhum curso cadastrado ainda. Clique na aba "+ Criar Novo Curso" acima!</p>
                   )}
                 </div>
@@ -657,8 +733,40 @@ export default function Treinamentos() {
                 )}
 
                 {colabResults.length === 0 && !isSearchingId && manualId.length >= 3 && !selectedColab && (
-                  <div className="text-xs text-amber-500/70 mt-2">
-                    Nenhum colaborador encontrado com esta chave, mas você ainda pode forçar o registro.
+                  <div className="mt-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-3 animate-in fade-in">
+                    <p className="text-xs text-amber-300 font-semibold flex items-center gap-1.5">
+                      <span>⚠️ Colaborador não localizado no banco. Preencha os dados manualmente abaixo:</span>
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-300 uppercase block mb-1">Nome Completo *</label>
+                        <input
+                          type="text"
+                          required
+                          value={nomeAvulso}
+                          onChange={e => setNomeAvulso(e.target.value)}
+                          placeholder="Digite o nome completo"
+                          className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-300 uppercase block mb-1">Empresa / Planta *</label>
+                        <input
+                          type="text"
+                          required
+                          list="admin-empresas-list"
+                          value={empresaAvulsa}
+                          onChange={e => setEmpresaAvulsa(e.target.value)}
+                          placeholder="Selecione ou digite"
+                          className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:outline-none focus:border-amber-400"
+                        />
+                        <datalist id="admin-empresas-list">
+                          {(treinamentos.find(t => t.id === selectedId)?.pais === 'CHILE' ? (empresasDict.chile.length > 0 ? empresasDict.chile : empresasDict.todas) : (empresasDict.brasil.length > 0 ? empresasDict.brasil : empresasDict.todas)).map(emp => (
+                            <option key={emp} value={emp} />
+                          ))}
+                        </datalist>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -691,7 +799,7 @@ export default function Treinamentos() {
               <div className="pt-4 flex items-center justify-end space-x-3">
                 <button 
                   type="button"
-                  onClick={() => setIsManualModalOpen(false)}
+                  onClick={() => { setIsManualModalOpen(false); setNomeAvulso(""); setEmpresaAvulsa(""); }}
                   className="px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg font-medium transition-colors"
                 >
                   Cancelar

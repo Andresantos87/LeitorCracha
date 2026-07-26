@@ -91,7 +91,18 @@ export async function POST(req: Request) {
     // Se nome ou planta não foram enviados no body, busca no arquivo de colaboradores
     if (!dataToSave.nome || !dataToSave.planta) {
       const usersDict = loadUsers() || {};
-      const user = usersDict[identificador];
+      let user = usersDict[identificador];
+      if (!user) {
+        const idClean = String(identificador).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+        for (const [key, u] of Object.entries(usersDict)) {
+          const kClean = key.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+          const matClean = u.matricula ? String(u.matricula).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : '';
+          if (kClean === idClean || (matClean && matClean === idClean)) {
+            user = u;
+            break;
+          }
+        }
+      }
       if (user) {
         if (!dataToSave.nome && user.nome) dataToSave.nome = user.nome;
         if (!dataToSave.planta && user.planta) {

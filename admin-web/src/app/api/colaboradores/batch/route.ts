@@ -19,6 +19,8 @@ export async function POST(req: Request) {
         identificador: c.identificador,
         nome: c.nome,
         planta: c.planta,
+        empresa: c.empresa || c.planta,
+        pais: c.pais || 'BRASIL',
         dataCriacao: new Date().toISOString()
       }, { merge: true }); // merge true garante que se já existir, só atualiza
     });

@@ -61,6 +61,11 @@ class MainActivity : AppCompatActivity() {
     private var currentScanMode = ""
     private var treinamentoIdStr = ""
 
+    private var listaEmpresasBrasil = mutableListOf<String>()
+    private var listaEmpresasChile = mutableListOf<String>()
+    private var listaEmpresasTodas = mutableListOf<String>()
+    private var paisTreinamentoAtivo = "BRASIL"
+
     // Instância do Firebase Firestore
     private val db = Firebase.firestore
 
@@ -175,9 +180,19 @@ class MainActivity : AppCompatActivity() {
         actvEmpresa.setAdapter(adapterEmpresas)
         actvEmpresa.setOnClickListener { actvEmpresa.showDropDown() }
 
-        // Carregar empresas do banco em background
+        // Carregar empresas e verificar país da turma em background
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                if (treinamentoIdStr.isNotBlank()) {
+                    try {
+                        val snap = db.collection("treinamentos").document(treinamentoIdStr).get().await()
+                        if (snap.exists()) {
+                            val nome = snap.getString("nome") ?: ""
+                            paisTreinamentoAtivo = snap.getString("pais") ?: if (nome.contains("laja", true) || nome.contains("santa fe", true) || nome.contains("pacifico", true) || nome.contains("chile", true) || nome.contains("talca", true) || nome.contains("nacimiento", true) || nome.contains("valdivia", true)) "CHILE" else "BRASIL"
+                        }
+                    } catch (e: Exception) {}
+                }
+
                 val url = URL("https://treinamentocmpc.netlify.app/api/empresas")
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "GET"
@@ -188,14 +203,24 @@ class MainActivity : AppCompatActivity() {
                     reader.close()
                     val json = JSONObject(response)
                     if (json.optBoolean("success", false)) {
-                        val array = json.optJSONArray("data")
-                        if (array != null && array.length() > 0) {
-                            val listaBanco = mutableListOf<String>()
-                            for (i in 0 until array.length()) {
-                                listaBanco.add(array.getString(i))
+                        val arrTodas = json.optJSONArray("data")
+                        val arrBrasil = json.optJSONArray("brasil") ?: arrTodas
+                        val arrChile = json.optJSONArray("chile") ?: arrTodas
+
+                        fun fillList(arr: org.json.JSONArray?, dest: MutableList<String>) {
+                            if (arr != null) {
+                                dest.clear()
+                                for (i in 0 until arr.length()) dest.add(arr.getString(i))
                             }
+                        }
+                        fillList(arrTodas, listaEmpresasTodas)
+                        fillList(arrBrasil, listaEmpresasBrasil)
+                        fillList(arrChile, listaEmpresasChile)
+
+                        val listaParaUsar = if (paisTreinamentoAtivo == "CHILE") (if (listaEmpresasChile.isNotEmpty()) listaEmpresasChile else listaEmpresasTodas) else (if (listaEmpresasBrasil.isNotEmpty()) listaEmpresasBrasil else listaEmpresasTodas)
+                        if (listaParaUsar.isNotEmpty()) {
                             withContext(Dispatchers.Main) {
-                                val novoAdapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_dropdown_item_1line, listaBanco)
+                                val novoAdapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_dropdown_item_1line, listaParaUsar)
                                 actvEmpresa.setAdapter(novoAdapter)
                             }
                         }
@@ -440,6 +465,7 @@ class MainActivity : AppCompatActivity() {
                                     
                                     turmaItemView.setOnClickListener {
                                         treinamentoIdStr = doc.id
+                                        paisTreinamentoAtivo = doc.getString("pais") ?: if (cursoNome.contains("laja", true) || cursoNome.contains("santa fe", true) || cursoNome.contains("pacifico", true) || cursoNome.contains("chile", true) || cursoNome.contains("talca", true) || cursoNome.contains("nacimiento", true) || cursoNome.contains("valdivia", true)) "CHILE" else "BRASIL"
                                         val display = if (nomeTurma.isNotBlank()) "$cursoNome ($nomeTurma)" else cursoNome
                                         tvSessionId.text = display
                                         tvStatus.text = "✅ Turma selecionada com sucesso!"
@@ -528,6 +554,15 @@ class MainActivity : AppCompatActivity() {
                     tvSessionId.text = "Turma ID: $treinamentoIdStr"
                     tvStatus.text = "✅ Sessão vinculada"
                     tvStatus.setTextColor(getColor(R.color.colorSuccess))
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            val snap = db.collection("treinamentos").document(treinamentoIdStr).get().await()
+                            if (snap.exists()) {
+                                val nome = snap.getString("nome") ?: ""
+                                paisTreinamentoAtivo = snap.getString("pais") ?: if (nome.contains("laja", true) || nome.contains("santa fe", true) || nome.contains("pacifico", true) || nome.contains("chile", true) || nome.contains("talca", true) || nome.contains("nacimiento", true) || nome.contains("valdivia", true)) "CHILE" else "BRASIL"
+                            }
+                        } catch (e: Exception) {}
+                    }
                 } else if (currentScanMode == "RUT") {
                     CoroutineScope(Dispatchers.IO).launch {
                         enviarParaServidor(scannedData, "QR_CODE")

@@ -26,8 +26,10 @@ function parseRainbowRow(row) {
     identificador,
     nome: row.funcionario || 'Sem Nome',
     planta: row.empresa || row.local_prestacao || 'Outros',
+    empresa: row.empresa || row.local_prestacao || 'Outros',
     cargo: row.cargo || row.cbo || 'Não Informado',
-    matricula: row.cod_funcionario || ''
+    matricula: row.cod_funcionario || '',
+    pais: 'BRASIL'
   };
 }
 
@@ -54,15 +56,23 @@ function parseMifibraRow(row) {
   const nome = `${row.user_name_first || ''} ${row.user_name_last || ''}`.trim() || 'Sem Nome';
   let domain = email.includes('@') ? email.split('@')[1] : '';
   let planta = 'Outros';
-  if (domain === 'cmpc.com' || domain === 'cmpc.cl') planta = 'Guaíba';
-  else if (domain === 'dialectosur.cl') planta = 'Los Angeles';
+  let pais = 'BRASIL';
+  if (domain === 'cmpc.com' || domain === 'cmpc.cl') {
+    planta = 'Guaíba';
+    if (domain === 'cmpc.cl') pais = 'CHILE';
+  } else if (domain === 'dialectosur.cl') {
+    planta = 'Los Angeles';
+    pais = 'CHILE';
+  }
   
   return {
     identificador: email.toUpperCase().startsWith('CPF:') ? email.substring(4).trim() : email,
     nome,
     planta,
+    empresa: planta,
     cargo: 'Não Informado',
-    matricula: row.user_ref || ''
+    matricula: row.user_ref || '',
+    pais
   };
 }
 
@@ -78,9 +88,11 @@ function parseSatRow(row) {
   return {
     identificador: rut,
     nome,
-    planta: row.planta || row.trabempresanombre || 'Outros',
+    planta: row.planta || 'Outros',
+    empresa: row.trabempresanombre || row.empr_mandante || row.planta || 'Outros',
     cargo: row.trabocupacion || row.trabprofesion || 'Não Informado',
-    matricula: row.trabid || ''
+    matricula: row.trabid || '',
+    pais: 'CHILE'
   };
 }
 
@@ -130,8 +142,10 @@ function processFile(fileIndex) {
           uniqueUsers[parsed.identificador] = {
             nome: parsed.nome,
             planta: parsed.planta,
+            empresa: parsed.empresa || '',
             cargo: parsed.cargo,
-            matricula: parsed.matricula
+            matricula: parsed.matricula,
+            pais: parsed.pais || ''
           };
         } else {
           // Atualiza com dados mais recentes se forem válidos (o arquivo pode ter registros mais novos no final)
@@ -141,8 +155,14 @@ function processFile(fileIndex) {
           if (parsed.planta && parsed.planta !== 'Outros') {
             uniqueUsers[parsed.identificador].planta = parsed.planta;
           }
+          if (parsed.empresa && parsed.empresa !== 'Outros' && parsed.empresa !== '') {
+            uniqueUsers[parsed.identificador].empresa = parsed.empresa;
+          }
           if (parsed.matricula && !uniqueUsers[parsed.identificador].matricula) {
             uniqueUsers[parsed.identificador].matricula = parsed.matricula;
+          }
+          if (parsed.pais && !uniqueUsers[parsed.identificador].pais) {
+            uniqueUsers[parsed.identificador].pais = parsed.pais;
           }
         }
       }

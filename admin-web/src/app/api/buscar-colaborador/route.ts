@@ -53,22 +53,27 @@ export async function GET(req: Request) {
     }
 
     const users = loadUsersList();
-    const isNumeric = /^\d+$/.test(queryStr.trim());
     const queryLower = removeAccents(queryStr.trim());
     const queryParts = queryLower.split(' ').filter(p => p.length > 0);
+    const queryClean = queryStr.trim().replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+    const hasDigits = /\d/.test(queryStr);
 
     let results = [];
 
     // Busca
     for (const u of users) {
-      // 1. Busca por ID (se for numérico) ignorando zeros à esquerda
-      if (isNumeric) {
-        const uIdLimpo = u.identificador.replace(/^0+/, '');
-        const qIdLimpo = queryStr.trim().replace(/^0+/, '');
-        
-        const matLimpa = u.matricula ? String(u.matricula).replace(/^0+/, '') : '';
+      // 1. Busca por ID, Matrícula, RUT ou CPF (com ou sem traço/pontos/zeros)
+      if (hasDigits || queryClean.length >= 3) {
+        const uIdClean = (u.identificador || '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+        const matClean = (u.matricula ? String(u.matricula) : '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
 
-        if (uIdLimpo === qIdLimpo || u.identificador === queryStr.trim() || matLimpa === qIdLimpo || u.matricula === queryStr.trim()) {
+        if (
+          uIdClean === queryClean ||
+          u.identificador.toLowerCase() === queryStr.trim().toLowerCase() ||
+          matClean === queryClean ||
+          (u.matricula && String(u.matricula).toLowerCase() === queryStr.trim().toLowerCase()) ||
+          (queryClean.length >= 4 && (uIdClean.startsWith(queryClean) || uIdClean.includes(queryClean) || (matClean.length >= 4 && matClean.includes(queryClean))))
+        ) {
           results.push(u);
           continue;
         }
@@ -76,7 +81,6 @@ export async function GET(req: Request) {
 
       // 2. Busca por Nome (Inteligente)
       const nomeLower = removeAccents(u.nome);
-      // Se TODAS as partes digitadas estão contidas no nome, é match!
       const matchName = queryParts.every(part => nomeLower.includes(part));
       
       if (matchName) {

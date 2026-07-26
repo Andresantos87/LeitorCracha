@@ -27,6 +27,8 @@ export default function RegistrarPresenca() {
   const [empresaAvulsa, setEmpresaAvulsa] = useState("");
   const [showAvulso, setShowAvulso] = useState(false);
   const [empresasList, setEmpresasList] = useState<string[]>([]);
+  const [paisTreinamento, setPaisTreinamento] = useState<'BRASIL' | 'CHILE' | 'GERAL'>('BRASIL');
+  const [empresasDict, setEmpresasDict] = useState<{ brasil: string[], chile: string[], todas: string[] }>({ brasil: [], chile: [], todas: [] });
 
   const sigCanvas = useRef<any>(null);
   const [hasSignature, setHasSignature] = useState(false);
@@ -39,7 +41,16 @@ export default function RegistrarPresenca() {
 
     fetch('/api/empresas')
       .then(r => r.json())
-      .then(data => { if (data.success && data.data) setEmpresasList(data.data); })
+      .then(data => { 
+        if (data.success) {
+          setEmpresasDict({
+            brasil: data.brasil || data.data || [],
+            chile: data.chile || data.data || [],
+            todas: data.data || []
+          });
+          setEmpresasList(data.data || []);
+        }
+      })
       .catch(() => {});
 
     fetch('/api/treinamentos')
@@ -49,12 +60,23 @@ export default function RegistrarPresenca() {
         if (t) {
           setNomeTreinamento(t.nome);
           setTurmaTreinamento(t.turma || "");
+          if (t.pais) setPaisTreinamento(t.pais);
         } else {
           setNomeTreinamento("Treinamento Desconhecido");
         }
       })
       .catch(() => setNomeTreinamento("Treinamento"));
   }, [id]);
+
+  useEffect(() => {
+    if (paisTreinamento === 'CHILE' && empresasDict.chile.length > 0) {
+      setEmpresasList(empresasDict.chile);
+    } else if (paisTreinamento === 'BRASIL' && empresasDict.brasil.length > 0) {
+      setEmpresasList(empresasDict.brasil);
+    } else if (empresasDict.todas.length > 0) {
+      setEmpresasList(empresasDict.todas);
+    }
+  }, [paisTreinamento, empresasDict]);
 
   // Reset success timer
   useEffect(() => {
@@ -92,7 +114,7 @@ export default function RegistrarPresenca() {
         const json = await res.json();
         if (json.success && json.data) {
           setColabResults(json.data);
-          if (json.data.length === 1 && /^\d+$/.test(manualId)) {
+          if (json.data.length === 1 && /\d/.test(manualId)) {
              setSelectedColab(json.data[0]);
              setManualId(json.data[0].identificador);
           }
