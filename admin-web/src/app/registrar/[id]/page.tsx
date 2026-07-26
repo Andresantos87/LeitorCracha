@@ -210,8 +210,8 @@ export default function RegistrarPresenca() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col p-6 animate-in fade-in duration-500">
-      <div className="w-full max-w-md mx-auto mt-8 flex-1">
+    <div className="min-h-screen bg-slate-950 flex flex-col p-4 sm:p-6 animate-in fade-in duration-500">
+      <div className="w-full max-w-2xl mx-auto mt-4 sm:mt-8 flex-1">
         
         <div className="flex items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
@@ -292,25 +292,25 @@ export default function RegistrarPresenca() {
               </div>
 
               {/* Assinatura */}
-              <div className="mt-4 bg-slate-950 border border-slate-800 rounded-lg p-3 animate-in fade-in zoom-in-95">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-slate-300 flex items-center gap-2">
-                    <PenTool className="h-4 w-4 text-blue-400" />
-                    Sua Assinatura
+              <div className="mt-4 bg-slate-950/80 border border-slate-700 rounded-xl p-4 animate-in fade-in zoom-in-95 shadow-lg">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <PenTool className="h-4 w-4 text-sky-400" />
+                    Sua Assinatura (Escreva no quadro abaixo)
                   </span>
                   <button 
                     type="button" 
                     onClick={() => { sigCanvas.current?.clear(); setHasSignature(false); }}
-                    className="text-xs text-red-400 hover:text-red-300 underline"
+                    className="px-2.5 py-1 text-xs font-semibold text-red-400 hover:text-white bg-red-950/40 hover:bg-red-900/60 rounded-lg border border-red-900/50 transition-colors"
                   >
-                    Limpar
+                    Limpar Assinatura
                   </button>
                 </div>
-                <div className="bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
+                <div className="bg-slate-900 rounded-xl overflow-hidden border-2 border-slate-600/80 shadow-inner">
                   <SignatureCanvas 
                     ref={sigCanvas} 
                     penColor="white"
-                    canvasProps={{className: 'w-full h-32 cursor-crosshair'}}
+                    canvasProps={{className: 'w-full h-64 cursor-crosshair'}}
                     onEnd={() => setHasSignature(true)}
                   />
                 </div>
