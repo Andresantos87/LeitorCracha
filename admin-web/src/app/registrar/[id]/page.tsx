@@ -23,14 +23,24 @@ export default function RegistrarPresenca() {
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
   const [pageUrl, setPageUrl] = useState("");
 
+  const [nomeAvulso, setNomeAvulso] = useState("");
+  const [empresaAvulsa, setEmpresaAvulsa] = useState("");
+  const [showAvulso, setShowAvulso] = useState(false);
+  const [empresasList, setEmpresasList] = useState<string[]>([]);
+
   const sigCanvas = useRef<any>(null);
   const [hasSignature, setHasSignature] = useState(false);
 
-  // Buscar nome do treinamento e pegar URL atual
+  // Buscar nome do treinamento, pegar URL atual e carregar lista de empresas
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setPageUrl(window.location.href);
     }
+
+    fetch('/api/empresas')
+      .then(r => r.json())
+      .then(data => { if (data.success && data.data) setEmpresasList(data.data); })
+      .catch(() => {});
 
     fetch('/api/treinamentos')
       .then(r => r.json())
@@ -54,6 +64,9 @@ export default function RegistrarPresenca() {
         setManualId("");
         setSelectedColab(null);
         setColabResults([]);
+        setNomeAvulso("");
+        setEmpresaAvulsa("");
+        setShowAvulso(false);
       }, 3000);
       return () => clearTimeout(t);
     }
@@ -116,7 +129,7 @@ export default function RegistrarPresenca() {
     }
   }, [mode, success]);
 
-  const submitRegistro = async (identificadorLido: string, modoRegistro: string, assinaturaBase64?: string) => {
+  const submitRegistro = async (identificadorLido: string, modoRegistro: string, assinaturaBase64?: string, nome?: string, empresa?: string) => {
     if (!identificadorLido.trim() || !id) return;
     
     setIsSubmitting(true);
@@ -129,8 +142,11 @@ export default function RegistrarPresenca() {
         modo_registro: modoRegistro
       };
 
-      if (assinaturaBase64) {
-        bodyData.assinaturaBase64 = assinaturaBase64;
+      if (assinaturaBase64) bodyData.assinaturaBase64 = assinaturaBase64;
+      if (nome) bodyData.nome = nome;
+      if (empresa) {
+        bodyData.planta = empresa;
+        bodyData.empresa = empresa;
       }
 
       const res = await fetch("/api/presencas", {
@@ -159,7 +175,8 @@ export default function RegistrarPresenca() {
       return;
     }
     const assinaturaBase64 = sigCanvas.current?.getCanvas().toDataURL("image/png");
-    await submitRegistro(manualId, 'AUTO_REGISTRO', assinaturaBase64);
+    const idFinal = manualId.trim() || `VISITANTE_${Date.now().toString().slice(-6)}`;
+    await submitRegistro(idFinal, 'AUTO_REGISTRO', assinaturaBase64, nomeAvulso || undefined, empresaAvulsa || undefined);
   };
 
   if (success) {
@@ -245,8 +262,55 @@ export default function RegistrarPresenca() {
                   <div className="mt-4 p-4 bg-emerald-900/20 border border-emerald-900/50 rounded-xl">
                     <h4 className="font-bold text-emerald-400">{selectedColab.nome}</h4>
                     <p className="text-xs text-emerald-500 mt-1 font-mono">ID: {selectedColab.identificador}</p>
-                    <button type="button" onClick={() => { setSelectedColab(null); setManualId(""); setColabResults([]); }} className="text-xs text-slate-400 mt-4 underline">Trocar Pessoa</button>
+                    <button type="button" onClick={() => { setSelectedColab(null); setManualId(""); setColabResults([]); setShowAvulso(false); }} className="text-xs text-slate-400 mt-4 underline">Trocar Pessoa</button>
                   </div>
+                )}
+
+                {(!selectedColab && (showAvulso || (colabResults.length === 0 && !isSearchingId && manualId.length >= 3))) && (
+                  <div className="mt-4 p-4 bg-amber-950/40 border border-amber-500/50 rounded-xl space-y-4 animate-in fade-in">
+                    <div className="flex items-start gap-2 text-amber-300 text-sm font-semibold">
+                      <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 text-amber-400" />
+                      <span>Não encontrou seu cadastro? Preencha seus dados para registrar sua presença:</span>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-bold text-slate-300 uppercase block mb-1">Seu Nome Completo *</label>
+                        <input 
+                          type="text" 
+                          value={nomeAvulso} 
+                          onChange={e => setNomeAvulso(e.target.value)} 
+                          placeholder="Ex: Carlos Oliveira Silva" 
+                          className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400 font-medium text-base"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-300 uppercase block mb-1">Empresa / Planta *</label>
+                        <input 
+                          type="text" 
+                          list="lista-empresas-web"
+                          value={empresaAvulsa} 
+                          onChange={e => setEmpresaAvulsa(e.target.value)} 
+                          placeholder="Ex: CMPC - Guaíba ou Nome da Empresa" 
+                          className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400 font-medium text-base"
+                        />
+                        <datalist id="lista-empresas-web">
+                          {empresasList.map((emp, i) => (
+                            <option key={i} value={emp} />
+                          ))}
+                        </datalist>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!selectedColab && !showAvulso && (colabResults.length > 0 || manualId.length < 3) && (
+                  <button 
+                    type="button" 
+                    onClick={() => setShowAvulso(true)} 
+                    className="text-xs text-sky-400 hover:text-sky-300 underline block pt-2"
+                  >
+                    Não encontrou seu nome / Sou novo ou visitante? Clique aqui
+                  </button>
                 )}
               </div>
 
@@ -277,8 +341,12 @@ export default function RegistrarPresenca() {
 
               <button 
                 type="submit"
-                disabled={isSubmitting || manualId.length < 3 || !hasSignature}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg disabled:opacity-50"
+                disabled={
+                  isSubmitting || 
+                  !hasSignature || 
+                  (!selectedColab && (nomeAvulso.trim().length < 3 || empresaAvulsa.trim().length < 2))
+                }
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg disabled:opacity-50 transition-colors"
               >
                 {isSubmitting ? 'Registrando...' : 'Confirmar Presença'}
               </button>
