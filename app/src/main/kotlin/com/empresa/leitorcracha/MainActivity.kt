@@ -8,10 +8,10 @@ import android.nfc.tech.MifareClassic
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
-import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.zxing.integration.android.IntentIntegrator
 import kotlinx.coroutines.CoroutineScope
@@ -20,19 +20,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import java.net.HttpURLConnection
 import java.net.URL
 import java.io.InputStreamReader
-import org.json.JSONArray
 import org.json.JSONObject
-import android.content.Context
-import android.content.SharedPreferences
 
 class MainActivity : AppCompatActivity() {
 
-    // Chave de acesso do Setor 0
+    // Chave de acesso do Setor 0 do Mifare Classic
     private val COMPANY_KEY = byteArrayOf(
         0xB5.toByte(), 0xB3.toByte(), 0xE3.toByte(),
         0x65.toByte(), 0xA7.toByte(), 0x3B.toByte()
@@ -46,11 +44,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnScanQr: Button
     private lateinit var tvSessionId: TextView
     private lateinit var btnScanSession: Button
-    
-    // Novas variáveis
-    private lateinit var etServerIp: EditText
-    private lateinit var btnSaveIp: Button
-    private lateinit var sharedPrefs: SharedPreferences
+    private lateinit var btnSelectSession: Button
 
     private var isWaitingForTag = false
     private var currentScanMode = ""
@@ -62,31 +56,15 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        
-        sharedPrefs = getSharedPreferences("CrachaPrefs", Context.MODE_PRIVATE)
 
-        tvStatus    = findViewById(R.id.tvStatus)
-        tvResult    = findViewById(R.id.tvResult)
-        progressBar = findViewById(R.id.progressBar)
-        btnScanNfc  = findViewById(R.id.btnScan)
-        btnScanQr   = findViewById(R.id.btnScanQr)
-        tvSessionId = findViewById(R.id.tvSessionId)
-        btnScanSession = findViewById(R.id.btnScanSession)
-        
-        etServerIp = findViewById(R.id.etServerIp)
-        btnSaveIp = findViewById(R.id.btnSaveIp)
-        
-        // Carregar IP salvo
-        val savedIp = sharedPrefs.getString("SERVER_IP", "")
-        if (!savedIp.isNullOrEmpty()) {
-            etServerIp.setText(savedIp)
-        }
-        
-        btnSaveIp.setOnClickListener {
-            val ip = etServerIp.text.toString().trim()
-            sharedPrefs.edit().putString("SERVER_IP", ip).apply()
-            Toast.makeText(this, "IP Salvo: $ip", Toast.LENGTH_SHORT).show()
-        }
+        tvStatus         = findViewById(R.id.tvStatus)
+        tvResult         = findViewById(R.id.tvResult)
+        progressBar      = findViewById(R.id.progressBar)
+        btnScanNfc       = findViewById(R.id.btnScan)
+        btnScanQr        = findViewById(R.id.btnScanQr)
+        tvSessionId      = findViewById(R.id.tvSessionId)
+        btnScanSession   = findViewById(R.id.btnScanSession)
+        btnSelectSession = findViewById(R.id.btnSelectSession)
 
         val adapter = NfcAdapter.getDefaultAdapter(this)
         if (adapter != null && adapter.isEnabled) {
@@ -96,6 +74,12 @@ class MainActivity : AppCompatActivity() {
             btnScanNfc.text = "NFC INDISPONÍVEL"
         }
 
+        // Seletor de sessões na nuvem (Sem QR Code)
+        btnSelectSession.setOnClickListener {
+            abrirSeletorDeSessao()
+        }
+
+        // Leitura de QR Code para vincular sessão
         btnScanSession.setOnClickListener {
             currentScanMode = "SESSION"
             val integrator = IntentIntegrator(this)
@@ -106,9 +90,10 @@ class MainActivity : AppCompatActivity() {
             integrator.initiateScan()
         }
 
+        // Botão principal de leitura NFC
         btnScanNfc.setOnClickListener {
             if (treinamentoIdStr.isBlank()) {
-                Toast.makeText(this, "Vincule a uma sessão primeiro!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Selecione uma turma primeiro!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             isWaitingForTag = true
@@ -118,9 +103,10 @@ class MainActivity : AppCompatActivity() {
             btnScanNfc.isEnabled = false
         }
 
+        // Botão de leitura de QR Code avulso (RUT)
         btnScanQr.setOnClickListener {
             if (treinamentoIdStr.isBlank()) {
-                Toast.makeText(this, "Vincule a uma sessão primeiro!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Selecione uma turma primeiro!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             currentScanMode = "RUT"
@@ -133,6 +119,56 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // --- SELETOR DE SESSÕES VIA FIRESTORE ---
+    private fun abrirSeletorDeSessao() {
+        tvStatus.text = "Buscando turmas na nuvem..."
+        progressBar.visibility = View.VISIBLE
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val snapshot = db.collection("treinamentos")
+                    .orderBy("data", Query.Direction.DESCENDING)
+                    .limit(15)
+                    .get()
+                    .await()
+                
+                if (snapshot.isEmpty) {
+                    mostrarErro("Nenhuma turma encontrada na nuvem.")
+                    return@launch
+                }
+                
+                val nomesList = mutableListOf<String>()
+                val idsList = mutableListOf<String>()
+                
+                for (doc in snapshot.docs) {
+                    val nome = doc.getString("nome") ?: "Turma Sem Nome"
+                    val turma = doc.getString("turma") ?: ""
+                    val display = if (turma.isNotBlank()) "$nome ($turma)" else nome
+                    nomesList.add(display)
+                    idsList.add(doc.id)
+                }
+                
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    tvStatus.text = "Selecione uma turma abaixo"
+                    
+                    val builder = AlertDialog.Builder(this@MainActivity)
+                    builder.setTitle("Selecione a Turma Ativa:")
+                    builder.setItems(nomesList.toTypedArray()) { _, which ->
+                        treinamentoIdStr = idsList[which]
+                        tvSessionId.text = nomesList[which]
+                        tvStatus.text = "✅ Turma selecionada com sucesso!"
+                        tvStatus.setTextColor(getColor(R.color.colorSuccess))
+                    }
+                    builder.setNegativeButton("Cancelar", null)
+                    builder.show()
+                }
+            } catch (e: Exception) {
+                mostrarErro("Erro ao buscar turmas: ${e.message}")
+            }
+        }
+    }
+
     // --- LEITURA NFC ---
     override fun onResume() {
         super.onResume()
@@ -142,10 +178,12 @@ class MainActivity : AppCompatActivity() {
         val techLists = arrayOf(arrayOf(MifareClassic::class.java.name))
         nfcAdapter.enableForegroundDispatch(this, pending, null, techLists)
     }
+
     override fun onPause() {
         super.onPause()
         if (::nfcAdapter.isInitialized) nfcAdapter.disableForegroundDispatch(this)
     }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (!isWaitingForTag) return
@@ -190,9 +228,8 @@ class MainActivity : AppCompatActivity() {
             } else {
                 val scannedData = result.contents
                 if (currentScanMode == "SESSION") {
-                    // Se o QR for uma URL (ex: https://.../registrar/ABC), pegamos apenas o ID final
                     treinamentoIdStr = scannedData.substringAfterLast("/")
-                    tvSessionId.text = "Sessão: $treinamentoIdStr"
+                    tvSessionId.text = "Turma ID: $treinamentoIdStr"
                     tvStatus.text = "✅ Sessão vinculada"
                     tvStatus.setTextColor(getColor(R.color.colorSuccess))
                 } else if (currentScanMode == "RUT") {
@@ -206,29 +243,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // --- BUSCA NA API LOCAL ---
+    // --- BUSCA NA API OFICIAL DA NETLIFY ---
     private suspend fun buscarNomeNaAPI(identificador: String): String? {
         return withContext(Dispatchers.IO) {
             try {
-                val ip = sharedPrefs.getString("SERVER_IP", "")
-                if (ip.isNullOrEmpty()) return@withContext null
-                
-                val urlString = "http://$ip:3000/api/buscar-colaborador?cpf=$identificador"
+                val urlString = "https://treinamentocmpc.netlify.app/api/buscar-colaborador?id=$identificador"
                 val url = URL(urlString)
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "GET"
-                conn.connectTimeout = 3000
-                conn.readTimeout = 3000
+                conn.connectTimeout = 4000
+                conn.readTimeout = 4000
 
                 if (conn.responseCode == 200) {
                     val reader = InputStreamReader(conn.inputStream)
                     val response = reader.readText()
                     reader.close()
                     
-                    val jsonArray = JSONArray(response)
-                    if (jsonArray.length() > 0) {
-                        val obj = jsonArray.getJSONObject(0)
-                        return@withContext obj.optString("nome", null)
+                    val jsonObject = JSONObject(response)
+                    if (jsonObject.optBoolean("success", false)) {
+                        val dataArray = jsonObject.optJSONArray("data")
+                        if (dataArray != null && dataArray.length() > 0) {
+                            val obj = dataArray.getJSONObject(0)
+                            return@withContext obj.optString("nome", null)
+                        }
                     }
                 }
                 null
@@ -252,13 +289,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            // Referência ao documento de presença no Firebase
             val docRef = db.collection("treinamentos")
                            .document(treinamentoIdStr)
                            .collection("presencas")
                            .document(identificador)
             
-            // Verifica se já existe para evitar duplicação local
             val snapshot = docRef.get().await()
             if (snapshot.exists()) {
                 withContext(Dispatchers.Main) {
@@ -270,7 +305,6 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             
-            // Salva na nuvem
             val data = hashMapOf(
                 "identificador_lido" to identificador,
                 "modo_registro" to modo,
