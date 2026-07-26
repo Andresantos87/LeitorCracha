@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { UserCheck, CheckCircle2, AlertCircle, Camera, SmartphoneNfc, Keyboard } from "lucide-react";
+import { UserCheck, CheckCircle2, AlertCircle, Camera, Keyboard } from "lucide-react";
 import { useParams } from "next/navigation";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import SignatureCanvas from "react-signature-canvas";
@@ -11,7 +11,7 @@ export default function RegistrarPresenca() {
   const params = useParams();
   const id = params.id as string;
 
-  const [mode, setMode] = useState<'MANUAL' | 'QR' | 'NFC'>('MANUAL');
+  const [mode, setMode] = useState<'MANUAL' | 'QR'>('MANUAL');
   const [manualId, setManualId] = useState("");
   const [colabResults, setColabResults] = useState<any[]>([]);
   const [selectedColab, setSelectedColab] = useState<any>(null);
@@ -19,7 +19,6 @@ export default function RegistrarPresenca() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [nfcStatus, setNfcStatus] = useState("Aguardando leitura NFC...");
   const [nomeTreinamento, setNomeTreinamento] = useState("Carregando Sessão...");
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
   const [pageUrl, setPageUrl] = useState("");
@@ -117,40 +116,6 @@ export default function RegistrarPresenca() {
     }
   }, [mode, success]);
 
-  // NFC effect
-  useEffect(() => {
-    let ndef: any = null;
-    let abortController = new AbortController();
-
-    const startNfc = async () => {
-      if (!('NDEFReader' in window)) {
-        setNfcStatus("NFC não suportado neste navegador/dispositivo. Tente o Chrome no Android.");
-        return;
-      }
-      try {
-        // @ts-ignore
-        ndef = new window.NDEFReader();
-        await ndef.scan({ signal: abortController.signal });
-        setNfcStatus("Aproxime o crachá na traseira do dispositivo...");
-        
-        ndef.addEventListener("reading", async ({ message, serialNumber }: any) => {
-          let crachaBruto = serialNumber.replace(/:/g, '');
-          await submitRegistro(crachaBruto, 'NFC');
-        });
-      } catch (error) {
-        setNfcStatus("Erro ao iniciar NFC. Verifique permissões.");
-      }
-    };
-
-    if (mode === 'NFC' && !success) {
-      startNfc();
-    }
-    
-    return () => {
-      abortController.abort();
-    };
-  }, [mode, success]);
-
   const submitRegistro = async (identificadorLido: string, modoRegistro: string, assinaturaBase64?: string) => {
     if (!identificadorLido.trim() || !id) return;
     
@@ -244,24 +209,18 @@ export default function RegistrarPresenca() {
           </div>
         )}
 
-        <div className="flex bg-slate-900 p-1 rounded-xl mb-6 border border-slate-800 mx-2 sm:mx-0">
+        <div className="flex bg-slate-900 p-1.5 rounded-xl mb-6 border border-slate-800 mx-2 sm:mx-0 gap-1.5">
           <button 
             onClick={() => setMode('MANUAL')}
-            className={`flex-1 py-2 flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors ${mode === 'MANUAL' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            className={`flex-1 py-3 flex items-center justify-center gap-2 rounded-lg text-sm font-bold transition-all ${mode === 'MANUAL' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
           >
-            <Keyboard className="h-4 w-4" /> Manual
+            <Keyboard className="h-4 w-4 text-sky-300" /> Manual &amp; Assinar
           </button>
           <button 
             onClick={() => setMode('QR')}
-            className={`flex-1 py-2 flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors ${mode === 'QR' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            className={`flex-1 py-3 flex items-center justify-center gap-2 rounded-lg text-sm font-bold transition-all ${mode === 'QR' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
           >
-            <Camera className="h-4 w-4" /> QR Code
-          </button>
-          <button 
-            onClick={() => setMode('NFC')}
-            className={`flex-1 py-2 flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors ${mode === 'NFC' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-          >
-            <SmartphoneNfc className="h-4 w-4" /> NFC
+            <Camera className="h-4 w-4 text-emerald-300" /> Câmera QR Code
           </button>
         </div>
 
@@ -330,15 +289,6 @@ export default function RegistrarPresenca() {
             <div className="flex flex-col items-center justify-center animate-in fade-in h-full">
               <div id="qr-reader" className="w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-800 mb-4 bg-white text-black"></div>
               <p className="text-sm text-slate-400 text-center">Aponte o QR Code do seu crachá para a câmera.</p>
-            </div>
-          )}
-
-          {mode === 'NFC' && (
-            <div className="flex flex-col items-center justify-center py-12 animate-in fade-in h-full text-center space-y-4">
-              <div className="p-6 bg-blue-900/20 rounded-full border border-blue-500/30 mb-2 animate-pulse">
-                <SmartphoneNfc className="h-12 w-12 text-blue-400" />
-              </div>
-              <p className="text-slate-300 font-medium">{nfcStatus}</p>
             </div>
           )}
 
