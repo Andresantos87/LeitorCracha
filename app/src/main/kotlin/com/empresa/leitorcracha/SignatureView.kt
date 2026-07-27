@@ -29,6 +29,8 @@ class SignatureView @JvmOverloads constructor(
     }
     
     private var isEmpty = true
+    private var lastX = 0f
+    private var lastY = 0f
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -41,15 +43,28 @@ class SignatureView @JvmOverloads constructor(
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
+                // IMPEDE QUE O SCROLLVIEW DO DIÁLOGO ROUBE/CORTE O TOQUE ENQUANTO DESENHA
+                parent?.requestDisallowInterceptTouchEvent(true)
                 path.moveTo(x, y)
+                lastX = x
+                lastY = y
                 isEmpty = false
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                path.lineTo(x, y)
+                parent?.requestDisallowInterceptTouchEvent(true)
+                val dx = Math.abs(x - lastX)
+                val dy = Math.abs(y - lastY)
+                if (dx >= 2f || dy >= 2f) {
+                    // Suavização Bézier para um traço de caneta fluido e contínuo
+                    path.quadTo(lastX, lastY, (x + lastX) / 2f, (y + lastY) / 2f)
+                    lastX = x
+                    lastY = y
+                }
             }
-            MotionEvent.ACTION_UP -> {
-                // nada a fazer
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
+                path.lineTo(x, y)
             }
             else -> return false
         }
