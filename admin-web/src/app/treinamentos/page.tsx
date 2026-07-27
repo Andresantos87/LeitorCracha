@@ -790,6 +790,7 @@ export default function Treinamentos() {
                   <SignatureCanvas 
                     ref={sigCanvas} 
                     penColor="white"
+                    clearOnResize={false}
                     canvasProps={{className: 'w-full h-80 cursor-crosshair'}}
                     onEnd={() => setHasSignature(true)}
                   />
@@ -819,22 +820,25 @@ export default function Treinamentos() {
 
       {isShareModalOpen && selectedTreinamento && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col md:flex-row gap-6">
-            <div className="flex-1 space-y-4 flex flex-col">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <UserPlus className="h-6 w-6 text-blue-400" />
-                Opções de Presença
-              </h3>
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 md:p-8 w-full max-w-4xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col md:flex-row gap-8">
+            <div className="flex-1 space-y-4 flex flex-col justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-white flex items-center gap-2 mb-2">
+                  <UserPlus className="h-7 w-7 text-blue-400" />
+                  Opções de Presença
+                </h3>
+                <p className="text-sm text-slate-400">Escolha como deseja registrar os alunos desta turma.</p>
+              </div>
               
-              <div className="flex flex-col gap-3 flex-1 mt-4">
+              <div className="flex flex-col gap-4 my-4">
                 <button 
                   onClick={() => { setIsShareModalOpen(false); setIsManualModalOpen(true); }}
-                  className="flex items-center gap-4 p-4 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-colors text-left"
+                  className="flex items-center gap-4 p-5 bg-slate-800/80 hover:bg-slate-800 rounded-2xl border border-slate-700 hover:border-blue-500/50 transition-all shadow-lg text-left group"
                 >
-                  <div className="bg-blue-900/30 p-2 rounded-lg"><UserPlus className="h-5 w-5 text-blue-400" /></div>
+                  <div className="bg-blue-600/20 group-hover:bg-blue-600/30 p-3 rounded-xl border border-blue-500/30 transition-colors"><UserPlus className="h-6 w-6 text-blue-400" /></div>
                   <div>
-                    <h4 className="font-bold text-slate-200">Registro Manual</h4>
-                    <p className="text-xs text-slate-400">Buscar pelo nome ou matrícula do aluno</p>
+                    <h4 className="font-bold text-white text-base">Registro Manual (Pelo PC)</h4>
+                    <p className="text-xs text-slate-400 mt-0.5">Buscar pelo nome, CPF ou matrícula e assinar na tela</p>
                   </div>
                 </button>
 
@@ -842,36 +846,41 @@ export default function Treinamentos() {
                   href={`/registrar/${selectedTreinamento.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-4 p-4 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-colors text-left"
+                  className="flex items-center gap-4 p-5 bg-slate-800/80 hover:bg-slate-800 rounded-2xl border border-slate-700 hover:border-emerald-500/50 transition-all shadow-lg text-left group"
                 >
-                  <div className="bg-emerald-900/30 p-2 rounded-lg"><ScanLine className="h-5 w-5 text-emerald-400" /></div>
+                  <div className="bg-emerald-600/20 group-hover:bg-emerald-600/30 p-3 rounded-xl border border-emerald-500/30 transition-colors"><ScanLine className="h-6 w-6 text-emerald-400" /></div>
                   <div>
-                    <h4 className="font-bold text-slate-200">Abrir Auto-Registro</h4>
-                    <p className="text-xs text-slate-400">Abre a página em uma nova aba no seu PC</p>
+                    <h4 className="font-bold text-white text-base">Abrir Tela de Auto-Registro</h4>
+                    <p className="text-xs text-slate-400 mt-0.5">Abre a página em uma nova aba do navegador no seu PC</p>
                   </div>
                 </a>
               </div>
 
               <button 
                 onClick={() => setIsShareModalOpen(false)}
-                className="mt-auto w-full py-3 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors font-medium"
+                className="w-full py-3.5 text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-700 rounded-xl transition-colors font-semibold"
               >
-                Fechar
+                Fechar Modal
               </button>
             </div>
 
-            <div className="w-full md:w-64 bg-slate-950 rounded-xl border border-slate-800 p-6 flex flex-col items-center justify-center text-center">
-              <h4 className="font-bold text-emerald-400 mb-2">QR Code da Sessão</h4>
-              <p className="text-xs text-slate-400 mb-4">Peça aos alunos para escanearem a tela</p>
+            <div className="w-full md:w-96 bg-slate-950 rounded-2xl border-2 border-slate-800 p-6 flex flex-col items-center justify-center text-center shadow-inner">
+              <h4 className="font-extrabold text-emerald-400 mb-1 text-lg uppercase tracking-wider">QR Code para Alunos</h4>
+              <div className="bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg text-white font-bold text-xs mb-3 max-w-full truncate text-blue-300">
+                📚 {selectedTreinamento.nome} {selectedTreinamento.turma ? `(${selectedTreinamento.turma})` : ''}
+              </div>
+              <p className="text-xs text-slate-400 mb-5">Peça aos alunos ou instrutores para escanearem a tela</p>
               
-              <div className="bg-white p-3 rounded-lg shadow-inner">
-                {/* QR Code com a URL real do ambiente (Netlify) */}
-                <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/registrar/${selectedTreinamento.id}`} size={150} level="H" />
+              <div className="bg-white p-5 rounded-2xl shadow-2xl border-4 border-emerald-500/30">
+                {/* QR Code gigante com a URL real do ambiente (Netlify) */}
+                <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/registrar/${selectedTreinamento.id}`} size={260} level="H" />
               </div>
               
-              <div className="mt-4 bg-amber-900/20 border border-amber-900/50 rounded-lg p-3 text-[10px] text-amber-200/80 text-left">
-                <strong className="block text-amber-400 mb-1">Instrutor (Smartphone):</strong>
-                O app de celular fará a leitura de crachás NFC automaticamente ao escanear este QR Code.
+              <div className="mt-5 bg-blue-950/40 border border-blue-500/30 rounded-xl p-3.5 text-xs text-blue-200/90 text-left w-full shadow-sm">
+                <strong className="block text-blue-400 mb-1 font-bold flex items-center gap-1.5">
+                  <Smartphone className="h-4 w-4 inline" /> Como Funciona:
+                </strong>
+                Os alunos escaneiam com a câmera do celular para assinar no próprio celular. O instrutor pode escanear com o APP Android para ler crachás NFC!
               </div>
             </div>
           </div>

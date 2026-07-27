@@ -117,6 +117,9 @@ export default function RegistrarPresenca() {
           if (json.data.length === 1 && /\d/.test(manualId)) {
              setSelectedColab(json.data[0]);
              setManualId(json.data[0].identificador);
+             if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+               document.activeElement.blur(); // Fecha o teclado virtual automaticamente!
+             }
           }
         } else {
           setColabResults([]);
@@ -223,10 +226,17 @@ export default function RegistrarPresenca() {
               <UserCheck className="h-6 w-6 text-blue-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-white uppercase tracking-wider">REGISTRAR PRESENÇA</h1>
-              <p className="text-sm font-black text-emerald-400 uppercase tracking-widest mt-1 line-clamp-2">
-                {nomeTreinamento} {turmaTreinamento && <span className="text-blue-300 ml-2">({turmaTreinamento})</span>}
-              </p>
+              <h1 className="text-2xl font-black text-white uppercase tracking-wider mb-2">REGISTRAR PRESENÇA</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="bg-emerald-950/80 border border-emerald-500/50 px-2.5 py-1 rounded-lg text-emerald-300 font-bold text-xs uppercase tracking-wide flex items-center gap-1 shadow-sm">
+                  📚 Treinamento: {nomeTreinamento}
+                </div>
+                {turmaTreinamento && (
+                  <div className="bg-blue-950/80 border border-blue-500/50 px-2.5 py-1 rounded-lg text-blue-300 font-bold text-xs uppercase tracking-wide flex items-center gap-1 shadow-sm">
+                    🏷️ Turma: {turmaTreinamento}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -269,14 +279,26 @@ export default function RegistrarPresenca() {
             <form onSubmit={handleManualSubmit} className="space-y-6 animate-in fade-in">
               <div className="space-y-3">
                 <label className="text-sm font-medium text-slate-300">Digite seu CPF ou Matrícula</label>
-                <input 
-                  type="text" 
-                  autoFocus
-                  value={manualId}
-                  onChange={e => setManualId(e.target.value)}
-                  className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-blue-500 text-white font-mono text-lg transition-colors"
-                  placeholder="Ex: 123456"
-                />
+                <div className="relative flex items-center">
+                  <input 
+                    type="text" 
+                    autoFocus
+                    value={manualId}
+                    onChange={e => setManualId(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+                    className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-blue-500 text-white font-mono text-lg transition-colors pr-24"
+                    placeholder="Ex: 123456"
+                  />
+                  {manualId && (
+                    <button
+                      type="button"
+                      onClick={() => { if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
+                      className="absolute right-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg uppercase tracking-wider transition-all shadow-md"
+                    >
+                      Concluir
+                    </button>
+                  )}
+                </div>
                 
                 {isSearchingId && <div className="text-xs text-blue-400 animate-pulse pt-1">Buscando seus dados...</div>}
                 
@@ -351,10 +373,15 @@ export default function RegistrarPresenca() {
                     🧹 Limpar Assinatura
                   </button>
                 </div>
-                <div className="bg-slate-950 rounded-xl overflow-hidden border-2 border-sky-500/60 shadow-inner">
+                <div 
+                  className="bg-slate-950 rounded-xl overflow-hidden border-2 border-sky-500/60 shadow-inner"
+                  onTouchStart={() => { if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
+                  onMouseDown={() => { if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
+                >
                   <SignatureCanvas 
                     ref={sigCanvas} 
                     penColor="white"
+                    clearOnResize={false}
                     canvasProps={{className: 'w-full h-80 cursor-crosshair'}}
                     onEnd={() => setHasSignature(true)}
                   />
