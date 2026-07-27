@@ -61,6 +61,11 @@ export default function Treinamentos() {
   useEffect(() => {
     if (selectedId) {
       carregarPresencas(selectedId);
+      const interval = setInterval(() => {
+        carregarPresencas(selectedId, true);
+        carregarTreinamentos();
+      }, 4000);
+      return () => clearInterval(interval);
     } else {
       setPresencas([]);
     }
@@ -103,12 +108,14 @@ export default function Treinamentos() {
     return () => clearTimeout(timeoutId);
   }, [manualId]);
 
-  const carregarPresencas = async (id: string) => {
-    setLoadingPresencas(true);
-    const res = await fetch(`/api/presencas?treinamentoId=${id}`);
-    const json = await res.json();
-    if (json.success) setPresencas(json.data);
-    setLoadingPresencas(false);
+  const carregarPresencas = async (id: string, silent = false) => {
+    if (!silent) setLoadingPresencas(true);
+    try {
+      const res = await fetch(`/api/presencas?treinamentoId=${id}`);
+      const json = await res.json();
+      if (json.success) setPresencas(json.data);
+    } catch (e) {}
+    if (!silent) setLoadingPresencas(false);
   };
 
   const carregarTreinamentos = async () => {
@@ -455,7 +462,21 @@ export default function Treinamentos() {
           </div>
 
           <div className="bg-slate-900/80 rounded-xl border border-slate-700 p-6">
-            <h3 className="font-bold text-white mb-4">Lista de Presenças ({presencas.length})</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <h3 className="font-bold text-white text-lg">Lista de Presenças ({presencas.length})</h3>
+                <span className="flex items-center gap-1 text-[10px] bg-emerald-950 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-ping"></span> Ao vivo
+                </span>
+              </div>
+              <button 
+                onClick={() => { carregarPresencas(selectedTreinamento.id); carregarTreinamentos(); }}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5 shadow-sm"
+                title="Forçar atualização da lista agora"
+              >
+                🔄 Atualizar Agora
+              </button>
+            </div>
             
             {loadingPresencas ? (
               <p className="text-slate-400 text-sm py-4">Carregando presenças...</p>
@@ -872,8 +893,8 @@ export default function Treinamentos() {
               <p className="text-xs text-slate-400 mb-5">Peça aos alunos ou instrutores para escanearem a tela</p>
               
               <div className="bg-white p-5 rounded-2xl shadow-2xl border-4 border-emerald-500/30">
-                {/* QR Code gigante com a URL real do ambiente (Netlify) */}
-                <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/registrar/${selectedTreinamento.id}`} size={260} level="H" />
+                {/* QR Code gigante com a URL real do ambiente e parâmetros de turma embutidos */}
+                <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/registrar/${selectedTreinamento.id}?nome=${encodeURIComponent(selectedTreinamento.nome)}&turma=${encodeURIComponent(selectedTreinamento.turma || "")}&pais=${selectedTreinamento.pais || "BRASIL"}`} size={260} level="H" />
               </div>
               
               <div className="mt-5 bg-blue-950/40 border border-blue-500/30 rounded-xl p-3.5 text-xs text-blue-200/90 text-left w-full shadow-sm">

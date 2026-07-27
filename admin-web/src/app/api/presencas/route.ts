@@ -29,8 +29,7 @@ export async function GET(req: Request) {
     }
 
     const presencasRef = collection(db, 'treinamentos', treinamentoId, 'presencas');
-    const q = query(presencasRef, orderBy('data_registro', 'desc'));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(presencasRef);
 
     const usersDict = loadUsers() || {};
 
@@ -56,8 +55,14 @@ export async function GET(req: Request) {
         planta: p.planta || p.empresa || user.planta || user.empresa || 'Desconhecida',
         empresa: p.empresa || p.planta || user.empresa || user.planta || 'Desconhecida',
         cargo: p.cargo || user.cargo || 'Não Informado',
-        data_registro: p.data_registro?.toDate()?.toISOString() || null
+        data_registro: p.data_registro?.toDate()?.toISOString() || new Date().toISOString()
       };
+    });
+
+    presencas.sort((a, b) => {
+      const timeA = new Date(a.data_registro).getTime() || 0;
+      const timeB = new Date(b.data_registro).getTime() || 0;
+      return timeB - timeA;
     });
 
     return NextResponse.json({ success: true, data: presencas });
