@@ -42,7 +42,8 @@ export async function GET(req: Request) {
         id: doc.id,
         ...p,
         nome: p.nome || user.nome || 'Desconhecido',
-        planta: p.planta || user.planta || 'Desconhecida',
+        planta: p.planta || p.empresa || user.planta || user.empresa || 'Desconhecida',
+        empresa: p.empresa || p.planta || user.empresa || user.planta || 'Desconhecida',
         cargo: p.cargo || user.cargo || 'Não Informado',
         data_registro: p.data_registro?.toDate()?.toISOString() || null
       };

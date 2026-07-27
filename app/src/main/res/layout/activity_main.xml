@@ -160,6 +160,17 @@
                 android:textColor="#F8FAFC"
                 android:textSize="16sp"
                 android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvSessionCount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="👥 0 pessoas registradas nesta turma"
+                android:textColor="#38BDF8"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:visibility="gone"
                 android:layout_marginBottom="12dp" />
 
             <LinearLayout

@@ -60,6 +60,13 @@ export async function GET(req: Request) {
 
     let results = [];
 
+    // Se for leitura de crachá NFC (ex: 328001633101 ou 310098817093), extrair o miolo central de matrícula (remove 2 prefixo e 2 sufixo)
+    let mioloNfc = '';
+    const rawDigits = queryStr.trim().replace(/\D/g, '');
+    if (rawDigits.length >= 10 && (rawDigits.startsWith('31') || rawDigits.startsWith('32'))) {
+      mioloNfc = rawDigits.substring(2, rawDigits.length - 2).replace(/^0+/, '');
+    }
+
     // Busca
     for (const u of users) {
       // 1. Busca por ID, Matrícula, RUT ou CPF (com ou sem traço/pontos/zeros)
@@ -71,8 +78,9 @@ export async function GET(req: Request) {
           uIdClean === queryClean ||
           u.identificador.toLowerCase() === queryStr.trim().toLowerCase() ||
           matClean === queryClean ||
+          (mioloNfc !== '' && (matClean === mioloNfc || uIdClean === mioloNfc)) ||
           (u.matricula && String(u.matricula).toLowerCase() === queryStr.trim().toLowerCase()) ||
-          (queryClean.length >= 4 && (uIdClean.startsWith(queryClean) || uIdClean.includes(queryClean) || (matClean.length >= 4 && matClean.includes(queryClean))))
+          (queryClean.length >= 4 && mioloNfc === '' && (uIdClean.startsWith(queryClean) || uIdClean.includes(queryClean) || (matClean.length >= 4 && matClean.includes(queryClean))))
         ) {
           results.push(u);
           continue;

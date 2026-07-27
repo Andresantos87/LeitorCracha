@@ -38,6 +38,13 @@ import android.widget.AutoCompleteTextView
 import android.widget.EditText
 import android.widget.FrameLayout
 
+data class ColaboradorAPI(
+    val nome: String,
+    val empresa: String,
+    val cargo: String,
+    val matricula: String
+)
+
 class MainActivity : AppCompatActivity() {
 
     // Chave de acesso do Setor 0 do Mifare Classic
@@ -54,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnScanQr: Button
     private lateinit var btnManualRegister: Button
     private lateinit var tvSessionId: TextView
+    private lateinit var tvSessionCount: TextView
     private lateinit var btnScanSession: Button
     private lateinit var btnSelectSession: Button
 
@@ -65,6 +73,8 @@ class MainActivity : AppCompatActivity() {
     private var listaEmpresasChile = mutableListOf<String>()
     private var listaEmpresasTodas = mutableListOf<String>()
     private var paisTreinamentoAtivo = "BRASIL"
+
+    private var presencaListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     // Instância do Firebase Firestore
     private val db = Firebase.firestore
@@ -80,6 +90,7 @@ class MainActivity : AppCompatActivity() {
         btnScanQr        = findViewById(R.id.btnScanQr)
         btnManualRegister = findViewById(R.id.btnManualRegister)
         tvSessionId      = findViewById(R.id.tvSessionId)
+        tvSessionCount   = findViewById(R.id.tvSessionCount)
         btnScanSession   = findViewById(R.id.btnScanSession)
         btnSelectSession = findViewById(R.id.btnSelectSession)
 
@@ -466,12 +477,9 @@ class MainActivity : AppCompatActivity() {
                                     tvTurmaSub.setTextColor(Color.parseColor("#94A3B8"))
                                     
                                     turmaItemView.setOnClickListener {
-                                        treinamentoIdStr = doc.id
-                                        paisTreinamentoAtivo = doc.getString("pais") ?: if (cursoNome.contains("laja", true) || cursoNome.contains("santa fe", true) || cursoNome.contains("pacifico", true) || cursoNome.contains("chile", true) || cursoNome.contains("talca", true) || cursoNome.contains("nacimiento", true) || cursoNome.contains("valdivia", true)) "CHILE" else "BRASIL"
+                                        val pais = doc.getString("pais") ?: if (cursoNome.contains("laja", true) || cursoNome.contains("santa fe", true) || cursoNome.contains("pacifico", true) || cursoNome.contains("chile", true) || cursoNome.contains("talca", true) || cursoNome.contains("nacimiento", true) || cursoNome.contains("valdivia", true)) "CHILE" else "BRASIL"
                                         val display = if (nomeTurma.isNotBlank()) "$cursoNome ($nomeTurma)" else cursoNome
-                                        tvSessionId.text = display
-                                        tvStatus.text = "✅ Turma selecionada com sucesso!"
-                                        tvStatus.setTextColor(getColor(R.color.colorSuccess))
+                                        atualizarSessaoAtiva(doc.id, display, pais)
                                         dialog.dismiss()
                                     }
                                     container.addView(turmaItemView)
@@ -552,18 +560,26 @@ class MainActivity : AppCompatActivity() {
             } else {
                 val scannedData = result.contents
                 if (currentScanMode == "SESSION") {
-                    treinamentoIdStr = scannedData.substringAfterLast("/")
-                    tvSessionId.text = "Turma ID: $treinamentoIdStr"
-                    tvStatus.text = "✅ Sessão vinculada"
-                    tvStatus.setTextColor(getColor(R.color.colorSuccess))
+                    val idSessao = scannedData.substringAfterLast("/")
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            val snap = db.collection("treinamentos").document(treinamentoIdStr).get().await()
+                            val snap = db.collection("treinamentos").document(idSessao).get().await()
                             if (snap.exists()) {
-                                val nome = snap.getString("nome") ?: ""
-                                paisTreinamentoAtivo = snap.getString("pais") ?: if (nome.contains("laja", true) || nome.contains("santa fe", true) || nome.contains("pacifico", true) || nome.contains("chile", true) || nome.contains("talca", true) || nome.contains("nacimiento", true) || nome.contains("valdivia", true)) "CHILE" else "BRASIL"
+                                val nome = snap.getString("nome") ?: "Turma QR"
+                                val pais = snap.getString("pais") ?: if (nome.contains("laja", true) || nome.contains("santa fe", true) || nome.contains("pacifico", true) || nome.contains("chile", true) || nome.contains("talca", true) || nome.contains("nacimiento", true) || nome.contains("valdivia", true)) "CHILE" else "BRASIL"
+                                withContext(Dispatchers.Main) {
+                                    atualizarSessaoAtiva(idSessao, nome, pais)
+                                }
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    atualizarSessaoAtiva(idSessao, "Turma ID: $idSessao", "BRASIL")
+                                }
                             }
-                        } catch (e: Exception) {}
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                atualizarSessaoAtiva(idSessao, "Turma ID: $idSessao", "BRASIL")
+                            }
+                        }
                     }
                 } else if (currentScanMode == "RUT") {
                     CoroutineScope(Dispatchers.IO).launch {
@@ -576,8 +592,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun atualizarSessaoAtiva(id: String, display: String, pais: String) {
+        treinamentoIdStr = id
+        paisTreinamentoAtivo = pais
+        tvSessionId.text = display
+        tvStatus.text = "✅ Turma ativa selecionada!"
+        tvStatus.setTextColor(getColor(R.color.colorSuccess))
+
+        presencaListener?.remove()
+        presencaListener = db.collection("treinamentos").document(treinamentoIdStr).collection("presencas")
+            .addSnapshotListener { snapshot, error ->
+                if (error == null && snapshot != null) {
+                    val count = snapshot.size()
+                    runOnUiThread {
+                        tvSessionCount.text = "👥 $count pessoa(s) registrada(s) nesta turma"
+                        tvSessionCount.visibility = View.VISIBLE
+                    }
+                }
+            }
+    }
+
     // --- BUSCA NA API OFICIAL DA NETLIFY ---
-    private suspend fun buscarNomeNaAPI(identificador: String): String? {
+    private suspend fun buscarNomeNaAPI(identificador: String): ColaboradorAPI? {
         return withContext(Dispatchers.IO) {
             try {
                 val urlString = "https://treinamentocmpc.netlify.app/api/buscar-colaborador?id=$identificador"
@@ -597,7 +633,13 @@ class MainActivity : AppCompatActivity() {
                         val dataArray = jsonObject.optJSONArray("data")
                         if (dataArray != null && dataArray.length() > 0) {
                             val obj = dataArray.getJSONObject(0)
-                            return@withContext obj.optString("nome", null)
+                            val nome = obj.optString("nome", "").trim()
+                            val emp = obj.optString("empresa", "").ifEmpty { obj.optString("planta", "") }.trim()
+                            val cargo = obj.optString("cargo", "").trim()
+                            val mat = obj.optString("matricula", "").trim()
+                            if (nome.isNotEmpty()) {
+                                return@withContext ColaboradorAPI(nome, emp, cargo, mat)
+                            }
                         }
                     }
                 }
@@ -610,8 +652,34 @@ class MainActivity : AppCompatActivity() {
 
     // --- COMUNICAÇÃO COM O FIREBASE CLOUD ---
     private suspend fun enviarParaServidor(identificador: String, modo: String) {
-        val nomeEncontrado = buscarNomeNaAPI(identificador)
-        val textoExibicao = nomeEncontrado ?: identificador
+        val colab = buscarNomeNaAPI(identificador)
+        
+        val isProprio = identificador.startsWith("31")
+        val isTerceiro = identificador.startsWith("32")
+        val tipoCracha = when {
+            isProprio -> "PRÓPRIO CMPC"
+            isTerceiro -> "TERCEIRO"
+            else -> "AVULSO"
+        }
+
+        val textoExibicao = if (colab != null) {
+            val badgeIcon = when {
+                isProprio -> "🟢 Próprio CMPC"
+                isTerceiro -> "🟠 Terceiro"
+                else -> ""
+            }
+            buildString {
+                append("👤 ${colab.nome}")
+                if (colab.empresa.isNotEmpty() && colab.empresa != "Outros") {
+                    append("\n🏢 ${colab.empresa}")
+                }
+                if (badgeIcon.isNotEmpty()) {
+                    append("\n$badgeIcon")
+                }
+            }
+        } else {
+            "ID: $identificador\n(Não encontrado no cadastro)"
+        }
 
         withContext(Dispatchers.Main) {
             isWaitingForTag = false
@@ -640,7 +708,11 @@ class MainActivity : AppCompatActivity() {
             
             val data = hashMapOf(
                 "identificador_lido" to identificador,
-                "nome" to (nomeEncontrado ?: ""),
+                "nome" to (colab?.nome ?: ""),
+                "empresa" to (colab?.empresa ?: ""),
+                "cargo" to (colab?.cargo ?: ""),
+                "matricula" to (colab?.matricula ?: ""),
+                "tipo_colaborador" to tipoCracha,
                 "modo_registro" to modo,
                 "data_registro" to FieldValue.serverTimestamp()
             )
@@ -671,5 +743,10 @@ class MainActivity : AppCompatActivity() {
             tvStatus.text = msg
             tvStatus.setTextColor(getColor(R.color.colorError))
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        presencaListener?.remove()
     }
 }
