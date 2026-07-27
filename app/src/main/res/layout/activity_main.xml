@@ -165,36 +165,16 @@
                         android:visibility="gone"
                         android:layout_marginBottom="12dp" />
 
-                    <LinearLayout
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSelectSession"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnSelectSession"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            android:text="LISTAR TURMAS"
-                            android:textSize="13sp"
-                            android:textStyle="bold"
-                            android:textColor="#0F172A"
-                            app:backgroundTint="#38BDF8"
-                            app:cornerRadius="10dp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnScanSession"
-                            android:layout_width="0dp"
-                            android:layout_height="48dp"
-                            android:layout_weight="1"
-                            android:layout_marginStart="6dp"
-                            android:text="LER QR CODE"
-                            android:textSize="13sp"
-                            android:textColor="#F8FAFC"
-                            app:backgroundTint="#334155"
-                            app:cornerRadius="10dp" />
-                    </LinearLayout>
+                        android:layout_height="50dp"
+                        android:text="📋 LISTAR E SELECIONAR TURMAS"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#0F172A"
+                        app:backgroundTint="#38BDF8"
+                        app:cornerRadius="12dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

@@ -62,7 +62,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnManualRegister: Button
     private lateinit var tvSessionId: TextView
     private lateinit var tvSessionCount: TextView
-    private lateinit var btnScanSession: Button
     private lateinit var btnSelectSession: Button
 
     private var isWaitingForTag = false
@@ -91,7 +90,6 @@ class MainActivity : AppCompatActivity() {
         btnManualRegister = findViewById(R.id.btnManualRegister)
         tvSessionId      = findViewById(R.id.tvSessionId)
         tvSessionCount   = findViewById(R.id.tvSessionCount)
-        btnScanSession   = findViewById(R.id.btnScanSession)
         btnSelectSession = findViewById(R.id.btnSelectSession)
 
         val adapter = NfcAdapter.getDefaultAdapter(this)
@@ -102,20 +100,9 @@ class MainActivity : AppCompatActivity() {
             btnScanNfc.text = "NFC INDISPONÍVEL"
         }
 
-        // Seletor de sessões na nuvem (Sem QR Code)
+        // Seletor de sessões na nuvem
         btnSelectSession.setOnClickListener {
             abrirSeletorDeSessao()
-        }
-
-        // Leitura de QR Code para vincular sessão
-        btnScanSession.setOnClickListener {
-            currentScanMode = "SESSION"
-            val integrator = IntentIntegrator(this)
-            integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
-            integrator.setPrompt("Escaneie o QR Code no Painel Web")
-            integrator.setCameraId(0)
-            integrator.setBeepEnabled(true)
-            integrator.initiateScan()
         }
 
         // Botão principal de leitura NFC
