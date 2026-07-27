@@ -43,9 +43,10 @@ export default function LoginPage() {
       <div className="w-full max-w-md animate-in slide-in-from-bottom-8 duration-700">
         <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl">
           
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400 mb-2">
-              CMPC Treinamentos
+          <div className="text-center mb-8 flex flex-col items-center">
+            <img src="/logo-cmpc.png" alt="CMPC Treinamentos" className="h-20 w-20 object-contain bg-white rounded-full p-2 mb-4 shadow-xl border-2 border-blue-500/30" />
+            <h1 className="text-2xl font-bold text-white tracking-tight mb-1">
+              CMPC <span className="text-blue-400 font-extrabold">TREINAMENTOS</span>
             </h1>
             <p className="text-slate-400 text-sm">Entre com suas credenciais para acessar o painel</p>
           </div>

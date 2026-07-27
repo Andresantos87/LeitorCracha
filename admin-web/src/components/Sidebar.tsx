@@ -29,11 +29,12 @@ export function Sidebar({ role, userName }: { role?: string; userName?: string }
 
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex">
-      <div className="p-6 border-b border-slate-800">
-        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400 flex items-center gap-2">
-          <ShieldAlert className="h-6 w-6 text-blue-500" />
-          CMPC Painel
-        </h1>
+      <div className="p-6 border-b border-slate-800 flex items-center gap-3">
+        <img src="/logo-cmpc.png" alt="CMPC Treinamentos" className="h-10 w-10 object-contain bg-white rounded-full p-1 shadow-md" />
+        <div className="flex flex-col">
+          <h1 className="text-lg font-bold text-white tracking-tight leading-tight">CMPC</h1>
+          <span className="text-xs font-semibold text-blue-400 tracking-wider">TREINAMENTOS</span>
+        </div>
       </div>
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {

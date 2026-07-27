@@ -26,6 +26,17 @@
             android:orientation="vertical"
             android:gravity="center_horizontal">
 
+            <!-- Logo CMPC Treinamentos -->
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@mipmap/ic_launcher"
+                android:background="@drawable/bg_logo_circle"
+                android:padding="8dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="8dp"
+                android:contentDescription="Logo CMPC Treinamentos" />
+
             <!-- Título do Sistema Atualizado -->
             <TextView
                 android:id="@+id/tvTitle"
@@ -33,11 +44,10 @@
                 android:layout_height="wrap_content"
                 android:text="REGISTRO DE PRESENÇA EM TREINAMENTO"
                 android:textColor="@color/colorWhite"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:gravity="center"
-                android:letterSpacing="0.03"
-                android:layout_marginTop="8dp"/>
+                android:letterSpacing="0.02" />
 
             <!-- Subtítulo -->
             <TextView
