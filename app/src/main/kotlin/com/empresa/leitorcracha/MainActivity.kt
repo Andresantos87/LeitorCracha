@@ -559,8 +559,10 @@ class MainActivity : AppCompatActivity() {
                 mostrarErro("Leitura cancelada")
             } else {
                 val scannedData = result.contents
-                if (currentScanMode == "SESSION") {
-                    val idSessao = scannedData.substringAfterLast("/")
+                val isRutQr = scannedData.contains("RUN=", true) || scannedData.contains("RUT=", true) || scannedData.contains("registrocivil", true) || scannedData.contains("docstatus", true) || scannedData.contains("cedula", true)
+
+                if (currentScanMode == "SESSION" && !isRutQr) {
+                    val idSessao = scannedData.substringAfterLast("/").replace("/", "_").trim()
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
                             val snap = db.collection("treinamentos").document(idSessao).get().await()
@@ -581,15 +583,32 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                     }
-                } else if (currentScanMode == "RUT") {
+                } else {
+                    // É leitura de QR de Colaborador / RUT chileno (seja no botão RUT ou se bipou o RUT no botão da turma)
+                    val rutLimpo = extrairRutOuIdentificador(scannedData)
                     CoroutineScope(Dispatchers.IO).launch {
-                        enviarParaServidor(scannedData, "QR_CODE")
+                        enviarParaServidor(rutLimpo, "QR_CODE")
                     }
                 }
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data)
         }
+    }
+
+    private fun extrairRutOuIdentificador(raw: String): String {
+        var texto = raw.trim()
+        if (texto.contains("RUN=", ignoreCase = true)) {
+            texto = texto.substringAfter("RUN=", "").substringAfter("run=", "").substringBefore("&").trim()
+        } else if (texto.contains("RUT=", ignoreCase = true)) {
+            texto = texto.substringAfter("RUT=", "").substringAfter("rut=", "").substringBefore("&").trim()
+        } else if (texto.contains("id=", ignoreCase = true) && texto.contains("http", ignoreCase = true)) {
+            texto = texto.substringAfter("id=", "").substringAfter("ID=", "").substringBefore("&").trim()
+        } else if (texto.startsWith("http", ignoreCase = true) || texto.contains("/")) {
+            texto = texto.substringAfterLast("/").substringBefore("?").trim()
+        }
+        texto = texto.replace("/", "_").replace("#", "").replace("$", "").replace("[", "").replace("]", "").trim()
+        return texto
     }
 
     private fun atualizarSessaoAtiva(id: String, display: String, pais: String) {
@@ -613,7 +632,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     // --- BUSCA NA API OFICIAL DA NETLIFY ---
-    private suspend fun buscarNomeNaAPI(identificador: String): ColaboradorAPI? {
+    private suspend fun buscarNomeNaAPI(identificadorRaw: String): ColaboradorAPI? {
+        val identificador = extrairRutOuIdentificador(identificadorRaw)
         return withContext(Dispatchers.IO) {
             try {
                 val urlString = "https://treinamentocmpc.netlify.app/api/buscar-colaborador?id=$identificador"
@@ -651,7 +671,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     // --- COMUNICAÇÃO COM O FIREBASE CLOUD ---
-    private suspend fun enviarParaServidor(identificador: String, modo: String) {
+    private suspend fun enviarParaServidor(identificadorRaw: String, modo: String) {
+        val identificador = extrairRutOuIdentificador(identificadorRaw)
         val colab = buscarNomeNaAPI(identificador)
         
         val isProprio = identificador.startsWith("31")
