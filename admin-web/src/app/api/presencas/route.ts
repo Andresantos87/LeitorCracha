@@ -75,8 +75,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'ID do treinamento e identificador são obrigatórios' }, { status: 400 });
     }
 
-    // Referência para presencas/{identificador}
-    const docRef = doc(db, 'treinamentos', treinamentoId, 'presencas', identificador);
+    // Limpar identificador (extrair RUT se for link chileno, remover barras para evitar erro no Firestore)
+    let idLimpo = String(identificador).trim();
+    if (idLimpo.includes('RUN=') || idLimpo.includes('rut=')) {
+      const match = idLimpo.match(/[?&](?:RUN|rut|RUT)=([0-9a-zA-Z\.\-]+)/i);
+      if (match && match[1]) idLimpo = match[1];
+    }
+    idLimpo = idLimpo.replace(/[\/\\#?]/g, '_').trim();
+    if (!idLimpo) idLimpo = `VISITANTE_${Date.now()}`;
+
+    // Referência para presencas/{idLimpo}
+    const docRef = doc(db, 'treinamentos', treinamentoId, 'presencas', idLimpo);
     
     // Verifica se já existe
     const snapshot = await getDoc(docRef);
@@ -86,7 +95,7 @@ export async function POST(req: Request) {
 
     // Preparar dados
     const dataToSave: any = {
-      identificador_lido: identificador,
+      identificador_lido: idLimpo,
       modo_registro: modo_registro,
       data_registro: serverTimestamp()
     };
@@ -103,9 +112,9 @@ export async function POST(req: Request) {
     // Se nome ou planta não foram enviados no body, busca no arquivo de colaboradores
     if (!dataToSave.nome || !dataToSave.planta) {
       const usersDict = loadUsers() || {};
-      let user = usersDict[identificador];
+      let user = usersDict[idLimpo] || usersDict[identificador];
       if (!user) {
-        const idClean = String(identificador).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+        const idClean = String(idLimpo).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
         for (const [key, u] of Object.entries(usersDict)) {
           const kClean = key.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
           const matClean = u.matricula ? String(u.matricula).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : '';
@@ -130,6 +139,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, message: 'Presença registrada com sucesso.' });
   } catch (error: any) {
     console.error("ERRO PRESENCA MANUAL:", error);
-    return NextResponse.json({ success: false, error: 'Erro ao salvar presença manual.' }, { status: 500 });
+    return NextResponse.json({ success: false, error: error?.message || 'Erro ao salvar presença manual.' }, { status: 500 });
   }
 }

@@ -188,7 +188,8 @@ export default function RegistrarPresenca() {
         setSuccess(true);
       }
     } catch (e: any) {
-      setErrorMsg("Erro de conexão.");
+      console.error("Erro no envio:", e);
+      setErrorMsg(e?.message || "Erro de conexão ao comunicar com o servidor.");
     }
     setIsSubmitting(false);
   };
@@ -278,7 +279,7 @@ export default function RegistrarPresenca() {
           {mode === 'MANUAL' && (
             <form onSubmit={handleManualSubmit} className="space-y-6 animate-in fade-in">
               <div className="space-y-3">
-                <label className="text-sm font-medium text-slate-300">Digite seu CPF ou Matrícula</label>
+                <label className="text-sm font-medium text-slate-300">Digite seu Nome, CPF ou Matrícula</label>
                 <div className="relative flex items-center">
                   <input 
                     type="text" 
@@ -286,21 +287,49 @@ export default function RegistrarPresenca() {
                     value={manualId}
                     onChange={e => setManualId(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                    className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-blue-500 text-white font-mono text-lg transition-colors pr-24"
-                    placeholder="Ex: 123456"
+                    className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-blue-500 text-white font-mono text-lg transition-colors pr-28"
+                    placeholder="Ex: 123456 ou Nome"
                   />
-                  {manualId && (
-                    <button
-                      type="button"
-                      onClick={() => { if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
-                      className="absolute right-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg uppercase tracking-wider transition-all shadow-md"
-                    >
-                      Concluir
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => { if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
+                    className="absolute right-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg uppercase tracking-wider transition-all shadow-md flex items-center gap-1"
+                  >
+                    🔍 Buscar
+                  </button>
                 </div>
                 
                 {isSearchingId && <div className="text-xs text-blue-400 animate-pulse pt-1">Buscando seus dados...</div>}
+                
+                {!selectedColab && colabResults.length > 0 && (
+                  <div className="mt-4 p-3 bg-slate-900 border border-blue-500/40 rounded-xl space-y-2 max-h-64 overflow-y-auto pr-1 animate-in fade-in shadow-xl">
+                    <p className="text-xs font-bold text-blue-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <span>👥 Selecione seu nome abaixo ({colabResults.length} encontrados):</span>
+                    </p>
+                    {colabResults.map((c, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setSelectedColab(c);
+                          setManualId(c.identificador);
+                          if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+                            document.activeElement.blur();
+                          }
+                        }}
+                        className="w-full p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-xl text-left transition-all flex items-center justify-between group shadow-sm"
+                      >
+                        <div>
+                          <h5 className="font-bold text-white text-sm group-hover:text-emerald-400 transition-colors">{c.nome}</h5>
+                          <p className="text-xs text-slate-400 mt-0.5">🏢 {c.planta || 'Empresa não informada'} | 💼 {c.cargo || 'Não informado'} | <span className="font-mono text-blue-400">ID: {c.identificador}</span></p>
+                        </div>
+                        <div className="bg-emerald-950/80 text-emerald-300 font-bold text-xs px-3 py-1.5 rounded-lg border border-emerald-500/30 group-hover:bg-emerald-600 group-hover:text-white transition-all flex-shrink-0 ml-2">
+                          ✓ Selecionar
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 
                 {selectedColab && (
                   <div className="mt-4 p-4 bg-emerald-900/20 border border-emerald-900/50 rounded-xl">

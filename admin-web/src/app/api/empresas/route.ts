@@ -64,20 +64,47 @@ export async function GET(req: Request) {
           "MAULE", "BUIN", "BOXBOARD", "TISSUE"
         ];
 
+        const corporateKeywords = [
+          "LTDA", "LIMITADA", "S.A.", "S/A", "S A", "ME", "EPP", "SERVIC", "COMERC", 
+          "INDUSTRI", "ENGENHA", "INGENIE", "TRANSPORT", "MONTAG", "MONTAJ", "CONSTRUC", 
+          "LOGIST", "SOLUC", "SOLUT", "SISTEM", "MAQUIN", "MECANIC", "ELETRIC", "ELECTRIC", 
+          "SEGUR", "CONSULT", "LABORAT", "CLIMATIZ", "PRESTAD", "TERCEIR", "VISITANT", 
+          "CMPC", "VALMET", "ANDRITZ", "POYRY", "SIEMENS", "ABB", "WEG", "KONEKRANES", 
+          "METSA", "GUAÍBA", "SAPUCAIA", "LAJA", "PACIFICO", "SANTA FE", "TALCA", 
+          "NACIMIENTO", "CORDILLERA", "PUENTE ALTO", "VALDIVIA", "MININCO", "BOXBOARD", 
+          "TISSUE", "FORESTAL", "MANTENC", "MANUTENC", "AGUA", "WATER", "CHEMIC", 
+          "QUIMIC", "AUTOMAC", "FLOREST", "MEDICIN", "OCUPACION", "TRABALH", "TEMPORAR", 
+          "PREDIAL", "AMBIENT", "ENVIRONMENT", "ECOLAB", "TECH", "TECNOLOG", "CENTRALIZ", 
+          "CRANES", "RENT", "GAS", "ENERG", "ENG", "IND", "COM", "REP", "LOCAC", 
+          "ARRIEND", "FABRIC", "EQUIP", "OBR", "PROJET", "PROYECT", "SOCIET", "SOCIEDAD", 
+          "COMPANIA", "CIA", "CORP", "GROUP", "GRUP", "ASSOCIA", "COOPERAT", "INSTITUT", 
+          "FUNDAC", "HOSPITAL", "CLINIC", "ACADEM", "ESCOL", "UNIVERSID", "FACULDAD", 
+          "CENTRO", "BUREAU", "AGENC", "STUDIO", "OFFICE", "GLOBAL", "BRASIL", "CHILE", 
+          "INTERNATIONAL", "INTERNACIONAL", "EMPRESA", "BUSINESS", "PARTNERS", "VENTURES", 
+          "HOLDING", "SERVICES", "SUPPLY", "SUSTENTAB", "RECURSOS", "HUMANOS", "SECURITY", 
+          "CLEAN", "LIMP", "ASSOC", "CLIN"
+        ];
+
         Object.values(usersMap).forEach((u: any) => {
           const addEmp = (val: string) => {
             if (!val || typeof val !== 'string') return;
-            const clean = val.trim().toUpperCase();
-            if (clean.length === 0 || clean === 'OUTROS' || clean === '000000000000 -') return;
+            // Remove códigos SAP numéricos iniciais (ex: "504 ", "514 - ", "0001 ")
+            let clean = val.trim().toUpperCase().replace(/^[\d\s\-\._\/]+/, '').trim();
             
+            // Ignora se for vazio, "OUTROS", muito curto ou contiver sequências numéricas (CPFs/Matrículas/Telefones na coluna errada)
+            if (clean.length < 3 || clean === 'OUTROS' || clean === '-' || /\d{3,}/.test(clean)) return;
+            
+            // Garante que é uma entidade corporativa (e não o nome de um funcionário que caiu na coluna)
+            const isCorporate = corporateKeywords.some(kw => clean.includes(kw));
+            if (!isCorporate && !globais.includes(clean)) return;
+
             todasSet.add(clean);
 
-            // Verifica se pertence à planta/unidade do Chile (SAT)
+            // Verifica se pertence à planta/unidade do Chile
             const isChile = chileKeywords.some(kw => clean.includes(kw));
             if (isChile) {
               chileSet.add(clean);
             } else {
-              // Caso contrário, no cadastro da CMPC é do Brasil (Rainbow / Códigos 504/508/514 / Guaíba / Ltda / S.A.)
               brasilSet.add(clean);
             }
           };
