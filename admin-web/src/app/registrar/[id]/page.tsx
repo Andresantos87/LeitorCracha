@@ -22,6 +22,7 @@ export default function RegistrarPresenca() {
   const [nomeTreinamento, setNomeTreinamento] = useState("Carregando Sessão...");
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
   const [pageUrl, setPageUrl] = useState("");
+  const [showGiantQR, setShowGiantQR] = useState(false);
 
   const [nomeAvulso, setNomeAvulso] = useState("");
   const [empresaAvulsa, setEmpresaAvulsa] = useState("");
@@ -180,6 +181,13 @@ export default function RegistrarPresenca() {
         body: JSON.stringify(bodyData)
       });
       
+      const contentType = res.headers.get("content-type");
+      if (!res.ok || !contentType || !contentType.includes("application/json")) {
+        const errText = await res.text().catch(() => "");
+        console.error("Erro HTML no servidor:", res.status, errText);
+        throw new Error(`Erro no servidor (${res.status}): Não foi possível processar a assinatura no momento. Tente novamente.`);
+      }
+
       const json = await res.json();
       if (!json.success) {
         setErrorMsg(json.error);
@@ -200,7 +208,12 @@ export default function RegistrarPresenca() {
       setErrorMsg("Você precisa assinar antes de confirmar a presença.");
       return;
     }
-    const assinaturaBase64 = sigCanvas.current?.getCanvas().toDataURL("image/png");
+    let assinaturaBase64 = "";
+    try {
+      assinaturaBase64 = sigCanvas.current?.getTrimmedCanvas().toDataURL("image/png") || sigCanvas.current?.getCanvas().toDataURL("image/png") || "";
+    } catch (err) {
+      assinaturaBase64 = sigCanvas.current?.getCanvas().toDataURL("image/png") || "";
+    }
     const idFinal = manualId.trim() || `VISITANTE_${Date.now().toString().slice(-6)}`;
     await submitRegistro(idFinal, 'AUTO_REGISTRO', assinaturaBase64, nomeAvulso || undefined, empresaAvulsa || undefined);
   };
@@ -242,20 +255,64 @@ export default function RegistrarPresenca() {
           </div>
 
           {pageUrl && (
-            <div className="hidden sm:block flex-shrink-0 bg-white p-2 rounded-lg shadow-lg">
-              <QRCodeSVG value={pageUrl} size={64} level="H" />
+            <div 
+              onClick={() => setShowGiantQR(true)}
+              className="hidden sm:flex flex-col items-center flex-shrink-0 bg-slate-900 border-2 border-emerald-500/60 hover:border-emerald-400 p-3 rounded-2xl shadow-xl cursor-pointer transition-all hover:scale-105 group"
+              title="Clique para projetar o QR Code em tela cheia"
+            >
+              <div className="bg-white p-2.5 rounded-xl shadow-md">
+                <QRCodeSVG value={pageUrl} size={130} level="H" />
+              </div>
+              <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider mt-2 flex items-center gap-1 group-hover:text-white transition-colors">
+                🔍 Projetar na Tela
+              </span>
             </div>
           )}
         </div>
 
         {pageUrl && (
-          <div className="sm:hidden flex items-center justify-center gap-3 mb-6 bg-slate-900 border border-slate-800 p-3 rounded-xl mx-2">
-            <div className="bg-white p-1 rounded-md">
-              <QRCodeSVG value={pageUrl} size={50} level="H" />
+          <div 
+            onClick={() => setShowGiantQR(true)}
+            className="sm:hidden flex items-center justify-between gap-3 mb-6 bg-slate-900 border-2 border-emerald-500/50 p-3.5 rounded-2xl mx-2 cursor-pointer active:scale-95 transition-all shadow-lg"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-white p-1.5 rounded-lg flex-shrink-0">
+                <QRCodeSVG value={pageUrl} size={64} level="H" />
+              </div>
+              <div className="text-left">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Acessar pelo Celular</h4>
+                <p className="text-[11px] text-slate-300 mt-0.5">Toque aqui para ampliar o QR Code na tela</p>
+              </div>
             </div>
-            <p className="text-xs text-slate-400 text-left">
-              Leia o QR Code para acessar o Totem no seu celular.
-            </p>
+            <span className="bg-emerald-600 text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg uppercase tracking-wider flex-shrink-0">
+              🔍 Ampliar
+            </span>
+          </div>
+        )}
+
+        {showGiantQR && pageUrl && (
+          <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200 text-center">
+            <div className="max-w-lg w-full bg-slate-900 border-2 border-blue-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center">
+              <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wider mb-2">{nomeTreinamento}</h2>
+              {turmaTreinamento && (
+                <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full font-bold text-xs sm:text-sm uppercase tracking-wide mb-6 shadow-md">
+                  🏷️ Turma: {turmaTreinamento}
+                </span>
+              )}
+              <div className="bg-white p-5 sm:p-6 rounded-3xl shadow-2xl border-4 border-emerald-400 my-2">
+                <QRCodeSVG value={pageUrl} size={320} level="H" />
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-emerald-400 mt-6 uppercase tracking-wider">
+                📱 Aponte a câmera do celular para registrar sua presença!
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowGiantQR(false)}
+                className="mt-6 px-8 py-3 bg-red-600 hover:bg-red-500 text-white font-bold text-sm rounded-xl uppercase tracking-wider transition-all shadow-lg"
+              >
+                ✕ Fechar Projeção
+              </button>
+            </div>
           </div>
         )}
 

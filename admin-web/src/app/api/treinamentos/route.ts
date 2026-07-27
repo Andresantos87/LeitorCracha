@@ -9,18 +9,21 @@ export async function GET() {
     const q = query(collection(db, "treinamentos"), orderBy("data", "desc"));
     const snapshot = await getDocs(q);
     
-    const treinamentos = [];
-    for (const doc of snapshot.docs) {
+    const treinamentos = await Promise.all(snapshot.docs.map(async (doc) => {
       const data = doc.data();
-      
-      // Contar as presenças para este treinamento
-      const presencasRef = collection(db, "treinamentos", doc.id, "presencas");
-      const countSnapshot = await getCountFromServer(presencasRef);
+      let count = 0;
+      try {
+        const presencasRef = collection(db, "treinamentos", doc.id, "presencas");
+        const countSnapshot = await getCountFromServer(presencasRef);
+        count = countSnapshot.data().count || 0;
+      } catch (e) {
+        console.warn("Erro ao contar presenças:", e);
+      }
       
       const isChileName = /laja|santa fe|pacifico|talca|nacimiento|cordillera|puente alto|valdivia|mininco|chile/i.test(data.nome || '') || /laja|santa fe|pacifico|talca|nacimiento|cordillera|puente alto|valdivia|mininco|chile/i.test(data.planta || '');
       const paisFinal = data.pais || (isChileName ? 'CHILE' : 'BRASIL');
       
-      treinamentos.push({
+      return {
         id: doc.id,
         nome: data.nome,
         turma: data.turma || "",
@@ -30,10 +33,10 @@ export async function GET() {
         instrutor_email: data.instrutor_email,
         status_encerrado: data.status_encerrado || false,
         _count: {
-          registros: countSnapshot.data().count
+          registros: count
         }
-      });
-    }
+      };
+    }));
     
     return NextResponse.json({ success: true, data: treinamentos });
   } catch (error: any) {
