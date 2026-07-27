@@ -36,7 +36,18 @@ export async function GET(req: Request) {
 
     const presencas = snapshot.docs.map(doc => {
       const p = doc.data();
-      const user = usersDict[p.identificador_lido] || {};
+      let user = usersDict[p.identificador_lido];
+      if (!user) {
+        const raw = String(p.identificador_lido || '').replace(/\D/g, '');
+        const mioloA = raw.length >= 10 ? raw.substring(2, raw.length - 2).replace(/^0+/, '') : '';
+        const mioloB = raw.length >= 4 ? raw.substring(2).replace(/^0+/, '') : '';
+        user = Object.values(usersDict).find((u: any) => {
+          const mat = String(u.matricula || '').replace(/\D/g, '').replace(/^0+/, '');
+          const uid = String(u.identificador || '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+          return (mat && mat.length >= 4 && (mat === mioloA || mat === mioloB || (raw.length >= 10 && mat.length >= 6 && raw.includes(mat)))) ||
+                 (uid && uid === raw);
+        }) || {};
+      }
       
       return {
         id: doc.id,

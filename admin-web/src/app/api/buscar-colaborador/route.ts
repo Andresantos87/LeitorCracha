@@ -60,11 +60,13 @@ export async function GET(req: Request) {
 
     let results = [];
 
-    // Se for leitura de crachá NFC (ex: 328001633101 ou 310098817093), extrair o miolo central de matrícula (remove 2 prefixo e 2 sufixo)
-    let mioloNfc = '';
+    // Se for leitura de crachá NFC (ex: 328001633101 ou 310098817093), extrair miolos possíveis
+    let mioloA = ''; // Sem os 2 últimos dígitos (ex: 328001633101 -> 80016331)
+    let mioloB = ''; // Com os dígitos finais (ex: 310098817093 -> 98817093)
     const rawDigits = queryStr.trim().replace(/\D/g, '');
-    if (rawDigits.length >= 10 && (rawDigits.startsWith('31') || rawDigits.startsWith('32'))) {
-      mioloNfc = rawDigits.substring(2, rawDigits.length - 2).replace(/^0+/, '');
+    if (rawDigits.length >= 8 && (rawDigits.startsWith('31') || rawDigits.startsWith('32'))) {
+      if (rawDigits.length >= 10) mioloA = rawDigits.substring(2, rawDigits.length - 2).replace(/^0+/, '');
+      mioloB = rawDigits.substring(2).replace(/^0+/, '');
     }
 
     // Busca
@@ -78,9 +80,11 @@ export async function GET(req: Request) {
           uIdClean === queryClean ||
           u.identificador.toLowerCase() === queryStr.trim().toLowerCase() ||
           matClean === queryClean ||
-          (mioloNfc !== '' && (matClean === mioloNfc || uIdClean === mioloNfc)) ||
+          (mioloA !== '' && (matClean === mioloA || uIdClean === mioloA)) ||
+          (mioloB !== '' && (matClean === mioloB || uIdClean === mioloB)) ||
+          (rawDigits.length >= 10 && matClean.length >= 6 && rawDigits.includes(matClean)) ||
           (u.matricula && String(u.matricula).toLowerCase() === queryStr.trim().toLowerCase()) ||
-          (queryClean.length >= 4 && mioloNfc === '' && (uIdClean.startsWith(queryClean) || uIdClean.includes(queryClean) || (matClean.length >= 4 && matClean.includes(queryClean))))
+          (queryClean.length >= 4 && mioloA === '' && mioloB === '' && (uIdClean.startsWith(queryClean) || uIdClean.includes(queryClean) || (matClean.length >= 4 && matClean.includes(queryClean))))
         ) {
           results.push(u);
           continue;
