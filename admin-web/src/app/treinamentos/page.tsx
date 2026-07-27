@@ -843,7 +843,7 @@ export default function Treinamentos() {
                 </button>
 
                 <a 
-                  href={`/registrar/${selectedTreinamento.id}`}
+                  href={`/registrar/${selectedTreinamento.id}?nome=${encodeURIComponent(selectedTreinamento.nome)}&turma=${encodeURIComponent(selectedTreinamento.turma || "")}&pais=${selectedTreinamento.pais || "BRASIL"}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-4 p-5 bg-slate-800/80 hover:bg-slate-800 rounded-2xl border border-slate-700 hover:border-emerald-500/50 transition-all shadow-lg text-left group"

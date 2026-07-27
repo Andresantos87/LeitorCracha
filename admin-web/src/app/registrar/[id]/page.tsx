@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { UserCheck, CheckCircle2, AlertCircle, Camera, Keyboard } from "lucide-react";
 import { useParams } from "next/navigation";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5QrcodeScanner, Html5Qrcode } from "html5-qrcode";
 import SignatureCanvas from "react-signature-canvas";
 import { PenTool } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -36,8 +36,19 @@ export default function RegistrarPresenca() {
 
   // Buscar nome do treinamento, pegar URL atual e carregar lista de empresas
   useEffect(() => {
+    let paramNome = "";
+    let paramTurma = "";
     if (typeof window !== 'undefined') {
-      setPageUrl(window.location.href);
+      const url = new URL(window.location.href);
+      paramNome = url.searchParams.get('nome') || "";
+      paramTurma = url.searchParams.get('turma') || "";
+      const paramPais = url.searchParams.get('pais');
+      
+      if (paramNome) setNomeTreinamento(paramNome);
+      if (paramTurma) setTurmaTreinamento(paramTurma);
+      if (paramPais === 'CHILE' || paramPais === 'BRASIL') setPaisTreinamento(paramPais as any);
+      
+      setPageUrl(url.toString());
     }
 
     fetch('/api/empresas')
@@ -62,11 +73,13 @@ export default function RegistrarPresenca() {
           setNomeTreinamento(t.nome);
           setTurmaTreinamento(t.turma || "");
           if (t.pais) setPaisTreinamento(t.pais);
-        } else {
-          setNomeTreinamento("Treinamento Desconhecido");
+        } else if (!paramNome) {
+          setNomeTreinamento("Treinamento Avulso");
         }
       })
-      .catch(() => setNomeTreinamento("Treinamento"));
+      .catch(() => {
+        if (!paramNome) setNomeTreinamento("Treinamento");
+      });
   }, [id]);
 
   useEffect(() => {
@@ -137,20 +150,35 @@ export default function RegistrarPresenca() {
   // QR Code Scanner effect
   useEffect(() => {
     if (mode === 'QR' && !success) {
-      const scanner = new Html5QrcodeScanner("qr-reader", { 
-        qrbox: { width: 250, height: 250 }, 
-        fps: 5,
-      }, false);
-      
-      scanner.render(async (decodedText) => {
-        scanner.clear();
-        await submitRegistro(decodedText, 'QR_CODE');
-      }, (err) => {
-        // ignora erros de leitura de frame vazio
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      let isMounted = true;
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        async (decodedText) => {
+          if (!isMounted) return;
+          if (html5QrCode.isScanning) {
+            await html5QrCode.stop().catch(() => {});
+          }
+          await submitRegistro(decodedText, 'QR_CODE');
+        },
+        () => {}
+      ).catch((err) => {
+        console.warn("Início automático da câmera falhou ou sem permissão, carregando UI manual:", err);
+        if (!isMounted) return;
+        const scanner = new Html5QrcodeScanner("qr-reader", { qrbox: { width: 250, height: 250 }, fps: 5 }, false);
+        scanner.render(async (decodedText) => {
+          scanner.clear();
+          await submitRegistro(decodedText, 'QR_CODE');
+        }, () => {});
       });
 
       return () => {
-        scanner.clear().catch(e => console.error(e));
+        isMounted = false;
+        if (html5QrCode.isScanning) {
+          html5QrCode.stop().catch(() => {});
+        }
       };
     }
   }, [mode, success]);
@@ -181,16 +209,15 @@ export default function RegistrarPresenca() {
         body: JSON.stringify(bodyData)
       });
       
-      const contentType = res.headers.get("content-type");
-      if (!res.ok || !contentType || !contentType.includes("application/json")) {
+      if (!res.ok) {
         const errText = await res.text().catch(() => "");
-        console.error("Erro HTML no servidor:", res.status, errText);
-        throw new Error(`Erro no servidor (${res.status}): Não foi possível processar a assinatura no momento. Tente novamente.`);
+        console.error("Erro no servidor:", res.status, errText);
+        throw new Error(`Erro no servidor (${res.status}): Não foi possível processar a presença. Tente novamente.`);
       }
 
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ success: true }));
       if (!json.success) {
-        setErrorMsg(json.error);
+        setErrorMsg(json.error || "Não foi possível registrar a presença.");
       } else {
         setManualId(identificadorLido); 
         setSuccess(true);
@@ -417,17 +444,35 @@ export default function RegistrarPresenca() {
                         <label className="text-xs font-bold text-slate-300 uppercase block mb-1">Empresa / Planta *</label>
                         <input 
                           type="text" 
-                          list="lista-empresas-web"
                           value={empresaAvulsa} 
                           onChange={e => setEmpresaAvulsa(e.target.value)} 
-                          placeholder="Ex: CMPC - Guaíba ou Nome da Empresa" 
+                          placeholder="Digite para buscar sua empresa..." 
                           className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400 font-medium text-base"
                         />
-                        <datalist id="lista-empresas-web">
-                          {empresasList.map((emp, i) => (
-                            <option key={i} value={emp} />
-                          ))}
-                        </datalist>
+                        {empresasList.length > 0 && (
+                          <div className="mt-2 max-h-40 overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl divide-y divide-slate-800 shadow-xl">
+                            <p className="text-[10px] font-bold text-amber-300 uppercase px-3 py-1.5 bg-slate-900">
+                              🏢 Selecione sua empresa ({empresasList.filter(emp => !empresaAvulsa || emp.toLowerCase().includes(empresaAvulsa.toLowerCase())).length} opções):
+                            </p>
+                            {empresasList
+                              .filter(emp => !empresaAvulsa || emp.toLowerCase().includes(empresaAvulsa.toLowerCase()))
+                              .slice(0, 15)
+                              .map((emp, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => {
+                                    setEmpresaAvulsa(emp);
+                                    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+                                  }}
+                                  className="w-full text-left px-4 py-2.5 hover:bg-slate-800 text-slate-200 hover:text-white text-xs font-semibold transition-colors flex items-center justify-between group"
+                                >
+                                  <span>{emp}</span>
+                                  <span className="text-[10px] bg-slate-800 group-hover:bg-amber-600 text-slate-400 group-hover:text-white px-2 py-0.5 rounded transition-colors flex-shrink-0 ml-2">✓ Selecionar</span>
+                                </button>
+                              ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
