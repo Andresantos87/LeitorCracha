@@ -685,43 +685,95 @@ class MainActivity : AppCompatActivity() {
     private fun showAttendeesDialog() {
         if (treinamentoIdStr.isEmpty()) return
         
-        val dialog = android.app.AlertDialog.Builder(this)
+        val loadingDialog = android.app.AlertDialog.Builder(this)
             .setTitle("Carregando...")
             .setMessage("Buscando presenças na nuvem...")
             .create()
-        dialog.show()
+        loadingDialog.show()
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val snap = db.collection("treinamentos").document(treinamentoIdStr)
                     .collection("presencas").get().await()
                 
-                val names = mutableListOf<String>()
+                // Usar data class para armazenar as presencas antes de ordenar
+                data class Presenca(val nome: String, val empresa: String, val modo: String)
+                val presencas = mutableListOf<Presenca>()
+                
                 for (doc in snap.documents) {
                     val nome = doc.getString("nome") ?: "Sem Nome"
                     val empresa = doc.getString("empresa") ?: doc.getString("planta") ?: "Sem Empresa"
                     val modo = doc.getString("modo_registro") ?: "NFC"
-                    names.add("👤 $nome\n🏢 $empresa | ⚙️ Modo: $modo")
+                    presencas.add(Presenca(nome, empresa, modo))
                 }
-                names.sort()
+                
+                // Ordenar alfabeticamente pelo nome
+                presencas.sortBy { it.nome }
                 
                 withContext(Dispatchers.Main) {
-                    if (names.isEmpty()) {
-                        dialog.setTitle("Lista Vazia")
-                        dialog.setMessage("Nenhum registro encontrado para esta turma.")
-                    } else {
-                        dialog.dismiss()
+                    loadingDialog.dismiss()
+                    
+                    if (presencas.isEmpty()) {
                         android.app.AlertDialog.Builder(this@MainActivity)
-                            .setTitle("Presenças Confirmadas (${names.size})")
-                            .setItems(names.toTypedArray(), null)
+                            .setTitle("Lista Vazia")
+                            .setMessage("Nenhum registro encontrado para esta turma.")
                             .setPositiveButton("Fechar", null)
                             .show()
+                        return@withContext
                     }
+                    
+                    val dialog = Dialog(this@MainActivity)
+                    val view = LayoutInflater.from(this@MainActivity).inflate(R.layout.dialog_attendees_list, null)
+                    dialog.setContentView(view)
+                    dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                    
+                    val displayMetrics = resources.displayMetrics
+                    val dialogWidth = (displayMetrics.widthPixels * 0.92).toInt()
+                    dialog.window?.setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    
+                    val tvTitle = view.findViewById<TextView>(R.id.tvAttendeesTitle)
+                    val tvSubtitle = view.findViewById<TextView>(R.id.tvAttendeesSubtitle)
+                    val llContainer = view.findViewById<LinearLayout>(R.id.llAttendeesContainer)
+                    val btnClose = view.findViewById<Button>(R.id.btnCancelDialog)
+                    
+                    tvTitle.text = "PRESENÇAS (${presencas.size})"
+                    tvSubtitle.text = "${presencas.size} pessoa(s) registrada(s) nesta turma"
+                    
+                    for (p in presencas) {
+                        val itemView = LayoutInflater.from(this@MainActivity).inflate(R.layout.item_attendee_card, llContainer, false)
+                        val tvName = itemView.findViewById<TextView>(R.id.tvAttendeeName)
+                        val tvCompany = itemView.findViewById<TextView>(R.id.tvAttendeeCompany)
+                        val tvMode = itemView.findViewById<TextView>(R.id.tvAttendeeMode)
+                        val tvModeIcon = itemView.findViewById<TextView>(R.id.tvAttendeeModeIcon)
+                        
+                        tvName.text = p.nome.uppercase()
+                        tvCompany.text = p.empresa
+                        tvMode.text = p.modo
+                        
+                        if (p.modo.contains("MANUAL")) {
+                            tvModeIcon.text = "✍️ "
+                            tvMode.setTextColor(Color.parseColor("#FBBF24")) // amber-400
+                        } else if (p.modo.contains("QR")) {
+                            tvModeIcon.text = "📷 "
+                            tvMode.setTextColor(Color.parseColor("#60A5FA")) // blue-400
+                        } else {
+                            tvModeIcon.text = "⚙️ "
+                        }
+                        
+                        llContainer.addView(itemView)
+                    }
+                    
+                    btnClose.setOnClickListener { dialog.dismiss() }
+                    dialog.show()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    dialog.setTitle("Erro")
-                    dialog.setMessage("Erro ao buscar lista: ${e.message}")
+                    loadingDialog.dismiss()
+                    android.app.AlertDialog.Builder(this@MainActivity)
+                        .setTitle("Erro")
+                        .setMessage("Erro ao buscar lista: ${e.message}")
+                        .setPositiveButton("Fechar", null)
+                        .show()
                 }
             }
         }

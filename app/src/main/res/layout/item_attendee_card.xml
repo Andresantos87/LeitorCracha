@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_attendee_item"
+    android:padding="12dp"
+    android:gravity="center_vertical">
+
+    <FrameLayout
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="@drawable/bg_icon_circle"
+        android:layout_marginEnd="12dp">
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="👤"
+            android:textSize="20sp"
+            android:layout_gravity="center"/>
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvAttendeeName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NOME DO COLABORADOR"
+            android:textColor="#F1F5F9"
+            android:textSize="14sp"
+            android:textStyle="bold"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🏢 "
+                android:textSize="10sp"/>
+                
+            <TextView
+                android:id="@+id/tvAttendeeCompany"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EMPRESA"
+                android:textColor="#94A3B8"
+                android:textSize="11sp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/llAttendeeMode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_mode_badge"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:id="@+id/tvAttendeeModeIcon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚙️ "
+            android:textSize="10sp"/>
+            
+        <TextView
+            android:id="@+id/tvAttendeeMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NFC"
+            android:textColor="#34D399"
+            android:textStyle="bold"
+            android:textSize="10sp"/>
+    </LinearLayout>
+
+</LinearLayout>
