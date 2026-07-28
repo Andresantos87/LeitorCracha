@@ -114,34 +114,38 @@ export async function POST(req: Request) {
       dataToSave.empresa = planta || empresa;
     }
 
-    // Se nome ou planta não foram enviados no body, busca no arquivo de colaboradores
-    if (!dataToSave.nome || !dataToSave.planta) {
-      const usersDict = loadUsers() || {};
-      let user = usersDict[idLimpo] || usersDict[identificador];
-      if (!user) {
-        const idClean = String(idLimpo).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
-        for (const [key, u] of Object.entries(usersDict)) {
-          const kClean = key.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
-          const matClean = u.matricula ? String(u.matricula).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : '';
-          if (kClean === idClean || (matClean && matClean === idClean)) {
-            user = u;
-            break;
-          }
+    // Busca no arquivo de colaboradores (SAT) para completar nome, planta, empresa e cargo
+    const usersDict = loadUsers() || {};
+    let user = usersDict[idLimpo] || usersDict[identificador];
+    if (!user) {
+      const idClean = String(idLimpo).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+      for (const [key, u] of Object.entries(usersDict)) {
+        const kClean = key.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+        const matClean = u.matricula ? String(u.matricula).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : '';
+        if (kClean === idClean || (matClean && matClean === idClean)) {
+          user = u;
+          break;
         }
       }
-      if (user) {
-        if (!dataToSave.nome && user.nome) dataToSave.nome = user.nome;
-        if (!dataToSave.planta && user.planta) {
-          dataToSave.planta = user.planta;
-          dataToSave.empresa = user.planta;
-        }
-      }
+    }
+    if (user) {
+      if (!dataToSave.nome && user.nome) dataToSave.nome = user.nome;
+      if (!dataToSave.planta && user.planta) dataToSave.planta = user.planta;
+      if (!dataToSave.empresa && (user.empresa || user.planta)) dataToSave.empresa = user.empresa || user.planta;
+      if (!dataToSave.cargo && user.cargo) dataToSave.cargo = user.cargo;
     }
 
     // Salva na subcoleção presencas
     await setDoc(docRef, dataToSave);
 
-    return NextResponse.json({ success: true, message: 'Presença registrada com sucesso.', nome: dataToSave.nome || idLimpo, identificador: idLimpo });
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Presença registrada com sucesso.', 
+      nome: dataToSave.nome || idLimpo, 
+      identificador: idLimpo,
+      empresa: dataToSave.empresa || dataToSave.planta || (user ? user.empresa || user.planta : 'Não Informada'),
+      cargo: dataToSave.cargo || (user ? user.cargo : 'Não Informado')
+    });
   } catch (error: any) {
     console.error("ERRO PRESENCA MANUAL:", error);
     return NextResponse.json({ success: false, error: error?.message || 'Erro ao salvar presença manual.' }, { status: 500 });

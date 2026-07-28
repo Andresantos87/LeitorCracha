@@ -19,6 +19,9 @@ export default function RegistrarPresenca() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
+  const [successId, setSuccessId] = useState("");
+  const [successEmpresa, setSuccessEmpresa] = useState("");
+  const [successCargo, setSuccessCargo] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [nomeTreinamento, setNomeTreinamento] = useState("Carregando Sessão...");
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
@@ -218,6 +221,9 @@ export default function RegistrarPresenca() {
       }
 
       setSuccessName(json.nome || nome || selectedColab?.nome || identificadorLido);
+      setSuccessId(json.identificador || identificadorLido);
+      setSuccessEmpresa(json.empresa || empresa || selectedColab?.empresa || "");
+      setSuccessCargo(json.cargo || selectedColab?.cargo || "");
       setManualId(identificadorLido); 
       setSuccess(true);
     } catch (e: any) {
@@ -250,14 +256,28 @@ export default function RegistrarPresenca() {
           <CheckCircle2 className="h-16 w-16 text-emerald-400" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">Presença Registrada!</h1>
-        <div className="bg-slate-900 border-2 border-emerald-500/40 rounded-2xl p-5 my-4 max-w-sm w-full shadow-2xl animate-in zoom-in-95">
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
-            <span>👤 Colaborador Confirmado:</span>
+        <div className="bg-slate-900 border-2 border-emerald-500/40 rounded-2xl p-5 my-4 max-w-sm w-full shadow-2xl animate-in zoom-in-95 text-left">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 text-center flex items-center justify-center gap-1">
+            <span>👤 Colaborador Confirmado no SAT:</span>
           </p>
-          <p className="text-xl font-black text-emerald-400 break-words">{successName}</p>
-          <div className="mt-3 pt-3 border-t border-slate-800 text-[11px] font-mono text-slate-400 flex justify-between items-center">
-            <span>ID / Matrícula:</span>
-            <span className="text-white font-bold">{manualId}</span>
+          <p className="text-xl font-black text-emerald-400 break-words text-center mb-4">{successName}</p>
+          <div className="space-y-2 border-t border-slate-800 pt-3 text-xs font-mono">
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-slate-400">ID / Matrícula:</span>
+              <span className="text-white font-bold truncate max-w-[190px]" title={successId}>{successId}</span>
+            </div>
+            {successEmpresa && successEmpresa !== 'Não Informada' && (
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-slate-400">Empresa:</span>
+                <span className="text-blue-300 font-bold truncate max-w-[190px]" title={successEmpresa}>{successEmpresa}</span>
+              </div>
+            )}
+            {successCargo && successCargo !== 'Não Informado' && (
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-slate-400">Cargo no SAT:</span>
+                <span className="text-amber-300 font-medium truncate max-w-[190px]" title={successCargo}>{successCargo}</span>
+              </div>
+            )}
           </div>
         </div>
         <p className="text-slate-400 text-xs mt-2">Tela atualizando para o próximo registro em 3 segundos...</p>
