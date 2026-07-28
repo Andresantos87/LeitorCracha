@@ -89,32 +89,7 @@ export async function POST(req: Request) {
     idLimpo = idLimpo.replace(/[\/\\#?]/g, '_').trim();
     if (!idLimpo) idLimpo = `VISITANTE_${Date.now()}`;
 
-    // Referência para presencas/{idLimpo}
-    const docRef = doc(db, 'treinamentos', treinamentoId, 'presencas', idLimpo);
-    
-    // Verifica se já existe
-    const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) {
-      return NextResponse.json({ success: false, error: 'Colaborador já registrado neste treinamento.' }, { status: 400 });
-    }
-
-    // Preparar dados
-    const dataToSave: any = {
-      identificador_lido: idLimpo,
-      modo_registro: modo_registro,
-      data_registro: serverTimestamp()
-    };
-    
-    if (assinaturaBase64) {
-      dataToSave.assinaturaBase64 = assinaturaBase64;
-    }
-    if (nome) dataToSave.nome = nome;
-    if (planta || empresa) {
-      dataToSave.planta = planta || empresa;
-      dataToSave.empresa = planta || empresa;
-    }
-
-    // Busca no arquivo de colaboradores (SAT) para completar nome, planta, empresa e cargo
+    // Busca no arquivo de colaboradores (SAT) primeiro para saber nome, matrícula, empresa e cargo oficiais
     const usersDict = loadUsers() || {};
     let user = usersDict[idLimpo] || usersDict[identificador];
     if (!user) {
@@ -128,6 +103,19 @@ export async function POST(req: Request) {
         }
       }
     }
+
+    // Preparar dados preliminares para validação
+    const dataToSave: any = {
+      identificador_lido: idLimpo,
+      modo_registro: modo_registro,
+      data_registro: serverTimestamp()
+    };
+    if (assinaturaBase64) dataToSave.assinaturaBase64 = assinaturaBase64;
+    if (nome) dataToSave.nome = nome;
+    if (planta || empresa) {
+      dataToSave.planta = planta || empresa;
+      dataToSave.empresa = planta || empresa;
+    }
     if (user) {
       if (!dataToSave.nome && user.nome) dataToSave.nome = user.nome;
       if (!dataToSave.planta && user.planta) dataToSave.planta = user.planta;
@@ -135,7 +123,43 @@ export async function POST(req: Request) {
       if (!dataToSave.cargo && user.cargo) dataToSave.cargo = user.cargo;
     }
 
-    // Salva na subcoleção presencas
+    const nomeFinal = dataToSave.nome ? String(dataToSave.nome).trim() : '';
+
+    // Verifica se já existe na turma (por ID, por Nome ou por Matrícula do SAT)
+    const presencasRef = collection(db, 'treinamentos', treinamentoId, 'presencas');
+    const allPresencasSnap = await getDocs(presencasRef);
+
+    for (const d of allPresencasSnap.docs) {
+      if (d.id === idLimpo) {
+        return NextResponse.json({ success: false, error: 'Colaborador já registrado nesta turma.' }, { status: 400 });
+      }
+      const data = d.data();
+      if (data.identificador_lido && data.identificador_lido === idLimpo) {
+        return NextResponse.json({ success: false, error: 'Colaborador já registrado nesta turma.' }, { status: 400 });
+      }
+      if (nomeFinal && data.nome && nomeFinal.toUpperCase() !== 'DESCONHECIDO' && !nomeFinal.toUpperCase().startsWith('VISITANTE')) {
+        if (String(data.nome).trim().toUpperCase() === nomeFinal.toUpperCase()) {
+          const modoAnterior = data.modo_registro ? ` (Modo anterior: ${data.modo_registro})` : '';
+          return NextResponse.json({ 
+            success: false, 
+            error: `O colaborador ${data.nome} já está registrado nesta turma${modoAnterior}!` 
+          }, { status: 400 });
+        }
+      }
+      if (user && user.matricula) {
+        const matSat = String(user.matricula).trim();
+        if (d.id === matSat || (data.identificador_lido && String(data.identificador_lido).trim() === matSat) || (data.matricula && String(data.matricula).trim() === matSat)) {
+          const modoAnterior = data.modo_registro ? ` (Modo anterior: ${data.modo_registro})` : '';
+          return NextResponse.json({ 
+            success: false, 
+            error: `O colaborador ${data.nome || user.nome} já está registrado nesta turma${modoAnterior}!` 
+          }, { status: 400 });
+        }
+      }
+    }
+
+    // Referência para presencas/{idLimpo} e salvamento
+    const docRef = doc(db, 'treinamentos', treinamentoId, 'presencas', idLimpo);
     await setDoc(docRef, dataToSave);
 
     return NextResponse.json({ 

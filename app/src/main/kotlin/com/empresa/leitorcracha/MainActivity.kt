@@ -344,6 +344,19 @@ class MainActivity : AppCompatActivity() {
                         }
                         return@launch
                     }
+                    if (nome.isNotBlank() && !nome.equals("Desconhecido", ignoreCase = true) && !nome.startsWith("Visitante", ignoreCase = true)) {
+                        val querySnap = db.collection("treinamentos").document(treinamentoIdStr)
+                            .collection("presencas").whereEqualTo("nome", nome).get().await()
+                        if (!querySnap.isEmpty) {
+                            withContext(Dispatchers.Main) {
+                                progressBar.visibility = View.GONE
+                                btnConfirmManual.isEnabled = true
+                                btnConfirmManual.text = "CONFIRMAR E ASSINAR"
+                                Toast.makeText(this@MainActivity, "❌ O colaborador $nome já está registrado nesta turma!", Toast.LENGTH_LONG).show()
+                            }
+                            return@launch
+                        }
+                    }
 
                     val dados = hashMapOf(
                         "identificador_lido" to idParaSalvar,
@@ -712,6 +725,20 @@ class MainActivity : AppCompatActivity() {
                     tvStatus.setTextColor(getColor(R.color.colorError))
                 }
                 return
+            }
+            val nomeColab = colab?.nome ?: ""
+            if (nomeColab.isNotBlank() && !nomeColab.equals("Desconhecido", ignoreCase = true) && !nomeColab.startsWith("Visitante", ignoreCase = true)) {
+                val querySnap = db.collection("treinamentos").document(treinamentoIdStr)
+                    .collection("presencas").whereEqualTo("nome", nomeColab).get().await()
+                if (!querySnap.isEmpty) {
+                    withContext(Dispatchers.Main) {
+                        progressBar.visibility = View.GONE
+                        btnScanNfc.isEnabled = true
+                        tvStatus.text = "❌ $nomeColab Já Registrado!"
+                        tvStatus.setTextColor(getColor(R.color.colorError))
+                    }
+                    return
+                }
             }
             
             val data = hashMapOf(
