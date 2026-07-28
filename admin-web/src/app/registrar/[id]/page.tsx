@@ -18,6 +18,7 @@ export default function RegistrarPresenca() {
   const [isSearchingId, setIsSearchingId] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successName, setSuccessName] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [nomeTreinamento, setNomeTreinamento] = useState("Carregando Sessão...");
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
@@ -209,19 +210,16 @@ export default function RegistrarPresenca() {
         body: JSON.stringify(bodyData)
       });
       
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        console.error("Erro no servidor:", res.status, errText);
-        throw new Error(`Erro no servidor (${res.status}): Não foi possível processar a presença. Tente novamente.`);
+      const json = await res.json().catch(() => ({ success: res.ok, error: `Erro no servidor (${res.status}): Falha ao processar.` }));
+      if (!res.ok || !json.success) {
+        setErrorMsg(json.error || "Colaborador já registrado ou erro no servidor.");
+        setIsSubmitting(false);
+        return;
       }
 
-      const json = await res.json().catch(() => ({ success: true }));
-      if (!json.success) {
-        setErrorMsg(json.error || "Não foi possível registrar a presença.");
-      } else {
-        setManualId(identificadorLido); 
-        setSuccess(true);
-      }
+      setSuccessName(json.nome || nome || selectedColab?.nome || identificadorLido);
+      setManualId(identificadorLido); 
+      setSuccess(true);
     } catch (e: any) {
       console.error("Erro no envio:", e);
       setErrorMsg(e?.message || "Erro de conexão ao comunicar com o servidor.");
@@ -248,20 +246,30 @@ export default function RegistrarPresenca() {
   if (success) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
-        <div className="bg-emerald-900/20 p-6 rounded-full border border-emerald-500/30 mb-6 animate-bounce">
+        <div className="bg-emerald-900/20 p-6 rounded-full border border-emerald-500/30 mb-4 animate-bounce">
           <CheckCircle2 className="h-16 w-16 text-emerald-400" />
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">Presença Confirmada!</h1>
-        <p className="text-slate-400 mb-8 max-w-sm">Próximo registro em 3 segundos...</p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">Presença Registrada!</h1>
+        <div className="bg-slate-900 border-2 border-emerald-500/40 rounded-2xl p-5 my-4 max-w-sm w-full shadow-2xl animate-in zoom-in-95">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+            <span>👤 Colaborador Confirmado:</span>
+          </p>
+          <p className="text-xl font-black text-emerald-400 break-words">{successName}</p>
+          <div className="mt-3 pt-3 border-t border-slate-800 text-[11px] font-mono text-slate-400 flex justify-between items-center">
+            <span>ID / Matrícula:</span>
+            <span className="text-white font-bold">{manualId}</span>
+          </div>
+        </div>
+        <p className="text-slate-400 text-xs mt-2">Tela atualizando para o próximo registro em 3 segundos...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col p-1 sm:p-6 animate-in fade-in duration-500">
-      <div className="w-full max-w-2xl mx-auto mt-2 sm:mt-8 flex-1">
+    <div className="min-h-screen bg-slate-950 flex flex-col p-2 sm:p-6 animate-in fade-in duration-500">
+      <div className="w-full max-w-3xl mx-auto mt-2 sm:mt-8 flex-1">
         
-        <div className="flex items-center justify-between gap-4 mb-6 px-2 sm:px-0">
+        <div className="flex items-center justify-between gap-4 mb-6 px-1 sm:px-0">
           <div className="flex items-center gap-3">
             <div className="bg-blue-600/20 p-3 rounded-xl border border-blue-500/30">
               <UserCheck className="h-6 w-6 text-blue-400" />
@@ -300,7 +308,7 @@ export default function RegistrarPresenca() {
         {pageUrl && (
           <div 
             onClick={() => setShowGiantQR(true)}
-            className="sm:hidden flex items-center justify-between gap-3 mb-6 bg-slate-900 border-2 border-emerald-500/50 p-3.5 rounded-2xl mx-2 cursor-pointer active:scale-95 transition-all shadow-lg"
+            className="sm:hidden flex items-center justify-between gap-3 mb-6 bg-slate-900 border-2 border-emerald-500/50 p-3.5 rounded-2xl cursor-pointer active:scale-95 transition-all shadow-lg"
           >
             <div className="flex items-center gap-3">
               <div className="bg-white p-1.5 rounded-lg flex-shrink-0">
@@ -343,7 +351,7 @@ export default function RegistrarPresenca() {
           </div>
         )}
 
-        <div className="flex bg-slate-900 p-1.5 rounded-xl mb-6 border border-slate-800 mx-2 sm:mx-0 gap-1.5">
+        <div className="flex bg-slate-900 p-1.5 rounded-xl mb-6 border border-slate-800 gap-1.5">
           <button 
             onClick={() => setMode('MANUAL')}
             className={`flex-1 py-3 flex items-center justify-center gap-2 rounded-lg text-sm font-bold transition-all ${mode === 'MANUAL' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}`}
@@ -358,26 +366,26 @@ export default function RegistrarPresenca() {
           </button>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-6 shadow-2xl min-h-[300px]">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl min-h-[300px]">
           
           {mode === 'MANUAL' && (
             <form onSubmit={handleManualSubmit} className="space-y-6 animate-in fade-in">
               <div className="space-y-3">
-                <label className="text-sm font-medium text-slate-300">Digite seu Nome, CPF ou Matrícula</label>
-                <div className="relative flex items-center">
+                <label className="text-sm font-bold text-slate-200 block">Digite seu Nome, Documento ou Matrícula</label>
+                <div className="flex flex-col sm:flex-row gap-2.5">
                   <input 
                     type="text" 
                     autoFocus
                     value={manualId}
                     onChange={e => setManualId(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
-                    className="w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-blue-500 text-white font-mono text-lg transition-colors pr-28"
-                    placeholder="Ex: 123456 ou Nome"
+                    className="flex-1 px-4 py-3.5 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 text-white font-mono text-base transition-colors shadow-inner placeholder:text-slate-500"
+                    placeholder="Ex: 123456, CPF ou Nome..."
                   />
                   <button
                     type="button"
                     onClick={() => { if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
-                    className="absolute right-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg uppercase tracking-wider transition-all shadow-md flex items-center gap-1"
+                    className="px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5 flex-shrink-0 active:scale-95"
                   >
                     🔍 Buscar
                   </button>

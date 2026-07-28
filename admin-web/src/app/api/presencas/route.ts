@@ -141,7 +141,7 @@ export async function POST(req: Request) {
     // Salva na subcoleção presencas
     await setDoc(docRef, dataToSave);
 
-    return NextResponse.json({ success: true, message: 'Presença registrada com sucesso.' });
+    return NextResponse.json({ success: true, message: 'Presença registrada com sucesso.', nome: dataToSave.nome || idLimpo, identificador: idLimpo });
   } catch (error: any) {
     console.error("ERRO PRESENCA MANUAL:", error);
     return NextResponse.json({ success: false, error: error?.message || 'Erro ao salvar presença manual.' }, { status: 500 });
