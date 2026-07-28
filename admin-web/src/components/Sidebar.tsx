@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ShieldAlert, LogOut } from "lucide-react";
+import { LanguageToggle } from "./LanguageToggle";
 
 export function Sidebar({ role, userName }: { role?: string; userName?: string }) {
   const pathname = usePathname();
@@ -29,12 +30,15 @@ export function Sidebar({ role, userName }: { role?: string; userName?: string }
 
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex">
-      <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-        <img src="/logo-cmpc.png" alt="CMPC Treinamentos" className="h-10 w-10 object-contain bg-white rounded-full p-1 shadow-md" />
-        <div className="flex flex-col">
-          <h1 className="text-lg font-bold text-white tracking-tight leading-tight">CMPC</h1>
-          <span className="text-xs font-semibold text-blue-400 tracking-wider">TREINAMENTOS</span>
+      <div className="p-5 border-b border-slate-800 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <img src="/logo-cmpc.png" alt="CMPC Treinamentos" className="h-9 w-9 object-contain bg-white rounded-full p-1 shadow-md" />
+          <div className="flex flex-col">
+            <h1 className="text-base font-bold text-white tracking-tight leading-tight">CMPC</h1>
+            <span className="text-[10px] font-semibold text-blue-400 tracking-wider">TREINAMENTOS</span>
+          </div>
         </div>
+        <LanguageToggle />
       </div>
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {

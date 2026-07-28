@@ -6,10 +6,13 @@ import { Html5QrcodeScanner, Html5Qrcode } from "html5-qrcode";
 import SignatureCanvas from "react-signature-canvas";
 import { PenTool } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { useTranslation } from "@/lib/useTranslation";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 export default function RegistrarPresenca() {
   const params = useParams();
   const id = params.id as string;
+  const { t } = useTranslation();
 
   const [mode, setMode] = useState<'MANUAL' | 'QR'>('MANUAL');
   const [manualId, setManualId] = useState("");
@@ -295,7 +298,7 @@ export default function RegistrarPresenca() {
               <UserCheck className="h-6 w-6 text-blue-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-white uppercase tracking-wider mb-2">REGISTRAR PRESENÇA</h1>
+              <h1 className="text-2xl font-black text-white uppercase tracking-wider mb-2">{t.regTitle}</h1>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="bg-emerald-950/80 border border-emerald-500/50 px-2.5 py-1 rounded-lg text-emerald-300 font-bold text-xs uppercase tracking-wide flex items-center gap-1 shadow-sm">
                   📚 Treinamento: {nomeTreinamento}
@@ -309,20 +312,23 @@ export default function RegistrarPresenca() {
             </div>
           </div>
 
-          {pageUrl && (
-            <div 
-              onClick={() => setShowGiantQR(true)}
-              className="hidden sm:flex flex-col items-center flex-shrink-0 bg-slate-900 border-2 border-emerald-500/60 hover:border-emerald-400 p-3 rounded-2xl shadow-xl cursor-pointer transition-all hover:scale-105 group"
-              title="Clique para projetar o QR Code em tela cheia"
-            >
-              <div className="bg-white p-2.5 rounded-xl shadow-md">
-                <QRCodeSVG value={pageUrl} size={130} level="H" />
+          <div className="flex items-center gap-2">
+            <LanguageToggle />
+            {pageUrl && (
+              <div 
+                onClick={() => setShowGiantQR(true)}
+                className="hidden sm:flex flex-col items-center flex-shrink-0 bg-slate-900 border-2 border-emerald-500/60 hover:border-emerald-400 p-3 rounded-2xl shadow-xl cursor-pointer transition-all hover:scale-105 group"
+                title="Clique para projetar o QR Code em tela cheia"
+              >
+                <div className="bg-white p-2.5 rounded-xl shadow-md">
+                  <QRCodeSVG value={pageUrl} size={130} level="H" />
+                </div>
+                <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider mt-2 flex items-center gap-1 group-hover:text-white transition-colors">
+                  🔍 Projetar na Tela
+                </span>
               </div>
-              <span className="text-[11px] font-black text-emerald-400 uppercase tracking-wider mt-2 flex items-center gap-1 group-hover:text-white transition-colors">
-                🔍 Projetar na Tela
-              </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {pageUrl && (
@@ -391,7 +397,7 @@ export default function RegistrarPresenca() {
           {mode === 'MANUAL' && (
             <form onSubmit={handleManualSubmit} className="space-y-6 animate-in fade-in">
               <div className="space-y-3">
-                <label className="text-sm font-bold text-slate-200 block">Digite seu Nome, Documento ou Matrícula</label>
+                <label className="text-sm font-bold text-slate-200 block">{t.searchLabel}</label>
                 <div className="flex flex-col sm:flex-row gap-2.5">
                   <input 
                     type="text" 
@@ -400,18 +406,18 @@ export default function RegistrarPresenca() {
                     onChange={e => setManualId(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
                     className="flex-1 px-4 py-3.5 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 text-white font-mono text-base transition-colors shadow-inner placeholder:text-slate-500"
-                    placeholder="Ex: 123456, CPF ou Nome..."
+                    placeholder={t.searchPlaceholder}
                   />
                   <button
                     type="button"
                     onClick={() => { if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) document.activeElement.blur(); }}
                     className="px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5 flex-shrink-0 active:scale-95"
                   >
-                    🔍 Buscar
+                    🔍 {t.btnSearch}
                   </button>
                 </div>
                 
-                {isSearchingId && <div className="text-xs text-blue-400 animate-pulse pt-1">Buscando seus dados...</div>}
+                {isSearchingId && <div className="text-xs text-blue-400 animate-pulse pt-1">{t.btnSearching}</div>}
                 
                 {!selectedColab && colabResults.length > 0 && (
                   <div className="mt-4 p-3 bg-slate-900 border border-blue-500/40 rounded-xl space-y-2 max-h-64 overflow-y-auto pr-1 animate-in fade-in shadow-xl">
@@ -522,14 +528,14 @@ export default function RegistrarPresenca() {
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
                   <span className="text-sm font-bold text-slate-200 flex items-center gap-2">
                     <PenTool className="h-4 w-4 text-sky-400" />
-                    Sua Assinatura (Escreva no quadro abaixo):
+                    {t.drawSignLabel}
                   </span>
                   <button 
                     type="button" 
                     onClick={() => { sigCanvas.current?.clear(); setHasSignature(false); }}
                     className="self-end sm:self-auto px-3 py-1 text-xs font-semibold text-red-400 hover:text-white bg-red-950/40 hover:bg-red-900/60 rounded-lg border border-red-900/50 transition-colors"
                   >
-                    🧹 Limpar Assinatura
+                    🧹 {t.btnClear}
                   </button>
                 </div>
                 <div 
@@ -556,7 +562,7 @@ export default function RegistrarPresenca() {
                 }
                 className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg disabled:opacity-50 transition-colors"
               >
-                {isSubmitting ? 'Registrando...' : 'Confirmar Presença'}
+                {isSubmitting ? t.btnSaving : t.btnConfirm}
               </button>
             </form>
           )}

@@ -26,16 +26,48 @@
             android:orientation="vertical"
             android:gravity="center_horizontal">
 
-            <!-- Logo CMPC Treinamentos -->
-            <ImageView
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@mipmap/ic_launcher"
-                android:background="@drawable/bg_logo_circle"
-                android:padding="8dp"
+            <!-- Cabeçalho com Logo e Botão de Idioma -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:layout_marginBottom="8dp"
-                android:contentDescription="Logo CMPC Treinamentos" />
+                android:layout_marginBottom="8dp">
+
+                <!-- Logo CMPC Treinamentos perfeitamente circular -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="84dp"
+                    android:layout_height="84dp"
+                    android:layout_gravity="center"
+                    app:cardCornerRadius="42dp"
+                    app:cardElevation="6dp"
+                    app:strokeColor="#38BDF8"
+                    app:strokeWidth="2dp"
+                    app:cardBackgroundColor="#FFFFFF">
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:src="@mipmap/ic_launcher"
+                        android:scaleType="fitCenter"
+                        android:padding="4dp"
+                        android:contentDescription="Logo CMPC Treinamentos" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Botão Alternar Idioma -->
+                <TextView
+                    android:id="@+id/btnLanguage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/bg_eye_btn"
+                    android:text="🇧🇷 PT"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:padding="8dp"
+                    android:elevation="4dp" />
+            </FrameLayout>
 
             <!-- Título do Sistema Atualizado -->
             <TextView
@@ -164,16 +196,38 @@
                         android:textStyle="bold"
                         android:layout_marginBottom="4dp" />
 
-                    <TextView
-                        android:id="@+id/tvSessionCount"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="👥 0 pessoa(s) registrada(s) nesta turma"
-                        android:textColor="#38BDF8"
-                        android:textSize="13sp"
-                        android:textStyle="bold"
-                        android:visibility="gone"
-                        android:layout_marginBottom="12dp" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+                        
+                        <TextView
+                            android:id="@+id/tvSessionCount"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="👥 0 pessoa(s) registrada(s) nesta turma"
+                            android:textColor="#38BDF8"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:visibility="gone" />
+
+                        <TextView
+                            android:id="@+id/btnViewAttendees"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="👁️ VER LISTA"
+                            android:textColor="#FFFFFF"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:background="@drawable/bg_eye_btn"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="6dp"
+                            android:layout_marginStart="8dp"
+                            android:visibility="gone" />
+                    </LinearLayout>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSelectSession"

@@ -62,7 +62,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnManualRegister: Button
     private lateinit var tvSessionId: TextView
     private lateinit var tvSessionCount: TextView
+    private lateinit var btnViewAttendees: TextView
     private lateinit var btnSelectSession: Button
+    private lateinit var btnLanguage: TextView
+    private lateinit var tvTitle: TextView
+
+    private var currentLang = "PT"
 
     private var isWaitingForTag = false
     private var currentScanMode = ""
@@ -90,7 +95,10 @@ class MainActivity : AppCompatActivity() {
         btnManualRegister = findViewById(R.id.btnManualRegister)
         tvSessionId      = findViewById(R.id.tvSessionId)
         tvSessionCount   = findViewById(R.id.tvSessionCount)
+        btnViewAttendees = findViewById(R.id.btnViewAttendees)
         btnSelectSession = findViewById(R.id.btnSelectSession)
+        btnLanguage      = findViewById(R.id.btnLanguage)
+        tvTitle          = findViewById(R.id.tvTitle)
 
         val adapter = NfcAdapter.getDefaultAdapter(this)
         if (adapter != null && adapter.isEnabled) {
@@ -105,14 +113,19 @@ class MainActivity : AppCompatActivity() {
             abrirSeletorDeSessao()
         }
 
+        // Botão para ver lista de presenças da turma ativa
+        btnViewAttendees.setOnClickListener {
+            showAttendeesDialog()
+        }
+
         // Botão principal de leitura NFC
         btnScanNfc.setOnClickListener {
             if (treinamentoIdStr.isBlank()) {
-                Toast.makeText(this, "Selecione uma turma primeiro!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, if (currentLang == "ES") "¡Seleccione una capacitación primero!" else "Selecione uma turma primeiro!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             isWaitingForTag = true
-            tvStatus.text  = "Aproxime o crachá..."
+            tvStatus.text  = if (currentLang == "ES") "Acercar credencial..." else "Aproxime o crachá..."
             tvResult.visibility = View.GONE
             progressBar.visibility = View.VISIBLE
             btnScanNfc.isEnabled = false
@@ -121,7 +134,7 @@ class MainActivity : AppCompatActivity() {
         // Botão de leitura de QR Code avulso (RUT)
         btnScanQr.setOnClickListener {
             if (treinamentoIdStr.isBlank()) {
-                Toast.makeText(this, "Selecione uma turma primeiro!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, if (currentLang == "ES") "¡Seleccione una capacitación primero!" else "Selecione uma turma primeiro!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             currentScanMode = "RUT"
@@ -136,10 +149,47 @@ class MainActivity : AppCompatActivity() {
         // Botão de registro manual na tela
         btnManualRegister.setOnClickListener {
             if (treinamentoIdStr.isBlank()) {
-                Toast.makeText(this, "Selecione uma turma primeiro!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, if (currentLang == "ES") "¡Seleccione una capacitación primero!" else "Selecione uma turma primeiro!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             abrirDialogoRegistroManual()
+        }
+
+        // --- SISTEMA BILÍNGUE ---
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        currentLang = prefs.getString("language", "PT") ?: "PT"
+        
+        btnLanguage.setOnClickListener {
+            currentLang = if (currentLang == "PT") "ES" else "PT"
+            prefs.edit().putString("language", currentLang).apply()
+            updateLanguageUI()
+            Toast.makeText(this, if (currentLang == "ES") "Idioma cambiado a Español 🇨🇱" else "Idioma alterado para Português 🇧🇷", Toast.LENGTH_SHORT).show()
+        }
+        
+        updateLanguageUI()
+    }
+
+    private fun updateLanguageUI() {
+        val isEs = currentLang == "ES"
+        btnLanguage.text = if (isEs) "🇨🇱 ES" else "🇧🇷 PT"
+        tvTitle.text = if (isEs) "REGISTRO DE ASISTENCIA" else "REGISTRO DE PRESENÇA EM TREINAMENTO"
+        btnScanNfc.text = if (isEs) "ACERQUE LA CREDENCIAL NFC" else "APROXIME O CRACHÁ NFC"
+        btnScanQr.text = if (isEs) "📷 LEER QR CODE" else "📷 LER QR CODE"
+        btnManualRegister.text = if (isEs) "✍️ Búsqueda Manual / Firmar" else "✍️ Busca Manual / Assinar"
+        btnSelectSession.text = if (isEs) "☁️ SELECCIONAR CAPACITACIÓN" else "☁️ SELECIONAR TURMA"
+        btnViewAttendees.text = if (isEs) "👁️ VER LISTA" else "👁️ VER LISTA"
+        
+        if (!isWaitingForTag) {
+            tvStatus.text = if (isEs) "👋 ¡Toque 'Acercar Credencial' o 'QR'!" else "👋 Toque em 'Aproxime o Crachá' ou 'QR Code'!"
+        } else {
+            tvStatus.text = if (isEs) "📱 Acercar tarjeta al dorso del celular..." else "📱 Aproxime o crachá do verso do celular..."
+        }
+        
+        if (tvSessionCount.visibility == View.VISIBLE) {
+            val countStr = tvSessionCount.text.toString().filter { it.isDigit() }
+            if (countStr.isNotEmpty()) {
+                tvSessionCount.text = if (isEs) "👥 $countStr persona(s) registrada(s)" else "👥 $countStr pessoa(s) registrada(s)"
+            }
         }
     }
 
@@ -626,9 +676,55 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         tvSessionCount.text = "👥 $count pessoa(s) registrada(s) nesta turma"
                         tvSessionCount.visibility = View.VISIBLE
+                        btnViewAttendees.visibility = View.VISIBLE
                     }
                 }
             }
+    }
+
+    private fun showAttendeesDialog() {
+        if (treinamentoIdStr.isEmpty()) return
+        
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setTitle("Carregando...")
+            .setMessage("Buscando presenças na nuvem...")
+            .create()
+        dialog.show()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val snap = db.collection("treinamentos").document(treinamentoIdStr)
+                    .collection("presencas").get().await()
+                
+                val names = mutableListOf<String>()
+                for (doc in snap.documents) {
+                    val nome = doc.getString("nome") ?: "Sem Nome"
+                    val empresa = doc.getString("empresa") ?: doc.getString("planta") ?: "Sem Empresa"
+                    val modo = doc.getString("modo_registro") ?: "NFC"
+                    names.add("👤 $nome\n🏢 $empresa | ⚙️ Modo: $modo")
+                }
+                names.sort()
+                
+                withContext(Dispatchers.Main) {
+                    if (names.isEmpty()) {
+                        dialog.setTitle("Lista Vazia")
+                        dialog.setMessage("Nenhum registro encontrado para esta turma.")
+                    } else {
+                        dialog.dismiss()
+                        android.app.AlertDialog.Builder(this@MainActivity)
+                            .setTitle("Presenças Confirmadas (${names.size})")
+                            .setItems(names.toTypedArray(), null)
+                            .setPositiveButton("Fechar", null)
+                            .show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    dialog.setTitle("Erro")
+                    dialog.setMessage("Erro ao buscar lista: ${e.message}")
+                }
+            }
+        }
     }
 
     // --- BUSCA NA API OFICIAL DA NETLIFY ---

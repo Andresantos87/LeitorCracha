@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
+import { LanguageToggle } from "./LanguageToggle";
 
 export function Navigation({ role, userName }: { role?: string; userName?: string }) {
   const pathname = usePathname();
@@ -22,7 +23,10 @@ export function Navigation({ role, userName }: { role?: string; userName?: strin
           <img src="/logo-cmpc.png" alt="CMPC" className="h-8 w-8 object-contain bg-white rounded-full p-0.5" />
           <span className="text-base font-bold text-white tracking-tight">CMPC <span className="text-blue-400 font-semibold text-xs">TREINAMENTOS</span></span>
         </div>
-        <MobileNav role={role} />
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
+          <MobileNav role={role} />
+        </div>
       </header>
     </>
   );
