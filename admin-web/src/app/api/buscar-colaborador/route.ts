@@ -28,7 +28,8 @@ function loadUsersList() {
       nome: val.nome || 'Desconhecido',
       planta: val.planta || 'Outros',
       cargo: val.cargo || 'Não Informado',
-      matricula: val.matricula || ''
+      matricula: val.matricula || '',
+      cod_cracha: val.cod_cracha || ''
     }));
     
     lastMtime = stat.mtimeMs;
@@ -64,7 +65,7 @@ export async function GET(req: Request) {
     let mioloA = ''; // Sem os 2 últimos dígitos (ex: 328001633101 -> 80016331)
     let mioloB = ''; // Com os dígitos finais (ex: 310098817093 -> 98817093)
     const rawDigits = queryStr.trim().replace(/\D/g, '');
-    if (rawDigits.length >= 8 && (rawDigits.startsWith('31') || rawDigits.startsWith('32'))) {
+    if (rawDigits.length >= 8 && (rawDigits.startsWith('31') || rawDigits.startsWith('32') || rawDigits.startsWith('33'))) {
       if (rawDigits.length >= 10) mioloA = rawDigits.substring(2, rawDigits.length - 2).replace(/^0+/, '');
       mioloB = rawDigits.substring(2).replace(/^0+/, '');
     }
@@ -75,13 +76,16 @@ export async function GET(req: Request) {
       if (hasDigits || queryClean.length >= 3) {
         const uIdClean = (u.identificador || '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
         const matClean = (u.matricula ? String(u.matricula) : '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+        const crachaClean = (u.cod_cracha ? String(u.cod_cracha) : '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
 
         if (
           uIdClean === queryClean ||
           u.identificador.toLowerCase() === queryStr.trim().toLowerCase() ||
           matClean === queryClean ||
-          (mioloA !== '' && (matClean === mioloA || uIdClean === mioloA)) ||
-          (mioloB !== '' && (matClean === mioloB || uIdClean === mioloB)) ||
+          crachaClean === queryClean ||
+          (crachaClean !== '' && rawDigits.includes(crachaClean)) ||
+          (mioloA !== '' && (matClean === mioloA || uIdClean === mioloA || crachaClean === mioloA)) ||
+          (mioloB !== '' && (matClean === mioloB || uIdClean === mioloB || crachaClean === mioloB)) ||
           (rawDigits.length >= 10 && matClean.length >= 6 && rawDigits.includes(matClean)) ||
           (u.matricula && String(u.matricula).toLowerCase() === queryStr.trim().toLowerCase()) ||
           (queryClean.length >= 4 && mioloA === '' && mioloB === '' && (uIdClean.startsWith(queryClean) || uIdClean.includes(queryClean) || (matClean.length >= 4 && matClean.includes(queryClean))))

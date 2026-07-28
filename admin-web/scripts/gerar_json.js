@@ -29,6 +29,7 @@ function parseRainbowRow(row) {
     empresa: row.empresa || row.local_prestacao || 'Outros',
     cargo: row.cargo || row.cbo || 'Não Informado',
     matricula: row.cod_funcionario || '',
+    cod_cracha: row.cod_cracha || '',
     pais: 'BRASIL'
   };
 }
@@ -72,6 +73,7 @@ function parseMifibraRow(row) {
     empresa: planta,
     cargo: 'Não Informado',
     matricula: row.user_ref || '',
+    cod_cracha: '',
     pais
   };
 }
@@ -92,6 +94,7 @@ function parseSatRow(row) {
     empresa: row.trabempresanombre || row.empr_mandante || row.planta || 'Outros',
     cargo: row.trabocupacion || row.trabprofesion || 'Não Informado',
     matricula: row.trabid || '',
+    cod_cracha: '',
     pais: 'CHILE'
   };
 }
@@ -145,6 +148,7 @@ function processFile(fileIndex) {
             empresa: parsed.empresa || '',
             cargo: parsed.cargo,
             matricula: parsed.matricula,
+            cod_cracha: parsed.cod_cracha || '',
             pais: parsed.pais || ''
           };
         } else {
@@ -160,6 +164,9 @@ function processFile(fileIndex) {
           }
           if (parsed.matricula && !uniqueUsers[parsed.identificador].matricula) {
             uniqueUsers[parsed.identificador].matricula = parsed.matricula;
+          }
+          if (parsed.cod_cracha && !uniqueUsers[parsed.identificador].cod_cracha) {
+            uniqueUsers[parsed.identificador].cod_cracha = parsed.cod_cracha;
           }
           if (parsed.pais && !uniqueUsers[parsed.identificador].pais) {
             uniqueUsers[parsed.identificador].pais = parsed.pais;
