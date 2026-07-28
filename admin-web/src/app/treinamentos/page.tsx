@@ -443,19 +443,7 @@ export default function Treinamentos() {
                   className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-blue-900/20"
                 >
                   <UserPlus className="h-5 w-5" />
-                  <span>Gerenciar Presenças</span>
-                </button>
-
-                <button 
-                  onClick={() => {
-                    const url = `${window.location.origin}/registrar/${selectedTreinamento.id}`;
-                    navigator.clipboard.writeText(url);
-                    alert('Link copiado: ' + url);
-                  }}
-                  className="flex items-center space-x-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors border border-slate-700"
-                >
-                  <LinkIcon className="h-5 w-5" />
-                  <span>Copiar Link Externo</span>
+                  <span>Gerenciar Presenças (QR Code e Leitura)</span>
                 </button>
               </div>
             </div>
