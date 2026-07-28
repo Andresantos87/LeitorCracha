@@ -10,6 +10,27 @@ export interface Translations {
   logout: string;
   user: string;
 
+  // Dashboard Page
+  dashSubtitle: string;
+  activeTrainings: string;
+  roomsCreated: string;
+  totalColabs: string;
+  baseImported: string;
+  presenceRead: string;
+  signaturesCaptured: string;
+  adhesionRate: string;
+  avgTrainings: string;
+  recentTrainings: string;
+  latestRooms: string;
+  quickActions: string;
+  shortcuts: string;
+  createNew: string;
+  importExcel: string;
+  testBq: string;
+  readStatus: string;
+  loading: string;
+  noRecent: string;
+
   // Registrar Page
   regTitle: string;
   regSubtitle: string;
@@ -43,6 +64,26 @@ export const translations: Record<Language, Translations> = {
     logout: "Sair",
     user: "Usuário",
 
+    dashSubtitle: "Visão geral do sistema de treinamentos CMPC.",
+    activeTrainings: "Treinamentos Ativos",
+    roomsCreated: "Salas criadas no sistema",
+    totalColabs: "Total Colaboradores",
+    baseImported: "Base importada",
+    presenceRead: "Presenças Lidas",
+    signaturesCaptured: "Assinaturas capturadas",
+    adhesionRate: "Taxa de Adesão",
+    avgTrainings: "Média dos treinamentos",
+    recentTrainings: "Treinamentos Recentes",
+    latestRooms: "Últimas salas abertas no sistema.",
+    quickActions: "Ações Rápidas",
+    shortcuts: "Atalhos para funções principais.",
+    createNew: "Criar Novo Treinamento",
+    importExcel: "Importar Planilha Excel",
+    testBq: "Testar Conexão BigQuery",
+    readStatus: "Lidos",
+    loading: "Carregando...",
+    noRecent: "Nenhum treinamento recente encontrado.",
+
     regTitle: "REGISTRO DE PRESENÇA EM TREINAMENTO",
     regSubtitle: "Controle na Nuvem (NFC / QR / Manual)",
     searchLabel: "Digite seu NOME, DOCUMENTO ou MATRÍCULA:",
@@ -72,6 +113,26 @@ export const translations: Record<Language, Translations> = {
     usuarios: "Usuarios",
     logout: "Salir",
     user: "Usuario",
+
+    dashSubtitle: "Visión general del sistema de capacitaciones CMPC.",
+    activeTrainings: "Capacitaciones Activas",
+    roomsCreated: "Salas creadas en el sistema",
+    totalColabs: "Total Colaboradores",
+    baseImported: "Base importada",
+    presenceRead: "Asistencias Leídas",
+    signaturesCaptured: "Firmas capturadas",
+    adhesionRate: "Tasa de Adhesión",
+    avgTrainings: "Promedio de las capacitaciones",
+    recentTrainings: "Capacitaciones Recientes",
+    latestRooms: "Últimas salas abiertas en el sistema.",
+    quickActions: "Acciones Rápidas",
+    shortcuts: "Atajos para funciones principales.",
+    createNew: "Crear Nueva Capacitación",
+    importExcel: "Importar Planilla Excel",
+    testBq: "Probar Conexión BigQuery",
+    readStatus: "Leídos",
+    loading: "Cargando...",
+    noRecent: "No se encontró ninguna capacitación reciente.",
 
     regTitle: "REGISTRO DE ASISTENCIA EN CAPACITACIÓN",
     regSubtitle: "Control en la Nube (NFC / QR / Manual)",

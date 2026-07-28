@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, LogOut } from "lucide-react";
+import { useTranslation } from "@/lib/useTranslation";
 
 export function MobileNav({ role }: { role?: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,12 +13,14 @@ export function MobileNav({ role }: { role?: string }) {
 
   if (!role) return null;
 
+  const { t } = useTranslation();
+
   const allItems = [
-    { name: "Dashboard", path: "/", roles: ["admin", "gestor"] },
-    { name: "Treinamentos", path: "/treinamentos", roles: ["admin", "gestor"] },
-    { name: "Colaboradores (Excel)", path: "/colaboradores", roles: ["admin", "gestor", "leitor"] },
-    { name: "Relatórios", path: "/relatorios", roles: ["admin", "gestor", "leitor"] },
-    { name: "Usuários", path: "/usuarios", roles: ["admin"] },
+    { name: t.dashboard, path: "/", roles: ["admin", "gestor"] },
+    { name: t.treinamentos, path: "/treinamentos", roles: ["admin", "gestor"] },
+    { name: t.colaboradores, path: "/colaboradores", roles: ["admin", "gestor", "leitor"] },
+    { name: t.relatorios, path: "/relatorios", roles: ["admin", "gestor", "leitor"] },
+    { name: t.usuarios, path: "/usuarios", roles: ["admin"] },
   ];
 
   const navItems = allItems.filter(item => item.roles.includes(role));
@@ -60,7 +63,7 @@ export function MobileNav({ role }: { role?: string }) {
               onClick={handleLogout}
               className="px-4 py-3 mt-4 rounded-lg font-medium transition-colors text-red-400 hover:bg-red-900/20 text-left flex items-center gap-2"
             >
-              <LogOut className="h-5 w-5" /> Sair do Sistema
+              <LogOut className="h-5 w-5" /> {t.logout}
             </button>
           </nav>
         </div>

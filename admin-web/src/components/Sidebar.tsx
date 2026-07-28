@@ -4,17 +4,20 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ShieldAlert, LogOut } from "lucide-react";
 import { LanguageToggle } from "./LanguageToggle";
+import { useTranslation } from "@/lib/useTranslation";
 
 export function Sidebar({ role, userName }: { role?: string; userName?: string }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const { t } = useTranslation();
+
   const allItems = [
-    { name: "Dashboard", path: "/", roles: ["admin", "gestor"] },
-    { name: "Treinamentos", path: "/treinamentos", roles: ["admin", "gestor"] },
-    { name: "Colaboradores (Excel)", path: "/colaboradores", roles: ["admin", "gestor", "leitor"] },
-    { name: "Relatórios", path: "/relatorios", roles: ["admin", "gestor", "leitor"] },
-    { name: "Usuários", path: "/usuarios", roles: ["admin"] },
+    { name: t.dashboard, path: "/", roles: ["admin", "gestor"] },
+    { name: t.treinamentos, path: "/treinamentos", roles: ["admin", "gestor"] },
+    { name: t.colaboradores, path: "/colaboradores", roles: ["admin", "gestor", "leitor"] },
+    { name: t.relatorios, path: "/relatorios", roles: ["admin", "gestor", "leitor"] },
+    { name: t.usuarios, path: "/usuarios", roles: ["admin"] },
   ];
 
   const navItems = allItems.filter(item => !role || item.roles.includes(role));
@@ -60,10 +63,10 @@ export function Sidebar({ role, userName }: { role?: string; userName?: string }
       </nav>
       <div className="p-4 border-t border-slate-800 flex items-center justify-between">
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-slate-300">{userName || "Usuário"}</span>
+          <span className="text-sm font-medium text-slate-300">{userName || t.user}</span>
           <span className="text-xs text-slate-500 uppercase">{role}</span>
         </div>
-        <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors" title="Sair">
+        <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors" title={t.logout}>
           <LogOut className="h-4 w-4" />
         </button>
       </div>
