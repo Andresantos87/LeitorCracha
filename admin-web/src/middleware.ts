@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { decrypt } from '@/lib/auth';
 
-const publicRoutes = ['/login', '/api/auth', '/api/setup', '/api/buscar-colaborador'];
+const publicRoutes = ['/login', '/api/auth', '/api/setup', '/api/buscar-colaborador', '/api/presencas', '/api/treinamentos', '/api/empresas'];
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
