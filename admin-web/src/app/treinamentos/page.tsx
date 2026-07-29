@@ -181,6 +181,21 @@ export default function Treinamentos() {
     setIsManualSubmitting(false);
   };
 
+  const excluirPresenca = async (presencaId: string) => {
+    if (!selectedId) return;
+    if (!confirm("Tem certeza que deseja remover esta presença permanentemente?")) return;
+    
+    try {
+      const res = await fetch(`/api/presencas?treinamentoId=${selectedId}&presencaId=${presencaId}`, { method: "DELETE" });
+      const json = await res.json();
+      if (!json.success) alert(json.error || "Erro ao excluir presença.");
+      carregarPresencas(selectedId);
+      carregarTreinamentos();
+    } catch (e) {
+      alert("Erro ao excluir.");
+    }
+  };
+
   const excluirTreinamento = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm("Tem certeza que deseja excluir esta turma permanentemente?")) return;
@@ -481,6 +496,7 @@ export default function Treinamentos() {
                       <th className="pb-3 font-medium hidden md:table-cell">Modo</th>
                       <th className="pb-3 font-medium text-center">Assinatura</th>
                       <th className="pb-3 font-medium text-right">Data / Hora</th>
+                      {userRole === 'admin' && <th className="pb-3 font-medium text-right">Ações</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50 text-slate-300">
@@ -518,6 +534,17 @@ export default function Treinamentos() {
                         <td className="py-3 text-right text-slate-500 text-sm font-medium">
                           {p.data_registro ? new Date(p.data_registro).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit'}) : '--/--/---- --:--'}
                         </td>
+                        {userRole === 'admin' && (
+                          <td className="py-3 text-right">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); excluirPresenca(p.id); }}
+                              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                              title="Remover Presença"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

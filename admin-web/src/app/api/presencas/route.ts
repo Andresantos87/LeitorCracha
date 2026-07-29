@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, serverTimestamp, collection, getDocs, query, orderBy } from 'firebase/firestore';
 
 import fs from 'fs';
 import path from 'path';
@@ -173,5 +173,25 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("ERRO PRESENCA MANUAL:", error);
     return NextResponse.json({ success: false, error: error?.message || 'Erro ao salvar presença manual.' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const treinamentoId = searchParams.get('treinamentoId');
+    const presencaId = searchParams.get('presencaId');
+
+    if (!treinamentoId || !presencaId) {
+      return NextResponse.json({ success: false, error: 'treinamentoId e presencaId são obrigatórios' }, { status: 400 });
+    }
+
+    const docRef = doc(db, 'treinamentos', treinamentoId, 'presencas', presencaId);
+    await deleteDoc(docRef);
+
+    return NextResponse.json({ success: true, message: 'Presença removida com sucesso.' });
+  } catch (error: any) {
+    console.error("ERRO DELETE PRESENCA:", error);
+    return NextResponse.json({ success: false, error: 'Erro ao remover presença.' }, { status: 500 });
   }
 }
