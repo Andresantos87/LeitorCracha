@@ -1,7 +1,59 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Users, Target, Plus, Search, Loader2, Trash2, Edit, X, Check } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Users, Target, Plus, Search, Loader2, Trash2, Edit, X, Check, ChevronDown, Building2, MapPin, Briefcase, UserCircle } from "lucide-react";
+
+const CustomSelect = ({ value, onChange, options, placeholder, icon: Icon, disabled = false }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className={`relative w-full ${disabled ? "opacity-50 cursor-not-allowed" : ""}`} ref={selectRef}>
+      <div 
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-white text-sm outline-none hover:border-blue-500 cursor-pointer flex items-center justify-between transition-colors"
+      >
+        <div className="flex items-center gap-2 truncate">
+          {Icon && <Icon className="h-4 w-4 text-slate-400 shrink-0" />}
+          <span className="truncate">{value || placeholder}</span>
+        </div>
+        <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </div>
+      
+      {isOpen && !disabled && (
+        <div className="absolute top-full left-0 mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+          <ul className="max-h-60 overflow-y-auto py-1 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+            <li 
+              onClick={() => { onChange(""); setIsOpen(false); }}
+              className={`px-3 py-2.5 text-sm cursor-pointer hover:bg-slate-700 text-slate-300 ${!value ? "bg-slate-700/50 text-white font-medium" : ""}`}
+            >
+              {placeholder}
+            </li>
+            {options.map((opt: string) => (
+              <li 
+                key={opt}
+                onClick={() => { onChange(opt); setIsOpen(false); }}
+                className={`px-3 py-2.5 text-sm cursor-pointer hover:bg-slate-700 transition-colors truncate ${value === opt ? "bg-blue-600/20 text-blue-400 font-medium" : "text-slate-300"}`}
+              >
+                {opt}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function PublicosAlvoPage() {
   const [publicos, setPublicos] = useState<any[]>([]);
@@ -327,47 +379,35 @@ export default function PublicosAlvoPage() {
                       <Search className="h-4 w-4" /> Buscar Colaboradores no Banco
                     </label>
                     <div className="grid grid-cols-2 gap-3 mb-3">
-                      <select 
+                      <CustomSelect 
                         value={filtroEmpresa}
-                        onChange={e => setFiltroEmpresa(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 appearance-none cursor-pointer"
-                      >
-                        <option value="">Todas as Empresas</option>
-                        {empresasOptions.map(emp => (
-                          <option key={emp} value={emp}>{emp}</option>
-                        ))}
-                      </select>
-                      <select 
+                        onChange={setFiltroEmpresa}
+                        options={empresasOptions}
+                        placeholder="Todas as Empresas"
+                        icon={Building2}
+                      />
+                      <CustomSelect 
                         value={filtroPlanta}
-                        onChange={e => setFiltroPlanta(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 appearance-none cursor-pointer"
-                      >
-                        <option value="">Todas as Plantas</option>
-                        {plantasOptions.map(planta => (
-                          <option key={planta} value={planta}>{planta}</option>
-                        ))}
-                      </select>
-                      <select 
+                        onChange={setFiltroPlanta}
+                        options={plantasOptions}
+                        placeholder="Todas as Plantas"
+                        icon={MapPin}
+                      />
+                      <CustomSelect 
                         value={filtroCargo}
-                        onChange={e => setFiltroCargo(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 appearance-none cursor-pointer"
-                      >
-                        <option value="">Todos os Cargos</option>
-                        {cargosOptions.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                      <select 
+                        onChange={setFiltroCargo}
+                        options={cargosOptions}
+                        placeholder="Todos os Cargos"
+                        icon={Briefcase}
+                      />
+                      <CustomSelect 
                         value={filtroGestor}
-                        onChange={e => setFiltroGestor(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500 appearance-none cursor-pointer"
+                        onChange={setFiltroGestor}
+                        options={gestoresOptions}
+                        placeholder="Todos os Gestores"
+                        icon={UserCircle}
                         disabled={gestoresOptions.length === 0}
-                      >
-                        <option value="">Todos os Gestores</option>
-                        {gestoresOptions.map(g => (
-                          <option key={g} value={g}>{g}</option>
-                        ))}
-                      </select>
+                      />
                     </div>
                     <input 
                       type="text"
