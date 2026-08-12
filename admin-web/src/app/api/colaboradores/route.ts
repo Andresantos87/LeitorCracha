@@ -1,45 +1,63 @@
 import { NextResponse } from "next/server";
-import { BigQuery } from "@google-cloud/bigquery";
+import fs from 'fs';
+import path from 'path';
 
-// Inicializa o cliente do BigQuery.
-// Ele usará automaticamente as Application Default Credentials (ADC) do sistema local
-// ou a variável de ambiente GOOGLE_APPLICATION_CREDENTIALS, se definida.
-const bigquery = new BigQuery();
+export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    // A query fornecida pelo usuário
-    const query = `
-      SELECT *
-      FROM \`cmpc-all-mof-prod.cmpc_all_data_integration_pt_digital.cmpc_all_pt_digital_sat_contratista\`
-      WHERE
-        insert_tm >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR) AND
-        insert_tm = (
-            SELECT MAX(insert_tm)
-            FROM \`cmpc-all-mof-prod.cmpc_all_data_integration_pt_digital.cmpc_all_pt_digital_sat_contratista\`
-            WHERE insert_tm >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
-        )
-      LIMIT 100
-    `;
+    const { searchParams } = new URL(req.url);
+    const busca = searchParams.get('busca')?.toLowerCase() || "";
+    const empresa = searchParams.get('empresa');
+    const planta = searchParams.get('planta');
+    const cargo = searchParams.get('cargo');
+    const gestor = searchParams.get('gestor');
+    const page = parseInt(searchParams.get('page') || "1");
+    const limit = parseInt(searchParams.get('limit') || "50");
 
-    const options = {
-      query: query,
-      // Location must match that of the dataset(s) referenced in the query.
-      location: 'US', // Ajuste conforme a localização do seu dataset se não for US
-    };
+    // Lendo o JSON local
+    const filePath = path.join(process.cwd(), 'colaboradores.json');
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+    const data = JSON.parse(fileContents);
 
-    // Run the query as a job
-    const [job] = await bigquery.createQueryJob(options);
-    
-    // Wait for the query to finish
-    const [rows] = await job.getQueryResults();
+    let resultados = [];
 
-    return NextResponse.json({ success: true, data: rows });
+    // O JSON é um dicionário onde a chave é o identificador e o valor é o objeto
+    for (const key in data) {
+      const colab = data[key];
+      
+      // Filtros
+      if (empresa && colab.empresa !== empresa) continue;
+      if (planta && colab.planta !== planta) continue;
+      if (cargo && colab.cargo !== cargo) continue;
+      if (gestor && colab.gestor !== gestor && colab.superior_imediato !== gestor) continue;
+      
+      if (busca) {
+        const nomeMatch = colab.nome?.toLowerCase().includes(busca);
+        const matMatch = colab.matricula?.includes(busca);
+        if (!nomeMatch && !matMatch) continue;
+      }
+
+      // Adicionamos um identificador único para uso no frontend (matrícula preferencialmente)
+      resultados.push({ ...colab, _id: colab.matricula || colab.cod_cracha || key });
+    }
+
+    // Remover duplicados baseados em _id (pois algumas chaves no JSON podem referenciar a mesma pessoa)
+    const uniqueResultados = Array.from(new Map(resultados.map(item => [item._id, item])).values());
+
+    // Paginação
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedResult = uniqueResultados.slice(startIndex, endIndex);
+
+    return NextResponse.json({ 
+      success: true, 
+      total: uniqueResultados.length,
+      data: paginatedResult 
+    });
+
   } catch (error: any) {
-    console.error("Erro ao consultar BigQuery:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || "Erro desconhecido ao consultar o BigQuery" },
-      { status: 500 }
-    );
+    console.error("ERRO ROTA COLABORADORES:", error);
+    return NextResponse.json({ success: false, error: "Erro ao buscar colaboradores." }, { status: 500 });
   }
 }
