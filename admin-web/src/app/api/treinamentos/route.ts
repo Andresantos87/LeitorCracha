@@ -34,7 +34,8 @@ export async function GET() {
         status_encerrado: data.status_encerrado || false,
         _count: {
           registros: count
-        }
+        },
+        publico_alvo_id: data.publico_alvo_id || null
       };
     }));
     
@@ -48,11 +49,11 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nome, instrutor_email, turma, pais = 'BRASIL', planta = '' } = body;
+    const { nome, instrutor_email, turma, pais = 'BRASIL', planta = '', publico_alvo_id } = body;
     
     if (!nome) return NextResponse.json({ success: false, error: "Nome é obrigatório" }, { status: 400 });
 
-    const docRef = await addDoc(collection(db, "treinamentos"), {
+    const docData: any = {
       nome,
       turma: turma || "",
       pais: pais,
@@ -60,7 +61,10 @@ export async function POST(req: Request) {
       instrutor_email: instrutor_email || "N/A",
       data: serverTimestamp(),
       status_encerrado: false
-    });
+    };
+    if (publico_alvo_id) docData.publico_alvo_id = publico_alvo_id;
+
+    const docRef = await addDoc(collection(db, "treinamentos"), docData);
     
     const treinamento = {
       id: docRef.id,
@@ -71,6 +75,7 @@ export async function POST(req: Request) {
       instrutor_email: instrutor_email || "N/A",
       data: new Date().toISOString(),
       status_encerrado: false,
+      publico_alvo_id: publico_alvo_id || null,
       _count: { registros: 0 }
     };
     

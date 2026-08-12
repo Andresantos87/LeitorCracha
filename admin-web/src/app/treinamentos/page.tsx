@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle } from "lucide-react";
+import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import SignatureCanvas from "react-signature-canvas";
 
@@ -20,6 +20,9 @@ export default function Treinamentos() {
   const [empresasDict, setEmpresasDict] = useState<{ brasil: string[], chile: string[], todas: string[] }>({ brasil: [], chile: [], todas: [] });
   const [nomeAvulso, setNomeAvulso] = useState("");
   const [empresaAvulsa, setEmpresaAvulsa] = useState("");
+  const [publicosAlvo, setPublicosAlvo] = useState<any[]>([]);
+  const [createPublicoAlvoId, setCreatePublicoAlvoId] = useState("");
+  const [showPending, setShowPending] = useState(false);
 
   // States para assinatura manual
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -55,6 +58,9 @@ export default function Treinamentos() {
           todas: json.data || []
         });
       }
+    }).catch(() => {});
+    fetch("/api/publicos-alvo").then(res => res.json()).then(json => {
+      if (json.success) setPublicosAlvo(json.data);
     }).catch(() => {});
   }, []);
 
@@ -133,13 +139,21 @@ export default function Treinamentos() {
     await fetch("/api/treinamentos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome: nomeTreinamento, turma: turmaTreinamento, pais: createPais, planta: createPlanta, instrutor_email: "Admin Local" })
+      body: JSON.stringify({ 
+        nome: nomeTreinamento, 
+        turma: turmaTreinamento, 
+        pais: createPais, 
+        planta: createPlanta, 
+        instrutor_email: "Admin Local",
+        publico_alvo_id: createPublicoAlvoId || undefined
+      })
     });
     
     setIsSubmitting(false);
     setIsModalOpen(false);
     setNomeTreinamento("");
     setTurmaTreinamento("");
+    setCreatePublicoAlvoId("");
     carregarTreinamentos();
   };
 
@@ -224,6 +238,52 @@ export default function Treinamentos() {
   };
 
   const selectedTreinamento = treinamentos.find(t => t.id === selectedId);
+
+  const renderProgress = () => {
+    if (!selectedTreinamento?.publico_alvo_id) return null;
+    const publico = publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id);
+    if (!publico || !publico.matriculas) return null;
+    
+    const presencasMatriculas = presencas.map(p => p.identificador_lido);
+    const pendentes = publico.matriculas.filter((m: string) => !presencasMatriculas.includes(m));
+    const capacitados = publico.matriculas.filter((m: string) => presencasMatriculas.includes(m));
+    const total = publico.matriculas.length;
+    const progresso = total > 0 ? Math.round((capacitados.length / total) * 100) : 0;
+    
+    return (
+      <div className="w-full md:w-96 bg-slate-950/50 rounded-xl border border-slate-700 p-5 flex flex-col">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <Target className="h-4 w-4 text-blue-400" />
+              Progresso do Público-Alvo
+            </h4>
+            <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">{publico.nome}</p>
+          </div>
+          <span className="text-2xl font-black text-white">{progresso}%</span>
+        </div>
+        
+        <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden mb-4">
+          <div 
+            className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 transition-all duration-1000"
+            style={{ width: `${progresso}%` }}
+          />
+        </div>
+        
+        <div className="flex justify-between text-xs font-medium mb-4">
+          <span className="text-emerald-400 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {capacitados.length} Capacitados</span>
+          <span className="text-amber-400 flex items-center gap-1"><Clock className="h-3 w-3" /> {pendentes.length} Pendentes</span>
+        </div>
+        
+        <button 
+          onClick={() => setShowPending(!showPending)}
+          className="mt-auto w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg transition-colors border border-slate-700"
+        >
+          {showPending ? 'Ocultar Lista de Pendentes' : 'Ver Lista de Pendentes'}
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -462,7 +522,33 @@ export default function Treinamentos() {
                 </button>
               </div>
             </div>
+            
+            {renderProgress()}
           </div>
+          
+          {showPending && selectedTreinamento?.publico_alvo_id && (
+            <div className="bg-slate-900/80 rounded-xl border border-amber-900/50 p-6 animate-in slide-in-from-top-4">
+              <h3 className="font-bold text-amber-400 text-lg mb-4 flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Matrículas Pendentes de Capacitação
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id)?.matriculas
+                  .filter((m: string) => !presencas.map(p => p.identificador_lido).includes(m))
+                  .map((m: string) => (
+                  <span key={m} className="px-3 py-1 bg-amber-950/40 border border-amber-900/50 text-amber-300 rounded-lg text-sm font-mono">
+                    {m}
+                  </span>
+                ))}
+                {publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id)?.matriculas
+                  .filter((m: string) => !presencas.map(p => p.identificador_lido).includes(m)).length === 0 && (
+                  <span className="text-emerald-400 text-sm font-bold flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" /> Todos os convocados foram capacitados!
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="bg-slate-900/80 rounded-xl border border-slate-700 p-6">
             <div className="flex items-center justify-between mb-4">
@@ -681,6 +767,28 @@ export default function Treinamentos() {
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium placeholder:text-slate-600 shadow-inner"
                   placeholder="Ex: Turma A - Manhã (26/07), ou Turma 01"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>Público-Alvo (Opcional)</span>
+                  <span className="text-[10px] font-normal text-slate-400">Vincular lista de convocação</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={createPublicoAlvoId}
+                    onChange={e => setCreatePublicoAlvoId(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium appearance-none cursor-pointer pr-10 shadow-inner"
+                  >
+                    <option value="">Nenhum (Treinamento Aberto)</option>
+                    {publicosAlvo.map(p => (
+                      <option key={p.id} value={p.id}>{p.nome}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                    <ChevronDown className="h-4 w-4" />
+                  </div>
+                </div>
               </div>
 
               <div className="pt-4 flex items-center justify-end space-x-3 border-t border-slate-800/80 mt-6">

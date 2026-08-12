@@ -4,6 +4,7 @@ export interface Translations {
   // Navigation & General
   dashboard: string;
   treinamentos: string;
+  publicosAlvo: string;
   colaboradores: string;
   relatorios: string;
   usuarios: string;
@@ -58,6 +59,7 @@ export const translations: Record<Language, Translations> = {
   pt: {
     dashboard: "Dashboard",
     treinamentos: "Treinamentos",
+    publicosAlvo: "Públicos-Alvo",
     colaboradores: "Colaboradores (Excel)",
     relatorios: "Relatórios",
     usuarios: "Usuários",
@@ -108,6 +110,7 @@ export const translations: Record<Language, Translations> = {
   es: {
     dashboard: "Panel",
     treinamentos: "Capacitaciones",
+    publicosAlvo: "Públicos Objetivo",
     colaboradores: "Colaboradores (Excel)",
     relatorios: "Reportes",
     usuarios: "Usuarios",
