@@ -4,8 +4,17 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+function cleanString(val: any) {
+  if (!val || typeof val !== 'string') return "";
+  return val.trim().toUpperCase().replace(/^[\d\s\-\._\/]+/, '').trim();
+}
+
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const empresaFilter = searchParams.get('empresa');
+    const plantaFilter = searchParams.get('planta');
+
     const filePath = path.join(process.cwd(), 'colaboradores.json');
     if (!fs.existsSync(filePath)) {
       return NextResponse.json({ success: true, empresas: [], plantas: [] });
@@ -19,11 +28,23 @@ export async function GET() {
     const gestoresSet = new Set<string>();
     
     for (const key in data) {
-      if (data[key].empresa) empresasSet.add(data[key].empresa);
-      if (data[key].planta) plantasSet.add(data[key].planta);
-      if (data[key].cargo) cargosSet.add(data[key].cargo);
-      if (data[key].gestor) gestoresSet.add(data[key].gestor);
-      if (data[key].superior_imediato) gestoresSet.add(data[key].superior_imediato);
+      const colab = data[key];
+      const empClean = cleanString(colab.empresa);
+      const plaClean = cleanString(colab.planta);
+      const cargoClean = cleanString(colab.cargo);
+      const gestorClean = cleanString(colab.gestor || colab.superior_imediato);
+
+      if (empClean) empresasSet.add(empClean);
+      if (plaClean) plantasSet.add(plaClean);
+
+      let match = true;
+      if (empresaFilter && empClean !== empresaFilter) match = false;
+      if (plantaFilter && plaClean !== plantaFilter) match = false;
+
+      if (match) {
+        if (cargoClean) cargosSet.add(cargoClean);
+        if (gestorClean) gestoresSet.add(gestorClean);
+      }
     }
     
     return NextResponse.json({ 

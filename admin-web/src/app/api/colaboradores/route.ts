@@ -4,6 +4,11 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
+function cleanString(val: any) {
+  if (!val || typeof val !== 'string') return "";
+  return val.trim().toUpperCase().replace(/^[\d\s\-\._\/]+/, '').trim();
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -26,11 +31,16 @@ export async function GET(req: Request) {
     for (const key in data) {
       const colab = data[key];
       
+      const empClean = cleanString(colab.empresa);
+      const plaClean = cleanString(colab.planta);
+      const cargoClean = cleanString(colab.cargo);
+      const gestorClean = cleanString(colab.gestor || colab.superior_imediato);
+
       // Filtros
-      if (empresa && colab.empresa !== empresa) continue;
-      if (planta && colab.planta !== planta) continue;
-      if (cargo && colab.cargo !== cargo) continue;
-      if (gestor && colab.gestor !== gestor && colab.superior_imediato !== gestor) continue;
+      if (empresa && empClean !== empresa) continue;
+      if (planta && plaClean !== planta) continue;
+      if (cargo && cargoClean !== cargo) continue;
+      if (gestor && gestorClean !== gestor) continue;
       
       if (busca) {
         const nomeMatch = colab.nome?.toLowerCase().includes(busca);
@@ -39,7 +49,11 @@ export async function GET(req: Request) {
       }
 
       // Adicionamos um identificador único para uso no frontend (matrícula preferencialmente)
-      resultados.push({ ...colab, _id: colab.matricula || colab.cod_cracha || key });
+      // Removemos eventuais zeros à esquerda da matrícula para deduplicar corretamente
+      let matriculaLimpa = colab.matricula ? String(colab.matricula).replace(/^0+/, '') : null;
+      let uid = matriculaLimpa || colab.cod_cracha || key;
+      
+      resultados.push({ ...colab, _id: uid });
     }
 
     // Remover duplicados baseados em _id (pois algumas chaves no JSON podem referenciar a mesma pessoa)

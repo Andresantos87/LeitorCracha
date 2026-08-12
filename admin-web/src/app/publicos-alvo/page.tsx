@@ -30,7 +30,14 @@ export default function PublicosAlvoPage() {
 
   useEffect(() => {
     carregarPublicos();
-    fetch("/api/colaboradores/filtros")
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filtroEmpresa) params.append('empresa', filtroEmpresa);
+    if (filtroPlanta) params.append('planta', filtroPlanta);
+
+    fetch(`/api/colaboradores/filtros?${params.toString()}`)
       .then(r => r.json())
       .then(d => {
         if (d.success) {
@@ -50,7 +57,7 @@ export default function PublicosAlvoPage() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [filtroEmpresa, filtroPlanta]);
 
   useEffect(() => {
     if (isModalOpen) {
