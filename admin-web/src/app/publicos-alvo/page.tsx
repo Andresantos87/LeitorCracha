@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Users, Target, Plus, Search, Loader2, Trash2, Edit } from "lucide-react";
-import toast from "react-hot-toast";
 
 export default function PublicosAlvoPage() {
   const [publicos, setPublicos] = useState<any[]>([]);
@@ -28,14 +27,17 @@ export default function PublicosAlvoPage() {
         setPublicos(data.data);
       }
     } catch (error) {
-      toast.error("Erro ao carregar públicos-alvo");
+      alert("Erro ao carregar públicos-alvo");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSalvar = async () => {
-    if (!nome) return toast.error("O nome é obrigatório");
+    if (!nome) {
+      alert("O nome é obrigatório");
+      return;
+    }
     
     // Process the text area input into an array of strings (removing empties)
     const matriculasArray = matriculasInput
@@ -53,17 +55,17 @@ export default function PublicosAlvoPage() {
       
       const data = await res.json();
       if (data.success) {
-        toast.success("Público-Alvo criado com sucesso!");
+        alert("Público-Alvo criado com sucesso!");
         setIsModalOpen(false);
         setNome("");
         setDescricao("");
         setMatriculasInput("");
         carregarPublicos();
       } else {
-        toast.error(data.error || "Erro ao salvar");
+        alert(data.error || "Erro ao salvar");
       }
     } catch (error) {
-      toast.error("Erro de conexão");
+      alert("Erro de conexão");
     } finally {
       setIsSaving(false);
     }
@@ -76,13 +78,13 @@ export default function PublicosAlvoPage() {
       const res = await fetch(`/api/publicos-alvo/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (data.success) {
-        toast.success("Público-Alvo excluído!");
+        alert("Público-Alvo excluído!");
         carregarPublicos();
       } else {
-        toast.error(data.error || "Você não tem permissão.");
+        alert(data.error || "Você não tem permissão.");
       }
     } catch (e) {
-      toast.error("Erro ao excluir.");
+      alert("Erro ao excluir.");
     }
   };
 
