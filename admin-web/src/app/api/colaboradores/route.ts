@@ -13,10 +13,10 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const busca = searchParams.get('busca')?.toLowerCase() || "";
-    const empresa = searchParams.get('empresa');
-    const planta = searchParams.get('planta');
-    const cargo = searchParams.get('cargo');
-    const gestor = searchParams.get('gestor');
+    const empresasFilter = searchParams.getAll('empresa');
+    const plantasFilter = searchParams.getAll('planta');
+    const cargosFilter = searchParams.getAll('cargo');
+    const gestoresFilter = searchParams.getAll('gestor');
     const page = parseInt(searchParams.get('page') || "1");
     const limit = parseInt(searchParams.get('limit') || "50");
 
@@ -70,10 +70,10 @@ export async function GET(req: Request) {
       const gestorClean = cleanString(colab.gestor || colab.superior_imediato);
 
       // Filtros
-      if (empresa && empClean !== empresa) continue;
-      if (planta && plaClean !== planta) continue;
-      if (cargo && cargoClean !== cargo) continue;
-      if (gestor && gestorClean !== gestor) continue;
+      if (empresasFilter.length > 0 && !empresasFilter.includes(empClean)) continue;
+      if (plantasFilter.length > 0 && !plantasFilter.includes(plaClean)) continue;
+      if (cargosFilter.length > 0 && !cargosFilter.includes(cargoClean)) continue;
+      if (gestoresFilter.length > 0 && !gestoresFilter.includes(gestorClean)) continue;
       
       if (busca) {
         const nomeMatch = colab.nome?.toLowerCase().includes(busca);

@@ -12,8 +12,8 @@ function cleanString(val: any) {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const empresaFilter = searchParams.get('empresa');
-    const plantaFilter = searchParams.get('planta');
+    const empresasFilter = searchParams.getAll('empresa');
+    const plantasFilter = searchParams.getAll('planta');
 
     const filePath = path.join(process.cwd(), 'colaboradores.json');
     if (!fs.existsSync(filePath)) {
@@ -71,8 +71,8 @@ export async function GET(req: Request) {
       if (plaClean) plantasSet.add(plaClean);
 
       let match = true;
-      if (empresaFilter && empClean !== empresaFilter) match = false;
-      if (plantaFilter && plaClean !== plantaFilter) match = false;
+      if (empresasFilter.length > 0 && !empresasFilter.includes(empClean)) match = false;
+      if (plantasFilter.length > 0 && !plantasFilter.includes(plaClean)) match = false;
 
       if (match) {
         if (cargoClean) cargosSet.add(cargoClean);

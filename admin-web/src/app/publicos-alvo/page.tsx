@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Users, Target, Plus, Search, Loader2, Trash2, Edit, X, Check, ChevronDown, Building2, MapPin, Briefcase, UserCircle } from "lucide-react";
 
-const CustomSelect = ({ value, onChange, options, placeholder, icon: Icon, disabled = false }: any) => {
+const CustomSelect = ({ values, onChange, options, placeholder, icon: Icon, disabled = false }: any) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const selectRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,6 +18,22 @@ const CustomSelect = ({ value, onChange, options, placeholder, icon: Icon, disab
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const filteredOptions = options.filter((opt: string) => opt.toLowerCase().includes(search.toLowerCase()));
+
+  const toggleOption = (opt: string) => {
+    if (values.includes(opt)) {
+      onChange(values.filter((v: string) => v !== opt));
+    } else {
+      onChange([...values, opt]);
+    }
+  };
+
+  const displayText = values.length === 0 
+    ? placeholder 
+    : values.length === 1 
+      ? values[0] 
+      : `${values.length} selecionados`;
+
   return (
     <div className={`relative w-full ${disabled ? "opacity-50 cursor-not-allowed" : ""}`} ref={selectRef}>
       <div 
@@ -25,29 +42,42 @@ const CustomSelect = ({ value, onChange, options, placeholder, icon: Icon, disab
       >
         <div className="flex items-center gap-2 truncate">
           {Icon && <Icon className="h-4 w-4 text-slate-400 shrink-0" />}
-          <span className="truncate">{value || placeholder}</span>
+          <span className="truncate">{displayText}</span>
         </div>
         <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </div>
       
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute top-full left-0 mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 flex flex-col">
+          <div className="p-2 border-b border-slate-700">
+            <input 
+              type="text" 
+              placeholder="Pesquisar..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-1.5 text-white text-sm outline-none focus:border-blue-500"
+            />
+          </div>
           <ul className="max-h-60 overflow-y-auto py-1 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
-            <li 
-              onClick={() => { onChange(""); setIsOpen(false); }}
-              className={`px-3 py-2.5 text-sm cursor-pointer hover:bg-slate-700 text-slate-300 ${!value ? "bg-slate-700/50 text-white font-medium" : ""}`}
-            >
-              {placeholder}
-            </li>
-            {options.map((opt: string) => (
-              <li 
-                key={opt}
-                onClick={() => { onChange(opt); setIsOpen(false); }}
-                className={`px-3 py-2.5 text-sm cursor-pointer hover:bg-slate-700 transition-colors truncate ${value === opt ? "bg-blue-600/20 text-blue-400 font-medium" : "text-slate-300"}`}
-              >
-                {opt}
-              </li>
-            ))}
+            {filteredOptions.length === 0 ? (
+              <li className="px-3 py-2 text-sm text-slate-500 text-center">Nenhum resultado</li>
+            ) : (
+              filteredOptions.map((opt: string) => {
+                const isSelected = values.includes(opt);
+                return (
+                  <li 
+                    key={opt}
+                    onClick={() => toggleOption(opt)}
+                    className={`px-3 py-2 text-sm cursor-pointer hover:bg-slate-700 transition-colors flex items-center gap-2 ${isSelected ? "bg-blue-600/20 text-blue-400 font-medium" : "text-slate-300"}`}
+                  >
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "bg-blue-500 border-blue-500 text-white" : "border-slate-500"}`}>
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </div>
+                    <span className="truncate">{opt}</span>
+                  </li>
+                );
+              })
+            )}
           </ul>
         </div>
       )}
@@ -69,10 +99,10 @@ export default function PublicosAlvoPage() {
   // New States for Search & Select UI
   const [selectedColaboradores, setSelectedColaboradores] = useState<any[]>([]);
   const [pesquisa, setPesquisa] = useState("");
-  const [filtroEmpresa, setFiltroEmpresa] = useState("");
-  const [filtroPlanta, setFiltroPlanta] = useState("");
-  const [filtroCargo, setFiltroCargo] = useState("");
-  const [filtroGestor, setFiltroGestor] = useState("");
+  const [filtroEmpresa, setFiltroEmpresa] = useState<string[]>([]);
+  const [filtroPlanta, setFiltroPlanta] = useState<string[]>([]);
+  const [filtroCargo, setFiltroCargo] = useState<string[]>([]);
+  const [filtroGestor, setFiltroGestor] = useState<string[]>([]);
   const [resultadosColab, setResultadosColab] = useState<any[]>([]);
   const [buscandoColab, setBuscandoColab] = useState(false);
   const [empresasOptions, setEmpresasOptions] = useState<string[]>([]);
@@ -86,8 +116,8 @@ export default function PublicosAlvoPage() {
 
   useEffect(() => {
     const params = new URLSearchParams();
-    if (filtroEmpresa) params.append('empresa', filtroEmpresa);
-    if (filtroPlanta) params.append('planta', filtroPlanta);
+    filtroEmpresa.forEach(e => params.append('empresa', e));
+    filtroPlanta.forEach(p => params.append('planta', p));
 
     fetch(`/api/colaboradores/filtros?${params.toString()}`)
       .then(r => r.json())
@@ -140,10 +170,10 @@ export default function PublicosAlvoPage() {
     try {
       const params = new URLSearchParams();
       if (pesquisa) params.append('busca', pesquisa);
-      if (filtroEmpresa) params.append('empresa', filtroEmpresa);
-      if (filtroPlanta) params.append('planta', filtroPlanta);
-      if (filtroCargo) params.append('cargo', filtroCargo);
-      if (filtroGestor) params.append('gestor', filtroGestor);
+      filtroEmpresa.forEach(e => params.append('empresa', e));
+      filtroPlanta.forEach(p => params.append('planta', p));
+      filtroCargo.forEach(c => params.append('cargo', c));
+      filtroGestor.forEach(g => params.append('gestor', g));
       
       const res = await fetch(`/api/colaboradores?${params.toString()}`);
       const json = await res.json();
@@ -216,10 +246,10 @@ export default function PublicosAlvoPage() {
     setDescricao(pub.descricao || "");
     setSelectedColaboradores(pub.matriculas.map((m: string) => ({ _id: m, nome: "Matrícula: " + m })));
     setPesquisa("");
-    setFiltroEmpresa("");
-    setFiltroPlanta("");
-    setFiltroCargo("");
-    setFiltroGestor("");
+    setFiltroEmpresa([]);
+    setFiltroPlanta([]);
+    setFiltroCargo([]);
+    setFiltroGestor([]);
     setIsModalOpen(true);
   };
 
@@ -229,10 +259,10 @@ export default function PublicosAlvoPage() {
     setDescricao("");
     setSelectedColaboradores([]);
     setPesquisa("");
-    setFiltroEmpresa("");
-    setFiltroPlanta("");
-    setFiltroCargo("");
-    setFiltroGestor("");
+    setFiltroEmpresa([]);
+    setFiltroPlanta([]);
+    setFiltroCargo([]);
+    setFiltroGestor([]);
     setIsModalOpen(true);
   };
 
@@ -380,28 +410,28 @@ export default function PublicosAlvoPage() {
                     </label>
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <CustomSelect 
-                        value={filtroEmpresa}
+                        values={filtroEmpresa}
                         onChange={setFiltroEmpresa}
                         options={empresasOptions}
                         placeholder="Todas as Empresas"
                         icon={Building2}
                       />
                       <CustomSelect 
-                        value={filtroPlanta}
+                        values={filtroPlanta}
                         onChange={setFiltroPlanta}
                         options={plantasOptions}
                         placeholder="Todas as Plantas"
                         icon={MapPin}
                       />
                       <CustomSelect 
-                        value={filtroCargo}
+                        values={filtroCargo}
                         onChange={setFiltroCargo}
                         options={cargosOptions}
                         placeholder="Todos os Cargos"
                         icon={Briefcase}
                       />
                       <CustomSelect 
-                        value={filtroGestor}
+                        values={filtroGestor}
                         onChange={setFiltroGestor}
                         options={gestoresOptions}
                         placeholder="Todos os Gestores"
