@@ -22,13 +22,46 @@ export async function GET(req: Request) {
     const fileContents = fs.readFileSync(filePath, 'utf8');
     const data = JSON.parse(fileContents);
     
+    const mergedColabs = new Map();
+
+    for (const key in data) {
+      const colab = data[key];
+      let matriculaLimpa = colab.matricula ? String(colab.matricula).replace(/^0+/, '') : null;
+      let uid = matriculaLimpa || colab.cod_cracha || key;
+
+      if (!mergedColabs.has(uid)) {
+        mergedColabs.set(uid, { ...colab, _id: uid });
+      } else {
+        const existing = mergedColabs.get(uid);
+        const mergeField = (f: string) => {
+          const v1 = existing[f];
+          const v2 = colab[f];
+          const isInvalid = (v: any) => !v || String(v).toUpperCase() === 'NÃO INFORMADO' || String(v).toUpperCase() === 'NAO INFORMADO' || v === '-';
+          if (isInvalid(v1)) return v2;
+          if (f === 'planta' || f === 'empresa') {
+             if (String(v1).toUpperCase() === 'CMPC CENTRALIZADA' && !isInvalid(v2) && String(v2).toUpperCase() !== 'CMPC CENTRALIZADA') return v2;
+          }
+          return v1;
+        };
+
+        mergedColabs.set(uid, {
+          ...existing,
+          cargo: mergeField('cargo'),
+          planta: mergeField('planta'),
+          empresa: mergeField('empresa'),
+          gestor: mergeField('gestor'),
+          superior_imediato: mergeField('superior_imediato'),
+          cod_cracha: existing.cod_cracha || colab.cod_cracha
+        });
+      }
+    }
+
     const empresasSet = new Set<string>();
     const plantasSet = new Set<string>();
     const cargosSet = new Set<string>();
     const gestoresSet = new Set<string>();
     
-    for (const key in data) {
-      const colab = data[key];
+    for (const colab of mergedColabs.values()) {
       const empClean = cleanString(colab.empresa);
       const plaClean = cleanString(colab.planta);
       const cargoClean = cleanString(colab.cargo);

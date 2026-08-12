@@ -25,12 +25,45 @@ export async function GET(req: Request) {
     const fileContents = fs.readFileSync(filePath, 'utf8');
     const data = JSON.parse(fileContents);
 
-    let resultados = [];
+    const mergedColabs = new Map();
 
-    // O JSON é um dicionário onde a chave é o identificador e o valor é o objeto
+    // 1. DEDUPLICAÇÃO E MESCLAGEM INTELIGENTE
     for (const key in data) {
       const colab = data[key];
-      
+      let matriculaLimpa = colab.matricula ? String(colab.matricula).replace(/^0+/, '') : null;
+      let uid = matriculaLimpa || colab.cod_cracha || key;
+
+      if (!mergedColabs.has(uid)) {
+        mergedColabs.set(uid, { ...colab, _id: uid });
+      } else {
+        const existing = mergedColabs.get(uid);
+        const mergeField = (f: string) => {
+          const v1 = existing[f];
+          const v2 = colab[f];
+          const isInvalid = (v: any) => !v || String(v).toUpperCase() === 'NÃO INFORMADO' || String(v).toUpperCase() === 'NAO INFORMADO' || v === '-';
+          if (isInvalid(v1)) return v2;
+          if (f === 'planta' || f === 'empresa') {
+             if (String(v1).toUpperCase() === 'CMPC CENTRALIZADA' && !isInvalid(v2) && String(v2).toUpperCase() !== 'CMPC CENTRALIZADA') return v2;
+          }
+          return v1;
+        };
+
+        mergedColabs.set(uid, {
+          ...existing,
+          cargo: mergeField('cargo'),
+          planta: mergeField('planta'),
+          empresa: mergeField('empresa'),
+          gestor: mergeField('gestor'),
+          superior_imediato: mergeField('superior_imediato'),
+          cod_cracha: existing.cod_cracha || colab.cod_cracha
+        });
+      }
+    }
+
+    let resultados = [];
+
+    // 2. APLICAR FILTROS NA BASE LIMPA E MESCLADA
+    for (const colab of mergedColabs.values()) {
       const empClean = cleanString(colab.empresa);
       const plaClean = cleanString(colab.planta);
       const cargoClean = cleanString(colab.cargo);
@@ -48,16 +81,8 @@ export async function GET(req: Request) {
         if (!nomeMatch && !matMatch) continue;
       }
 
-      // Adicionamos um identificador único para uso no frontend (matrícula preferencialmente)
-      // Removemos eventuais zeros à esquerda da matrícula para deduplicar corretamente
-      let matriculaLimpa = colab.matricula ? String(colab.matricula).replace(/^0+/, '') : null;
-      let uid = matriculaLimpa || colab.cod_cracha || key;
-      
-      resultados.push({ ...colab, _id: uid });
+      resultados.push(colab);
     }
-
-    // Remover duplicados baseados em _id (pois algumas chaves no JSON podem referenciar a mesma pessoa)
-    const uniqueResultados = Array.from(new Map(resultados.map(item => [item._id, item])).values());
 
     // Paginação
     const startIndex = (page - 1) * limit;
