@@ -9,6 +9,7 @@ export default function PublicosAlvoPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -47,16 +48,20 @@ export default function PublicosAlvoPage() {
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/publicos-alvo", {
-        method: "POST",
+      const url = editId ? `/api/publicos-alvo/${editId}` : "/api/publicos-alvo";
+      const method = editId ? "PUT" : "POST";
+      
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nome, descricao, matriculas: matriculasArray })
       });
       
       const data = await res.json();
       if (data.success) {
-        alert("Público-Alvo criado com sucesso!");
+        alert(editId ? "Público-Alvo atualizado!" : "Público-Alvo criado com sucesso!");
         setIsModalOpen(false);
+        setEditId(null);
         setNome("");
         setDescricao("");
         setMatriculasInput("");
@@ -88,6 +93,22 @@ export default function PublicosAlvoPage() {
     }
   };
 
+  const abrirEdicao = (pub: any) => {
+    setEditId(pub.id);
+    setNome(pub.nome);
+    setDescricao(pub.descricao || "");
+    setMatriculasInput(pub.matriculas.join("\n"));
+    setIsModalOpen(true);
+  };
+
+  const abrirCriacao = () => {
+    setEditId(null);
+    setNome("");
+    setDescricao("");
+    setMatriculasInput("");
+    setIsModalOpen(true);
+  };
+
   const filtrados = publicos.filter(p => p.nome.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
@@ -104,7 +125,7 @@ export default function PublicosAlvoPage() {
         </div>
         
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={abrirCriacao}
           className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 group"
         >
           <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform" />
@@ -140,16 +161,25 @@ export default function PublicosAlvoPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtrados.map((pub) => (
-            <div key={pub.id} className="bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800 hover:border-slate-600 transition-all group">
+            <div 
+              key={pub.id} 
+              onClick={() => abrirEdicao(pub)}
+              className="bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800 hover:border-slate-600 transition-all group cursor-pointer relative"
+            >
               <div className="flex justify-between items-start mb-4">
                 <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
                   <Users className="h-6 w-6" />
                 </div>
-                <button onClick={() => excluirPublico(pub.id)} className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); excluirPublico(pub.id); }} 
+                  className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100 z-10"
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-              <h3 className="text-xl font-bold text-white mb-1 truncate">{pub.nome}</h3>
+              <h3 className="text-xl font-bold text-white mb-1 truncate group-hover:text-blue-400 transition-colors flex items-center gap-2">
+                {pub.nome} <Edit className="h-4 w-4 opacity-0 group-hover:opacity-100" />
+              </h3>
               <p className="text-sm text-slate-400 mb-4 line-clamp-2 min-h-[40px]">{pub.descricao || "Sem descrição"}</p>
               
               <div className="pt-4 border-t border-slate-700/50 flex items-center justify-between">
@@ -173,7 +203,7 @@ export default function PublicosAlvoPage() {
             <div className="p-6 border-b border-slate-700 flex justify-between items-center sticky top-0 bg-slate-800 z-10">
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                 <Target className="h-6 w-6 text-blue-400" />
-                Novo Público-Alvo
+                {editId ? "Editar Público-Alvo" : "Novo Público-Alvo"}
               </h2>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
@@ -238,7 +268,7 @@ export default function PublicosAlvoPage() {
                 className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
               >
                 {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isSaving ? "Salvando..." : "Criar Público-Alvo"}
+                {isSaving ? "Salvando..." : (editId ? "Salvar Alterações" : "Criar Público-Alvo")}
               </button>
             </div>
           </div>
