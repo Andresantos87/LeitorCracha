@@ -30,7 +30,8 @@ function parseRainbowRow(row) {
     cargo: row.cargo || row.cbo || 'Não Informado',
     matricula: row.cod_funcionario || '',
     cod_cracha: row.cod_cracha || '',
-    pais: 'BRASIL'
+    pais: 'BRASIL',
+    gestor: row.gestor || ''
   };
 }
 
@@ -65,6 +66,7 @@ function parseMifibraRow(row) {
     planta = 'Los Angeles';
     pais = 'CHILE';
   }
+  let gestor = `${row.user_mgr_name_first || ''} ${row.user_mgr_name_last || ''}`.trim();
   
   return {
     identificador: email.toUpperCase().startsWith('CPF:') ? email.substring(4).trim() : email,
@@ -74,7 +76,8 @@ function parseMifibraRow(row) {
     cargo: 'Não Informado',
     matricula: row.user_ref || '',
     cod_cracha: '',
-    pais
+    pais,
+    gestor
   };
 }
 
@@ -95,7 +98,8 @@ function parseSatRow(row) {
     cargo: row.trabocupacion || row.trabprofesion || 'Não Informado',
     matricula: row.trabid || '',
     cod_cracha: '',
-    pais: 'CHILE'
+    pais: 'CHILE',
+    gestor: row.trabjefe || row.jefe || ''
   };
 }
 
@@ -149,7 +153,8 @@ function processFile(fileIndex) {
             cargo: parsed.cargo,
             matricula: parsed.matricula,
             cod_cracha: parsed.cod_cracha || '',
-            pais: parsed.pais || ''
+            pais: parsed.pais || '',
+            gestor: parsed.gestor || ''
           };
         } else {
           // Atualiza com dados mais recentes se forem válidos (o arquivo pode ter registros mais novos no final)
@@ -170,6 +175,9 @@ function processFile(fileIndex) {
           }
           if (parsed.pais && !uniqueUsers[parsed.identificador].pais) {
             uniqueUsers[parsed.identificador].pais = parsed.pais;
+          }
+          if (parsed.gestor && !uniqueUsers[parsed.identificador].gestor) {
+            uniqueUsers[parsed.identificador].gestor = parsed.gestor;
           }
         }
       }
