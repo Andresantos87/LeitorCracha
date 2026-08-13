@@ -87,11 +87,11 @@ export async function GET(req: Request) {
     // Paginação
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
-    const paginatedResult = uniqueResultados.slice(startIndex, endIndex);
+    const paginatedResult = resultados.slice(startIndex, endIndex);
 
     return NextResponse.json({ 
       success: true, 
-      total: uniqueResultados.length,
+      total: resultados.length,
       data: paginatedResult 
     });
 
