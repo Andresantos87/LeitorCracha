@@ -3,6 +3,7 @@ import "./globals.css";
 import { Inter } from 'next/font/google';
 import { Navigation } from '@/components/Navigation';
 import { getSession } from '@/lib/auth';
+import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -32,6 +33,13 @@ export default async function RootLayout({
             {children}
           </div>
         </main>
+        <Toaster position="bottom-right" toastOptions={{
+          style: {
+            background: '#1e293b',
+            color: '#f8fafc',
+            border: '1px solid rgba(51, 65, 85, 0.5)',
+          },
+        }} />
       </body>
     </html>
   );

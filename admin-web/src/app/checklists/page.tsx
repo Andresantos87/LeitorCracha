@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { PlusCircle, Edit, Trash2, CheckCircle2, ListChecks, Plus, X, GripVertical } from "lucide-react";
+import toast from "react-hot-toast";
+import ConfirmModal from "@/components/ConfirmModal";
 
 type ChecklistItem = {
   id: string;
@@ -22,6 +24,7 @@ export default function ChecklistsPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ChecklistTemplate | null>(null);
+  const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean; id: string | null}>({ isOpen: false, id: null });
   
   // Form State
   const [nome, setNome] = useState("");
@@ -104,13 +107,15 @@ export default function ChecklistsPage() {
   };
 
   const excluirTemplate = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este modelo? Treinamentos que já usam este modelo não serão afetados.")) return;
-    
     try {
       await fetch(`/api/checklists/${id}`, { method: "DELETE" });
       carregarTemplates();
+      toast.success("Modelo excluído com sucesso!");
     } catch (e) {
       console.error(e);
+      toast.error("Erro ao excluir modelo.");
+    } finally {
+      setConfirmConfig({ isOpen: false, id: null });
     }
   };
 
@@ -172,7 +177,7 @@ export default function ChecklistsPage() {
                     <button onClick={() => abrirModalEditar(template)} className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2">
                       <Edit className="h-4 w-4" /> Editar
                     </button>
-                    <button onClick={() => excluirTemplate(template.id)} className="px-4 py-2 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-400 rounded-lg transition-colors">
+                    <button onClick={() => setConfirmConfig({ isOpen: true, id: template.id })} className="px-4 py-2 bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-400 rounded-lg transition-colors">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -279,6 +284,15 @@ export default function ChecklistsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmConfig.isOpen}
+        title="Excluir Modelo de Checklist"
+        message="Tem certeza que deseja excluir este modelo? Treinamentos que já usam este modelo não serão afetados."
+        onConfirm={() => confirmConfig.id && excluirTemplate(confirmConfig.id)}
+        onCancel={() => setConfirmConfig({ isOpen: false, id: null })}
+        confirmText="Sim, Excluir"
+      />
 
     </div>
   );
