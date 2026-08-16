@@ -31,10 +31,14 @@ export async function GET(req: Request) {
     for (const key in data) {
       const colab = data[key];
       let matriculaLimpa = colab.matricula ? String(colab.matricula).replace(/^0+/, '') : null;
-      let uid = matriculaLimpa || colab.cod_cracha || key;
+      let nomeLimpo = colab.nome ? colab.nome.trim().toUpperCase() : null;
+      
+      // MUDANÇA MASSIVA: Usar o Nome Exato como chave primária de mesclagem.
+      // Isso resolve o problema de pessoas com matrículas diferentes entre Rainbow e Mifibra.
+      let uid = nomeLimpo || matriculaLimpa || colab.cod_cracha || key;
 
       if (!mergedColabs.has(uid)) {
-        mergedColabs.set(uid, { ...colab, _id: uid });
+        mergedColabs.set(uid, { ...colab, _id: colab.matricula || colab.cod_cracha || key });
       } else {
         const existing = mergedColabs.get(uid);
         const mergeField = (f: string) => {
@@ -55,15 +59,33 @@ export async function GET(req: Request) {
           empresa: mergeField('empresa'),
           gestor: mergeField('gestor'),
           superior_imediato: mergeField('superior_imediato'),
-          cod_cracha: existing.cod_cracha || colab.cod_cracha
+          cod_cracha: existing.cod_cracha || colab.cod_cracha,
+          isTerceiro: existing.isTerceiro === false || colab.isTerceiro === false ? false : true
         });
       }
     }
+      
+    let colabsArr = Array.from(mergedColabs.values());
+    
+    // 2. DEDUPLICAÇÃO FINAL POR _id (Previne erro de "two children with the same key" no React)
+    const finalDeduplicated = new Map();
+    for (const colab of colabsArr) {
+      if (!finalDeduplicated.has(colab._id)) {
+          finalDeduplicated.set(colab._id, colab);
+      } else {
+          // Se já existe, tentar preservar os dados mais ricos
+          const existing = finalDeduplicated.get(colab._id);
+          if (!existing.email && colab.email) existing.email = colab.email;
+          if (!existing.cargo && colab.cargo) existing.cargo = colab.cargo;
+      }
+    }
+    
+    colabsArr = Array.from(finalDeduplicated.values());
 
     let resultados = [];
 
-    // 2. APLICAR FILTROS NA BASE LIMPA E MESCLADA
-    for (const colab of mergedColabs.values()) {
+    // 3. APLICAÇÃO DOS FILTROS NA BASE LIMPA E MESCLADA
+    for (const colab of colabsArr) {
       const empClean = cleanString(colab.empresa);
       const plaClean = cleanString(colab.planta);
       const cargoClean = cleanString(colab.cargo);
@@ -73,7 +95,17 @@ export async function GET(req: Request) {
       if (empresasFilter.length > 0 && !empresasFilter.includes(empClean)) continue;
       if (plantasFilter.length > 0 && !plantasFilter.includes(plaClean)) continue;
       if (cargosFilter.length > 0 && !cargosFilter.includes(cargoClean)) continue;
-      if (gestoresFilter.length > 0 && !gestoresFilter.includes(gestorClean)) continue;
+      
+      if (gestoresFilter.length > 0) {
+        if (!gestoresFilter.includes(gestorClean)) continue;
+        
+        // REGRA DE NEGÓCIO: Se filtrar por gestor E não escolher empresa, 
+        // exibe SOMENTE funcionários próprios (CMPC/Guaíba/Softys/etc) por padrão.
+        if (empresasFilter.length === 0) {
+            const isThirdPartyByCompany = /^\d+/.test(empClean) || empClean.includes('MASTER');
+            if (colab.isTerceiro || isThirdPartyByCompany) continue;
+        }
+      }
       
       if (busca) {
         const nomeMatch = colab.nome?.toLowerCase().includes(busca);

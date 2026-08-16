@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { id_treinamento, identificador_lido, modo_registro } = body;
+    const { id_treinamento, identificador_lido, modo_registro, id_sessao } = body;
 
     if (!id_treinamento || !identificador_lido) {
       return NextResponse.json(
@@ -29,13 +29,16 @@ export async function POST(req: Request) {
     }
 
     // Cria o registro da presença "cego" usando o identificador como ID do documento
-    await setDoc(presencaRef, {
+    const dataToSave: any = {
       identificador_lido,
       modo_registro: modo_registro || "DESCONHECIDO",
       data_registro: serverTimestamp()
-    });
+    };
+    if (id_sessao) dataToSave.id_sessao = id_sessao;
 
-    return NextResponse.json({ success: true, data: { id_treinamento, identificador_lido, modo_registro } });
+    await setDoc(presencaRef, dataToSave);
+
+    return NextResponse.json({ success: true, data: { id_treinamento, identificador_lido, modo_registro, id_sessao } });
   } catch (error: any) {
     console.error("Erro ao registrar presença:", error);
     return NextResponse.json(

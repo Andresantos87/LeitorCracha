@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Users, Target, Plus, Search, Loader2, Trash2, Edit, X, Check, ChevronDown, Building2, MapPin, Briefcase, UserCircle } from "lucide-react";
+import { Users, Target, Plus, Search, Loader2, Trash2, Edit, X, Check, ChevronDown, Building2, MapPin, Briefcase, UserCircle, Save, Clock, CheckCircle2 } from "lucide-react";
 
 const CustomSelect = ({ values, onChange, options, placeholder, icon: Icon, disabled = false }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -89,9 +89,12 @@ export default function PublicosAlvoPage() {
   const [publicos, setPublicos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
+  const [editTreinamentoVinculado, setEditTreinamentoVinculado] = useState<any>(null);
+  const [editPresencas, setEditPresencas] = useState<string[]>([]);
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -104,6 +107,7 @@ export default function PublicosAlvoPage() {
   const [filtroCargo, setFiltroCargo] = useState<string[]>([]);
   const [filtroGestor, setFiltroGestor] = useState<string[]>([]);
   const [resultadosColab, setResultadosColab] = useState<any[]>([]);
+  const [totalEncontrados, setTotalEncontrados] = useState(0);
   const [buscandoColab, setBuscandoColab] = useState(false);
   const [empresasOptions, setEmpresasOptions] = useState<string[]>([]);
   const [plantasOptions, setPlantasOptions] = useState<string[]>([]);
@@ -142,13 +146,13 @@ export default function PublicosAlvoPage() {
   }, [filtroEmpresa, filtroPlanta]);
 
   useEffect(() => {
-    if (isModalOpen) {
+    if (isSearchModalOpen) {
       const timeoutId = setTimeout(() => {
         buscarColaboradores();
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [pesquisa, filtroEmpresa, filtroPlanta, filtroCargo, filtroGestor, isModalOpen]);
+  }, [pesquisa, filtroEmpresa, filtroPlanta, filtroCargo, filtroGestor, isSearchModalOpen]);
 
   const carregarPublicos = async () => {
     setIsLoading(true);
@@ -174,10 +178,14 @@ export default function PublicosAlvoPage() {
       filtroPlanta.forEach(p => params.append('planta', p));
       filtroCargo.forEach(c => params.append('cargo', c));
       filtroGestor.forEach(g => params.append('gestor', g));
+      params.append('limit', '2000'); // Limite alto para evitar sobrecarga excessiva no navegador, mas suficiente para a maioria dos pblicos-alvo
       
       const res = await fetch(`/api/colaboradores?${params.toString()}`);
       const json = await res.json();
-      if (json.success) setResultadosColab(json.data);
+      if (json.success) {
+        setResultadosColab(json.data);
+        setTotalEncontrados(json.total || 0);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -185,15 +193,37 @@ export default function PublicosAlvoPage() {
     }
   };
 
-  const handleSalvar = async () => {
+  const updateRol = (id: string, rol: string) => {
+    setSelectedColaboradores(prev => prev.map(c => (c._id === id || c.matricula === id) ? { ...c, rol } : c));
+  };
+  
+  const aplicarRolEmMassa = () => {
+    const rol = window.prompt("Digite o papel (rol) para aplicar a todos da lista (ex: Operador, Brigadista):");
+    if (rol !== null) {
+      setSelectedColaboradores(prev => prev.map(c => ({ ...c, rol })));
+    }
+  };
+
+  const copiarEmails = () => {
+    const emails = selectedColaboradores.map(c => c.email).filter(e => e && e.trim() !== "");
+    if (emails.length === 0) {
+      alert("Nenhum e-mail encontrado na lista.");
+      return;
+    }
+    navigator.clipboard.writeText(emails.join("; "));
+    alert(`${emails.length} e-mail(s) copiado(s) para a área de transferência!`);
+  };
+
+  const salvarPublico = async () => {
     if (!nome) {
-      alert("O nome é obrigatório");
+      alert("O nome do público-alvo é obrigatório.");
       return;
     }
     
-    const matriculasArray = selectedColaboradores.map(c => c._id);
-
     setIsSaving(true);
+    const matriculas = selectedColaboradores.map(c => c.matricula || c._id);
+    const membros = selectedColaboradores.map(c => ({ matricula: c.matricula || c._id, rol: c.rol || "" }));
+    
     try {
       const url = editId ? `/api/publicos-alvo/${editId}` : "/api/publicos-alvo";
       const method = editId ? "PUT" : "POST";
@@ -201,7 +231,7 @@ export default function PublicosAlvoPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, descricao, matriculas: matriculasArray })
+        body: JSON.stringify({ nome, descricao, matriculas, membros })
       });
       
       const data = await res.json();
@@ -240,21 +270,85 @@ export default function PublicosAlvoPage() {
     }
   };
 
-  const abrirEdicao = (pub: any) => {
+  const abrirEdicao = async (pub: any) => {
     setEditId(pub.id);
+    setEditTreinamentoVinculado(pub.treinamento_vinculado || null);
+    setEditPresencas(pub.presencas_matriculas || []);
     setNome(pub.nome);
     setDescricao(pub.descricao || "");
-    setSelectedColaboradores(pub.matriculas.map((m: string) => ({ _id: m, nome: "Matrícula: " + m })));
+    
+    setIsModalOpen(true);
+    setBuscandoColab(true);
+    
+    try {
+        const matriculasUnicasReq = Array.from(new Set(pub.matriculas || []));
+        const res = await fetch("/api/colaboradores/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ matriculas: matriculasUnicasReq })
+        });
+        const json = await res.json();
+        if (json.success) {
+          const encontrados = json.data.map((c: any) => {
+           const det = pub.matriculas_detalhes?.find((md: any) => md._id === (c.matricula || c._id));
+           return { ...c, rol: det?.rol || "" };
+        });
+        
+        const encontradosIds = new Set(encontrados.map((c: any) => c.matricula || c._id));
+        const matriculasUnicas = Array.from(new Set(pub.matriculas)) as string[];
+        const naoEncontrados = matriculasUnicas
+          .filter((m: string) => {
+             const cleanM = String(m).replace(/^0+/, '');
+             const noZeroM = cleanM.length > 0 ? cleanM : m;
+             return !encontradosIds.has(m) && !encontradosIds.has(cleanM) && !encontradosIds.has(noZeroM);
+          })
+          .map((m: string) => {
+             const det = pub.matriculas_detalhes?.find((md: any) => md._id === m);
+             return { 
+               _id: m, 
+               nome: "Matrícula/ID: " + m, 
+               cargo: "Não localizado no banco", 
+               planta: "-",
+               rol: det?.rol || ""
+             };
+          });
+          
+          const combinados = [...encontrados, ...naoEncontrados];
+          const unicosMap = new Map();
+          combinados.forEach(c => {
+             const key = c._id || c.matricula;
+             if (!unicosMap.has(key)) {
+                unicosMap.set(key, c);
+             }
+          });
+          
+          setSelectedColaboradores(Array.from(unicosMap.values()));
+      } else {
+        setSelectedColaboradores(pub.matriculas.map((m: string) => {
+           const det = pub.matriculas_detalhes?.find((md: any) => md._id === m);
+           return { _id: m, nome: "Matrícula: " + m, cargo: "-", planta: "-", rol: det?.rol || "" };
+        }));
+      }
+    } catch (e) {
+      setSelectedColaboradores(pub.matriculas.map((m: string) => {
+           const det = pub.matriculas_detalhes?.find((md: any) => md._id === m);
+           return { _id: m, nome: "Matrícula: " + m, cargo: "-", planta: "-", rol: det?.rol || "" };
+      }));
+    } finally {
+      setBuscandoColab(false);
+    }
+
     setPesquisa("");
     setFiltroEmpresa([]);
     setFiltroPlanta([]);
     setFiltroCargo([]);
     setFiltroGestor([]);
-    setIsModalOpen(true);
   };
 
   const abrirCriacao = () => {
     setEditId(null);
+    setEditTreinamentoVinculado(null);
+    setEditPresencas([]);
     setNome("");
     setDescricao("");
     setSelectedColaboradores([]);
@@ -282,13 +376,16 @@ export default function PublicosAlvoPage() {
   const removerTodos = () => {
     if(confirm("Remover todos os selecionados?")) setSelectedColaboradores([]);
   };
+    
+  const removerInvalidos = () => {
+    setSelectedColaboradores(prev => prev.filter(c => c.cargo !== "Não localizado no banco"));
+  };
 
   const filtrados = publicos.filter(p => p.nome.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-500">
       
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -307,7 +404,6 @@ export default function PublicosAlvoPage() {
         </button>
       </div>
 
-      {/* Busca */}
       <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 p-4 rounded-2xl">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -321,7 +417,6 @@ export default function PublicosAlvoPage() {
         </div>
       </div>
 
-      {/* Lista */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 text-slate-400">
           <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
@@ -341,20 +436,54 @@ export default function PublicosAlvoPage() {
               className="bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800 hover:border-slate-600 transition-all group cursor-pointer relative"
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
-                  <Users className="h-6 w-6" />
+                  <div className="flex gap-3">
+                    <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl shrink-0">
+                      <Users className="h-6 w-6" />
+                    </div>
+                    {pub.treinamento_vinculado ? (
+                       <div className="flex flex-col justify-center">
+                          <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Vinculado a:</span>
+                          <span className="text-xs text-emerald-100 bg-emerald-900/40 px-2 py-0.5 rounded border border-emerald-700/50 line-clamp-1" title={pub.treinamento_vinculado.nome}>
+                            {pub.treinamento_vinculado.nome}
+                          </span>
+                       </div>
+                    ) : (
+                       <div className="flex flex-col justify-center">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status:</span>
+                          <span className="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">Aguardando Vínculo</span>
+                       </div>
+                    )}
+                  </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); excluirPublico(pub.id); }} 
+                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100 z-10 shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); excluirPublico(pub.id); }} 
-                  className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100 z-10"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
               <h3 className="text-xl font-bold text-white mb-1 truncate group-hover:text-blue-400 transition-colors flex items-center gap-2">
                 {pub.nome} <Edit className="h-4 w-4 opacity-0 group-hover:opacity-100" />
               </h3>
               <p className="text-sm text-slate-400 mb-4 line-clamp-2 min-h-[40px]">{pub.descricao || "Sem descrição"}</p>
+              
+              {pub.treinamento_vinculado && (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avanço da Turma</span>
+                    <span className="text-[10px] font-bold text-blue-400">
+                      {pub.matriculas?.length > 0 
+                        ? Math.round(((pub.presencas_matriculas?.length || 0) / pub.matriculas.length) * 100) 
+                        : 0}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-700">
+                    <div 
+                      className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                      style={{ width: `${pub.matriculas?.length > 0 ? Math.round(((pub.presencas_matriculas?.length || 0) / pub.matriculas.length) * 100) : 0}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
               
               <div className="pt-4 border-t border-slate-700/50 flex items-center justify-between">
                 <span className="text-xs text-slate-500">
@@ -370,194 +499,286 @@ export default function PublicosAlvoPage() {
         </div>
       )}
 
-      {/* Modal de Cadastro */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-6xl w-full max-h-[95vh] flex flex-col shadow-2xl">
+        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl max-w-6xl w-full h-[95vh] flex flex-col shadow-2xl overflow-hidden">
             
-            {/* Header Modal */}
-            <div className="p-6 border-b border-slate-700 flex justify-between items-center shrink-0">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Target className="h-6 w-6 text-blue-400" />
-                {editId ? "Editar Público-Alvo" : "Novo Público-Alvo"}
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white text-2xl leading-none p-2">&times;</button>
-            </div>
-            
-            {/* Corpo do Modal - Layout em Colunas */}
-            <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
-              
-              {/* Coluna da Esquerda: Config e Busca */}
-              <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-slate-700 flex flex-col min-h-0">
-                <div className="p-6 space-y-4 shrink-0 border-b border-slate-700/50">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Nome do Público / Turma *</label>
-                      <input 
-                        type="text"
-                        value={nome}
-                        onChange={e => setNome(e.target.value)}
-                        placeholder="Ex: Operadores de Caldeira"
-                        className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-blue-500 outline-none text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Filtros de Busca */}
-                  <div className="pt-2">
-                    <label className="block text-xs font-bold text-blue-400 uppercase mb-2 flex items-center gap-2">
-                      <Search className="h-4 w-4" /> Buscar Colaboradores no Banco
-                    </label>
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <CustomSelect 
-                        values={filtroEmpresa}
-                        onChange={setFiltroEmpresa}
-                        options={empresasOptions}
-                        placeholder="Todas as Empresas"
-                        icon={Building2}
-                      />
-                      <CustomSelect 
-                        values={filtroPlanta}
-                        onChange={setFiltroPlanta}
-                        options={plantasOptions}
-                        placeholder="Todas as Plantas"
-                        icon={MapPin}
-                      />
-                      <CustomSelect 
-                        values={filtroCargo}
-                        onChange={setFiltroCargo}
-                        options={cargosOptions}
-                        placeholder="Todos os Cargos"
-                        icon={Briefcase}
-                      />
-                      <CustomSelect 
-                        values={filtroGestor}
-                        onChange={setFiltroGestor}
-                        options={gestoresOptions}
-                        placeholder="Todos os Gestores"
-                        icon={UserCircle}
-                        disabled={gestoresOptions.length === 0}
-                      />
-                    </div>
-                    <input 
-                      type="text"
-                      value={pesquisa}
-                      onChange={e => setPesquisa(e.target.value)}
-                      placeholder="Buscar por nome ou matrícula..."
-                      className="w-full bg-slate-900 border border-blue-500/30 focus:border-blue-500 rounded-lg px-4 py-3 text-white text-sm outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Resultados da Busca */}
-                <div className="flex-1 overflow-y-auto p-4 bg-slate-950/30">
-                  <div className="flex justify-between items-center mb-3 px-2">
-                    <span className="text-xs text-slate-400 font-medium">Resultados encontrados: {resultadosColab.length}</span>
-                    {resultadosColab.length > 0 && (
-                      <button onClick={adicionarTodosResultados} className="text-xs text-blue-400 hover:text-blue-300 font-bold">
-                        + Adicionar Todos
-                      </button>
-                    )}
-                  </div>
-                  
-                  {buscandoColab ? (
-                    <div className="flex items-center justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-blue-500" /></div>
-                  ) : resultadosColab.length === 0 ? (
-                    <div className="text-center text-slate-500 text-sm py-10">Nenhum resultado encontrado</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {resultadosColab.map(colab => {
-                        const isSelected = !!selectedColaboradores.find(c => c._id === colab._id);
-                        return (
-                          <div 
-                            key={colab._id}
-                            onClick={() => toggleColaborador(colab)}
-                            className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${isSelected ? 'bg-blue-900/20 border-blue-500/50' : 'bg-slate-900 border-slate-800 hover:border-slate-600'}`}
-                          >
-                            <div>
-                              <p className="text-sm font-bold text-white">{colab.nome}</p>
-                              <p className="text-xs text-slate-400 font-mono mt-0.5">{colab._id} • {colab.planta}</p>
-                            </div>
-                            <div className={`w-6 h-6 rounded-md flex items-center justify-center border ${isSelected ? 'bg-blue-500 border-blue-400 text-white' : 'border-slate-600 text-transparent'}`}>
-                              <Check className="h-4 w-4" />
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+            <div className="px-5 py-3 border-b border-slate-700 flex flex-wrap gap-3 justify-between items-center bg-slate-900/80 shrink-0">
+              <div className="flex items-center gap-3 flex-1 min-w-[300px]">
+                <Target className="h-6 w-6 text-blue-400 shrink-0" />
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="Digite o nome deste Público-Alvo..."
+                  className="bg-slate-900/50 border border-slate-600 focus:border-blue-500 rounded-lg px-3 py-1.5 text-lg font-bold text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500/20 outline-none w-full max-w-md transition-all"
+                />
               </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={salvarPublico}
+                  disabled={isSaving || !nome}
+                  className="px-6 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {isSaving ? "Salvando..." : (editId ? "Salvar Alterações" : "Concluir Lista")}
+                </button>
+              </div>
+            </div>
 
-              {/* Coluna da Direita: Selecionados */}
-              <div className="w-full lg:w-1/2 flex flex-col min-h-0 bg-slate-900/20">
-                <div className="p-5 border-b border-slate-700/50 flex justify-between items-center shrink-0">
-                  <div>
-                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                      <Users className="h-5 w-5 text-emerald-400" />
-                      Pessoas Selecionadas
-                    </h3>
-                    <p className="text-xs text-slate-400">{selectedColaboradores.length} colaboradores na lista</p>
+            <div className="flex-1 flex flex-col min-h-0 bg-slate-900/30 p-4 sm:p-5">
+               
+               <div className="flex justify-between items-center mb-4 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <Users className="h-5 w-5 text-emerald-400" />
+                    <div>
+                      <h3 className="text-base font-bold text-white leading-none">Pessoas Selecionadas</h3>
+                      <p className="text-[13px] text-slate-400 mt-1">{selectedColaboradores.length} adicionados</p>
+                    </div>
                   </div>
-                  {selectedColaboradores.length > 0 && (
-                    <button onClick={removerTodos} className="text-xs text-red-400 hover:text-red-300 font-bold px-3 py-1.5 bg-red-500/10 rounded-lg">
-                      Limpar Tudo
+                  <div className="flex gap-2">
+                    {selectedColaboradores.length > 0 && (
+                      <>
+                        <button 
+                          onClick={copiarEmails}
+                          className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-700/50 hover:bg-slate-600 rounded-md transition-colors border border-slate-600"
+                          title="Copiar todos os e-mails da lista"
+                        >
+                          Copiar E-mails
+                        </button>
+                        <button 
+                          onClick={aplicarRolEmMassa}
+                          className="px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 rounded-md transition-colors border border-emerald-500/20"
+                        >
+                          Atribuir Rol a Todos
+                        </button>
+
+                        {selectedColaboradores.some(c => c.cargo === "Não localizado no banco") && (
+                          <button 
+                            onClick={removerInvalidos}
+                            className="px-3 py-1.5 text-xs font-medium text-orange-400 hover:text-white bg-orange-500/10 hover:bg-orange-500/20 rounded-md transition-colors border border-orange-500/20"
+                          >
+                            Limpar Inválidos
+                          </button>
+                        )}
+
+                        <button 
+                          onClick={removerTodos}
+                          className="px-3 py-1.5 text-xs font-medium text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500/20 rounded-md transition-colors"
+                        >
+                          Limpar Tudo
+                        </button>
+                      </>
+                    )}
+                    <button 
+                      onClick={() => setIsSearchModalOpen(true)}
+                      className="px-4 py-1.5 text-sm font-bold text-white bg-blue-500 hover:bg-blue-400 rounded-md transition-colors shadow-sm"
+                    >
+                      + Adicionar Pessoas
+                    </button>
+                  </div>
+               </div>
+
+               {buscandoColab && editId ? (
+                 <div className="flex items-center justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-blue-500" /></div>
+               ) : selectedColaboradores.length === 0 ? (
+                 <div className="flex flex-col items-center justify-center flex-1 text-center p-12 bg-slate-800/30 rounded-xl border border-slate-700/50 border-dashed">
+                   <Target className="h-16 w-16 text-slate-600 mb-4" />
+                   <p className="text-slate-400 text-lg">Nenhuma pessoa selecionada ainda.<br/>Clique no botão acima para adicionar colaboradores do banco.</p>
+                 </div>
+               ) : (
+                 <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-sm flex-1 flex flex-col min-h-0">
+                   <div className="overflow-auto flex-1 relative">
+                     <table className="w-full text-left text-sm text-slate-300 border-collapse">
+                       <thead className="bg-slate-900/80 text-slate-400 font-bold uppercase text-[10px] border-b border-slate-700 sticky top-0 z-10 backdrop-blur-sm">
+                         <tr>
+                           <th className="px-2 py-2 whitespace-nowrap">Colaborador</th>
+                           <th className="px-2 py-2 whitespace-nowrap">Matrícula</th>
+                           <th className="px-2 py-2 whitespace-nowrap">Cargo</th>
+                           <th className="px-2 py-2 whitespace-nowrap">Turno</th>
+                           <th className="px-2 py-2 whitespace-nowrap">Área</th>
+                           <th className="px-2 py-2 whitespace-nowrap">E-mail</th>
+                           <th className="px-2 py-2 whitespace-nowrap">Planta / Empresa</th>
+                           <th className="px-2 py-2 whitespace-nowrap w-24">Papel / Rol</th>
+                           {editTreinamentoVinculado && <th className="px-2 py-2 text-center whitespace-nowrap w-20">Presença</th>}
+                           <th className="px-2 py-2 text-center whitespace-nowrap w-12">Remover</th>
+                         </tr>
+                       </thead>
+                       <tbody className="divide-y divide-slate-700/50">
+                         {selectedColaboradores.map(colab => {
+                           const isPresente = editPresencas.some(p => {
+                             const cleanP = String(p).replace(/^0+/, '');
+                             const id1 = String(colab._id || '').replace(/^0+/, '');
+                             const id2 = String(colab.matricula || '').replace(/^0+/, '');
+                             const id3 = String(colab.identificador || '').replace(/^0+/, '');
+                             const id4 = String(colab.cod_cracha || '').replace(/^0+/, '');
+                             return (cleanP && cleanP === id1) || 
+                                    (cleanP && cleanP === id2) || 
+                                    (cleanP && id1 && cleanP.endsWith(id1)) || 
+                                    (id1 && cleanP && id1.endsWith(cleanP)) ||
+                                    (cleanP && id2 && cleanP.endsWith(id2)) || 
+                                    (id2 && cleanP && id2.endsWith(cleanP)) ||
+                                    (id3 && cleanP === id3) || 
+                                    (id4 && cleanP === id4);
+                           });
+                           return (
+                             <tr key={colab._id} className="hover:bg-slate-700/40 transition-colors group">
+                               <td className="px-2 py-1 text-white font-medium text-[11px] truncate max-w-[150px]" title={colab.nome}>
+                                 {colab.nome}
+                               </td>
+                               <td className="px-2 py-1 font-mono text-[10px] text-slate-400">{colab.matricula || colab._id}</td>
+                               <td className="px-2 py-1 text-blue-400 text-[10px] truncate max-w-[120px]" title={colab.cargo}>
+                                 {(colab.cargo || "").replace(/^\d+\s*-\s*/, '')}
+                               </td>
+                               <td className="px-2 py-1 text-emerald-400 font-medium text-[10px] whitespace-nowrap">{colab.turno || "-"}</td>
+                               <td className="px-2 py-1 text-indigo-400 text-[10px] truncate max-w-[120px]" title={colab.area}>{colab.area || "-"}</td>
+                               <td className="px-2 py-1 text-slate-400 text-[10px] truncate max-w-[120px]" title={colab.email}>{colab.email || "-"}</td>
+                               <td className="px-2 py-1 text-slate-300 text-[10px] truncate max-w-[120px]" title={`${colab.planta} - ${colab.empresa}`}>{colab.planta} - {colab.empresa}</td>
+                               <td className="px-2 py-1">
+                                 <input 
+                                   type="text" 
+                                   value={colab.rol || ""} 
+                                   onChange={(e) => updateRol(colab._id, e.target.value)}
+                                   className="w-full bg-slate-900 border border-slate-600 text-[10px] text-white px-1.5 py-0.5 rounded focus:outline-none focus:border-blue-500"
+                                   placeholder="Ex: Operador"
+                                 />
+                               </td>
+                               {editTreinamentoVinculado && (
+                                 <td className="px-2 py-1 text-center">
+                                   {isPresente ? (
+                                      <CheckCircle2 className="h-4 w-4 text-emerald-400 inline-block" />
+                                   ) : (
+                                      <Clock className="h-4 w-4 text-slate-600 inline-block" />
+                                   )}
+                                 </td>
+                               )}
+                               <td className="px-2 py-1 text-center">
+                                 <button 
+                                   onClick={() => toggleColaborador(colab)}
+                                   className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors opacity-50 group-hover:opacity-100"
+                                 >
+                                   <X className="h-3 w-3" />
+                                 </button>
+                               </td>
+                             </tr>
+                           );
+                         })}
+                       </tbody>
+                     </table>
+                   </div>
+                 </div>
+               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isSearchModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-in fade-in zoom-in-95 duration-200">
+           <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+             <div className="p-6 border-b border-slate-700 flex justify-between items-center shrink-0">
+               <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                 <Search className="h-6 w-6 text-blue-400" />
+                 Buscar Colaboradores no Banco
+               </h2>
+               <button onClick={() => setIsSearchModalOpen(false)} className="text-slate-400 hover:text-white text-3xl leading-none p-2">&times;</button>
+             </div>
+             
+             <div className="p-6 border-b border-slate-700/50 bg-slate-900/30 shrink-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+                  <CustomSelect values={filtroEmpresa} onChange={setFiltroEmpresa} options={empresasOptions} placeholder="Todas as Empresas" icon={Building2} />
+                  <CustomSelect values={filtroPlanta} onChange={setFiltroPlanta} options={plantasOptions} placeholder="Todas as Plantas" icon={MapPin} />
+                  <CustomSelect values={filtroCargo} onChange={setFiltroCargo} options={cargosOptions} placeholder="Todos os Cargos" icon={Briefcase} />
+                  <CustomSelect values={filtroGestor} onChange={setFiltroGestor} options={gestoresOptions} placeholder="Todos os Gestores" icon={UserCircle} disabled={gestoresOptions.length === 0} />
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <input 
+                    type="text"
+                    value={pesquisa}
+                    onChange={e => setPesquisa(e.target.value)}
+                    placeholder="Buscar por nome ou matrícula..."
+                    className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl py-3 pl-12 pr-4 text-white text-base outline-none transition-all shadow-inner"
+                  />
+                </div>
+             </div>
+             
+             <div className="flex-1 overflow-y-auto p-6 bg-slate-950/50">
+                <div className="flex justify-between items-center mb-5">
+                  <span className="text-sm text-slate-400 font-medium">
+                    {resultadosColab.length < totalEncontrados 
+                      ? `Exibindo ${resultadosColab.length} de ${totalEncontrados} resultados encontrados (limite atingido)` 
+                      : `Resultados encontrados: ${totalEncontrados}`}
+                  </span>
+                  {resultadosColab.length > 0 && (
+                    <button onClick={adicionarTodosResultados} className="text-sm text-blue-400 hover:text-blue-300 font-bold px-4 py-2 bg-blue-500/10 rounded-lg transition-colors">
+                      + Adicionar Todos Exibidos
                     </button>
                   )}
                 </div>
-
-                <div className="flex-1 overflow-y-auto p-4">
-                  {selectedColaboradores.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                      <Target className="h-12 w-12 text-slate-700 mb-3" />
-                      <p className="text-slate-400 text-sm">Nenhuma pessoa selecionada ainda.<br/>Busque na coluna ao lado e clique para adicionar.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-2">
-                      {selectedColaboradores.map(colab => (
-                        <div key={colab._id} className="bg-slate-800 border border-slate-700 p-2.5 rounded-lg flex items-center justify-between group">
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs shrink-0">
-                              {colab.nome?.charAt(0) || "U"}
-                            </div>
-                            <div className="truncate">
-                              <p className="text-sm font-bold text-slate-200 truncate">{colab.nome}</p>
-                              <p className="text-[10px] text-slate-400 font-mono truncate">{colab._id}</p>
-                            </div>
+                
+                {buscandoColab ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                    <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
+                    <p>Buscando colaboradores...</p>
+                  </div>
+                ) : resultadosColab.length === 0 ? (
+                  <div className="text-center text-slate-500 py-20 bg-slate-900/50 rounded-2xl border border-slate-800 border-dashed">
+                    <Search className="h-12 w-12 text-slate-700 mx-auto mb-3" />
+                    <p>Nenhum resultado encontrado para os filtros atuais.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {resultadosColab.map(colab => {
+                      const isSelected = !!selectedColaboradores.find(c => c._id === colab._id);
+                      return (
+                        <div 
+                          key={colab._id}
+                          onClick={() => toggleColaborador(colab)}
+                          className={`p-4 rounded-xl border flex items-start justify-between cursor-pointer transition-all ${isSelected ? 'bg-blue-900/20 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.15)]' : 'bg-slate-800 border-slate-700 hover:border-slate-500'}`}
+                        >
+                          <div className="flex items-start gap-3 overflow-hidden">
+                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${isSelected ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-300'}`}>
+                               {colab.nome?.charAt(0) || "U"}
+                             </div>
+                             <div className="truncate">
+                               <p className="text-sm font-bold text-white truncate">{colab.nome}</p>
+                               <p className="text-[11px] text-blue-400 font-medium truncate mt-0.5" title={colab.cargo}>{colab.cargo}</p>
+                               {colab.area && <p className="text-[10px] text-indigo-400 font-medium mt-0.5 truncate">{colab.area}</p>}
+                               {colab.email && <p className="text-[10px] text-slate-400 mt-0.5 truncate">{colab.email}</p>}
+                               <p className="text-[10px] text-emerald-400 font-medium mt-0.5 truncate">{colab.turno ? `Turno: ${colab.turno}` : ''}</p>
+                               <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">{colab._id} • {colab.planta} - {colab.empresa}</p>
+                             </div>
                           </div>
-                          <button 
-                            onClick={() => toggleColaborador(colab)}
-                            className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
+                          <div className={`w-6 h-6 mt-1 rounded-md flex items-center justify-center border shrink-0 transition-colors ${isSelected ? 'bg-blue-500 border-blue-400 text-white' : 'border-slate-600 text-transparent'}`}>
+                            <Check className="h-4 w-4" />
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {/* Footer Modal */}
-            <div className="p-5 border-t border-slate-700 flex justify-end gap-3 shrink-0 bg-slate-800 rounded-b-2xl">
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="px-6 py-2.5 rounded-xl font-medium text-slate-300 hover:bg-slate-700 transition-colors"
-                disabled={isSaving}
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={handleSalvar}
-                disabled={isSaving || !nome}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
-              >
-                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isSaving ? "Salvando..." : (editId ? "Salvar Alterações" : "Concluir Lista (" + selectedColaboradores.length + ")")}
-              </button>
-            </div>
-          </div>
+                      )
+                    })}
+                  </div>
+                )}
+             </div>
+             
+             {/* Footer */}
+             <div className="p-6 border-t border-slate-700 flex justify-between items-center shrink-0 bg-slate-800 rounded-b-2xl">
+               <div className="text-slate-400 text-sm">
+                 <strong className="text-white">{selectedColaboradores.length}</strong> pessoas selecionadas no total
+               </div>
+               <button 
+                 onClick={() => setIsSearchModalOpen(false)}
+                 className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
+               >
+                 Confirmar Seleção <Check className="h-5 w-5" />
+               </button>
+             </div>
+           </div>
         </div>
       )}
     </div>

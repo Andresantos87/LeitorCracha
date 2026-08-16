@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, getCountFromServer } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, getCountFromServer, doc, getDoc } from "firebase/firestore";
 
 export const dynamic = 'force-dynamic';
 
@@ -9,11 +9,11 @@ export async function GET() {
     const q = query(collection(db, "treinamentos"), orderBy("data", "desc"));
     const snapshot = await getDocs(q);
     
-    const treinamentos = await Promise.all(snapshot.docs.map(async (doc) => {
-      const data = doc.data();
+    const treinamentos = await Promise.all(snapshot.docs.map(async (d) => {
+      const data = d.data();
       let count = 0;
       try {
-        const presencasRef = collection(db, "treinamentos", doc.id, "presencas");
+        const presencasRef = collection(db, "treinamentos", d.id, "presencas");
         const countSnapshot = await getCountFromServer(presencasRef);
         count = countSnapshot.data().count || 0;
       } catch (e) {
@@ -24,7 +24,7 @@ export async function GET() {
       const paisFinal = data.pais || (isChileName ? 'CHILE' : 'BRASIL');
       
       return {
-        id: doc.id,
+        id: d.id,
         nome: data.nome,
         turma: data.turma || "",
         pais: paisFinal,
@@ -35,7 +35,8 @@ export async function GET() {
         _count: {
           registros: count
         },
-        publico_alvo_id: data.publico_alvo_id || null
+        publico_alvo_id: data.publico_alvo_id || null,
+        checklist_dinamico: data.checklist_dinamico || []
       };
     }));
     
@@ -49,9 +50,27 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nome, instrutor_email, turma, pais = 'BRASIL', planta = '', publico_alvo_id } = body;
+    const { nome, instrutor_email, turma, pais = 'BRASIL', planta = '', publico_alvo_id, checklistTemplateId } = body;
     
     if (!nome) return NextResponse.json({ success: false, error: "Nome é obrigatório" }, { status: 400 });
+
+    let checklist_dinamico: any[] = [];
+    if (checklistTemplateId) {
+      try {
+        const templateDoc = await getDoc(doc(db, "checklist_templates", checklistTemplateId));
+        if (templateDoc.exists()) {
+          const tData = templateDoc.data();
+          if (tData.items && Array.isArray(tData.items)) {
+            checklist_dinamico = tData.items.map((item: any) => ({
+              ...item,
+              checado: false
+            }));
+          }
+        }
+      } catch(e) {
+        console.error("Erro ao carregar template", e);
+      }
+    }
 
     const docData: any = {
       nome,
@@ -60,7 +79,8 @@ export async function POST(req: Request) {
       planta: planta || (pais === 'CHILE' ? 'CHILE (SAT)' : 'GUAÍBA (RAINBOW)'),
       instrutor_email: instrutor_email || "N/A",
       data: serverTimestamp(),
-      status_encerrado: false
+      status_encerrado: false,
+      checklist_dinamico
     };
     if (publico_alvo_id) docData.publico_alvo_id = publico_alvo_id;
 
@@ -68,14 +88,8 @@ export async function POST(req: Request) {
     
     const treinamento = {
       id: docRef.id,
-      nome,
-      turma: turma || "",
-      pais: pais,
-      planta: planta || (pais === 'CHILE' ? 'CHILE (SAT)' : 'GUAÍBA (RAINBOW)'),
-      instrutor_email: instrutor_email || "N/A",
+      ...docData,
       data: new Date().toISOString(),
-      status_encerrado: false,
-      publico_alvo_id: publico_alvo_id || null,
       _count: { registros: 0 }
     };
     

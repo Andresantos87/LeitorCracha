@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock } from "lucide-react";
+import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import SignatureCanvas from "react-signature-canvas";
 
@@ -43,6 +43,14 @@ export default function Treinamentos() {
   const [presencas, setPresencas] = useState<any[]>([]);
   const [loadingPresencas, setLoadingPresencas] = useState(false);
 
+  // States para Checklist
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [checklist, setChecklist] = useState<any[]>([]);
+  const [checklistTemplates, setChecklistTemplates] = useState<any[]>([]);
+  const [createChecklistId, setCreateChecklistId] = useState("");
+  const [assignChecklistId, setAssignChecklistId] = useState("");
+
   useEffect(() => {
     carregarTreinamentos();
     fetch("/api/auth").then(res => res.json()).then(json => {
@@ -62,10 +70,19 @@ export default function Treinamentos() {
     fetch("/api/publicos-alvo").then(res => res.json()).then(json => {
       if (json.success) setPublicosAlvo(json.data);
     }).catch(() => {});
+    fetch("/api/checklists").then(res => res.json()).then(json => {
+      if (json.success) setChecklistTemplates(json.data);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
     if (selectedId) {
+      const tr = treinamentos.find(t => t.id === selectedId);
+      if (tr && tr.checklist_dinamico) {
+        setChecklist(tr.checklist_dinamico);
+      } else {
+        setChecklist([]);
+      }
       carregarPresencas(selectedId);
       const interval = setInterval(() => {
         carregarPresencas(selectedId, true);
@@ -75,7 +92,7 @@ export default function Treinamentos() {
     } else {
       setPresencas([]);
     }
-  }, [selectedId]);
+  }, [selectedId, treinamentos]);
 
   useEffect(() => {
     if (!manualId || manualId.length < 3) {
@@ -124,8 +141,53 @@ export default function Treinamentos() {
     if (!silent) setLoadingPresencas(false);
   };
 
+  const handleSalvarChecklist = async () => {
+    if (!selectedId) return;
+    setIsSubmitting(true);
+    try {
+      await fetch(`/api/treinamentos/${selectedId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checklist_dinamico: checklist })
+      });
+      setTreinamentos(prev => prev.map(t => t.id === selectedId ? { ...t, checklist_dinamico: checklist } : t));
+      carregarTreinamentos();
+      setIsChecklistModalOpen(false);
+    } catch(e) {}
+    setIsSubmitting(false);
+  };
+
+  const handleAssignChecklistSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedId || !assignChecklistId) return;
+    
+    setIsSubmitting(true);
+    try {
+      const template = checklistTemplates.find(t => t.id === assignChecklistId);
+      if (template && template.items) {
+        const checklist_dinamico = template.items.map((item: any) => ({
+          ...item,
+          checado: false
+        }));
+
+        await fetch(`/api/treinamentos/${selectedId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ checklist_dinamico })
+        });
+        
+        setChecklist(checklist_dinamico);
+        setTreinamentos(prev => prev.map(t => t.id === selectedId ? { ...t, checklist_dinamico } : t));
+        carregarTreinamentos();
+      }
+      setIsAssignModalOpen(false);
+      setAssignChecklistId("");
+    } catch(e) {}
+    setIsSubmitting(false);
+  };
+
   const carregarTreinamentos = async () => {
-    const res = await fetch("/api/treinamentos");
+    const res = await fetch(`/api/treinamentos?t=${Date.now()}`);
     const json = await res.json();
     if (json.success) setTreinamentos(json.data);
     setLoading(false);
@@ -145,7 +207,8 @@ export default function Treinamentos() {
         pais: createPais, 
         planta: createPlanta, 
         instrutor_email: "Admin Local",
-        publico_alvo_id: createPublicoAlvoId || undefined
+        publico_alvo_id: createPublicoAlvoId || undefined,
+        checklistTemplateId: createChecklistId || undefined
       })
     });
     
@@ -154,6 +217,7 @@ export default function Treinamentos() {
     setNomeTreinamento("");
     setTurmaTreinamento("");
     setCreatePublicoAlvoId("");
+    setCreateChecklistId("");
     carregarTreinamentos();
   };
 
@@ -245,8 +309,24 @@ export default function Treinamentos() {
     if (!publico || !publico.matriculas) return null;
     
     const presencasMatriculas = presencas.map(p => p.identificador_lido);
-    const pendentes = publico.matriculas.filter((m: string) => !presencasMatriculas.includes(m));
-    const capacitados = publico.matriculas.filter((m: string) => presencasMatriculas.includes(m));
+    
+    const checkIsPresente = (m: string) => {
+      const det = publico.matriculas_detalhes?.find((d:any) => d._id === m);
+      return presencasMatriculas.some(p => {
+        const cleanP = String(p).replace(/^0+/, '');
+        const id1 = String(m).replace(/^0+/, '');
+        const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
+        const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
+        return (cleanP && cleanP === id1) || 
+               (cleanP && id1 && cleanP.endsWith(id1)) || 
+               (id1 && cleanP && id1.endsWith(cleanP)) ||
+               (id2 && cleanP === id2) || 
+               (id3 && cleanP === id3);
+      });
+    };
+
+    const pendentes = publico.matriculas.filter((m: string) => !checkIsPresente(m));
+    const capacitados = publico.matriculas.filter((m: string) => checkIsPresente(m));
     const total = publico.matriculas.length;
     const progresso = total > 0 ? Math.round((capacitados.length / total) * 100) : 0;
     
@@ -279,8 +359,30 @@ export default function Treinamentos() {
           onClick={() => setShowPending(!showPending)}
           className="mt-auto w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg transition-colors border border-slate-700"
         >
-          {showPending ? 'Ocultar Lista de Pendentes' : 'Ver Lista de Pendentes'}
+          {showPending ? 'Ocultar Lista de Participantes' : 'Ver Lista de Participantes'}
         </button>
+
+        {showPending && publico.matriculas_detalhes && (
+          <div className="mt-4 max-h-60 overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-700">
+            {publico.matriculas_detalhes.map((detalhe: any) => {
+              const isCapacitado = checkIsPresente(detalhe._id);
+              return (
+                <div key={detalhe._id} className="flex justify-between items-center p-2 bg-slate-900 rounded-lg border border-slate-800">
+                  <div className="flex flex-col overflow-hidden pr-2">
+                    <span className="text-[11px] font-bold text-white truncate">{detalhe.nome}</span>
+                    {detalhe.rol && <span className="text-[9px] text-emerald-400 font-bold truncate uppercase">{detalhe.rol}</span>}
+                    <span className="text-[9px] text-slate-500 font-mono">{detalhe._id}</span>
+                  </div>
+                  {isCapacitado ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <Clock className="h-4 w-4 text-slate-600 shrink-0" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -442,6 +544,7 @@ export default function Treinamentos() {
                             <th className="px-4 py-3 font-semibold">Turma / Identificador</th>
                             <th className="px-4 py-3 font-semibold">ID da Sessão</th>
                             <th className="px-4 py-3 font-semibold">Status</th>
+                            <th className="px-4 py-3 font-semibold">Checklist</th>
                             <th className="px-4 py-3 font-semibold">Presenças</th>
                             <th className="px-4 py-3 font-semibold text-right">Ações</th>
                           </tr>
@@ -466,6 +569,21 @@ export default function Treinamentos() {
                                 <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800">
                                   <PlayCircle className="h-3 w-3" /> Ativo
                                 </span>
+                              </td>
+                              <td className="px-4 py-3.5">
+                                {t.checklist_dinamico && t.checklist_dinamico.length > 0 ? (
+                                  t.checklist_dinamico.every((item: any) => item.checado) ? (
+                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800" title="Checklist concluído">
+                                      <CheckCircle2 className="h-3 w-3" /> Realizado
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-amber-900/30 text-amber-400 border border-amber-800" title={`${t.checklist_dinamico.filter((i:any)=>i.checado).length} de ${t.checklist_dinamico.length} itens concluídos`}>
+                                      <Clock className="h-3 w-3" /> Pendente
+                                    </span>
+                                  )
+                                ) : (
+                                  <span className="text-slate-600 text-xs">-</span>
+                                )}
                               </td>
                               <td className="px-4 py-3.5 font-bold text-sky-400">{t._count.registros} pessoas</td>
                               <td className="px-4 py-3.5 text-right flex items-center justify-end space-x-2" onClick={e => e.stopPropagation()}>
@@ -518,8 +636,26 @@ export default function Treinamentos() {
                   className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-blue-900/20"
                 >
                   <UserPlus className="h-5 w-5" />
-                  <span>Gerenciar Presenças (QR Code e Leitura)</span>
+                  <span>Compartilhar / QR Code</span>
                 </button>
+
+                {checklist && checklist.length > 0 ? (
+                  <button 
+                    onClick={() => setIsChecklistModalOpen(true)}
+                    className="flex items-center space-x-2 px-6 py-3 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-600/50 rounded-xl font-bold transition-colors shadow-lg shadow-emerald-900/10"
+                  >
+                    <CheckCircle2 className="h-5 w-5" />
+                    <span>Checklist do Instrutor</span>
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setIsAssignModalOpen(true)}
+                    className="flex items-center space-x-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-xl font-bold transition-colors shadow-lg shadow-slate-900/10"
+                  >
+                    <PlusCircle className="h-5 w-5" />
+                    <span>Atribuir Checklist</span>
+                  </button>
+                )}
               </div>
             </div>
             
@@ -534,14 +670,44 @@ export default function Treinamentos() {
               </h3>
               <div className="flex flex-wrap gap-2">
                 {publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id)?.matriculas
-                  .filter((m: string) => !presencas.map(p => p.identificador_lido).includes(m))
+                  .filter((m: string) => {
+                     const publico = publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id);
+                     const det = publico?.matriculas_detalhes?.find((d:any) => d._id === m);
+                     const presencasMatriculas = presencas.map(p => p.identificador_lido);
+                     return !presencasMatriculas.some(p => {
+                       const cleanP = String(p).replace(/^0+/, '');
+                       const id1 = String(m).replace(/^0+/, '');
+                       const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
+                       const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
+                       return (cleanP && cleanP === id1) || 
+                              (cleanP && id1 && cleanP.endsWith(id1)) || 
+                              (id1 && cleanP && id1.endsWith(cleanP)) ||
+                              (id2 && cleanP === id2) || 
+                              (id3 && cleanP === id3);
+                     });
+                  })
                   .map((m: string) => (
                   <span key={m} className="px-3 py-1 bg-amber-950/40 border border-amber-900/50 text-amber-300 rounded-lg text-sm font-mono">
                     {m}
                   </span>
                 ))}
                 {publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id)?.matriculas
-                  .filter((m: string) => !presencas.map(p => p.identificador_lido).includes(m)).length === 0 && (
+                  .filter((m: string) => {
+                     const publico = publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id);
+                     const det = publico?.matriculas_detalhes?.find((d:any) => d._id === m);
+                     const presencasMatriculas = presencas.map(p => p.identificador_lido);
+                     return !presencasMatriculas.some(p => {
+                       const cleanP = String(p).replace(/^0+/, '');
+                       const id1 = String(m).replace(/^0+/, '');
+                       const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
+                       const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
+                       return (cleanP && cleanP === id1) || 
+                              (cleanP && id1 && cleanP.endsWith(id1)) || 
+                              (id1 && cleanP && id1.endsWith(cleanP)) ||
+                              (id2 && cleanP === id2) || 
+                              (id3 && cleanP === id3);
+                     });
+                  }).length === 0 && (
                   <span className="text-emerald-400 text-sm font-bold flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4" /> Todos os convocados foram capacitados!
                   </span>
@@ -550,8 +716,9 @@ export default function Treinamentos() {
             </div>
           )}
 
-          <div className="bg-slate-900/80 rounded-xl border border-slate-700 p-6">
-            <div className="flex items-center justify-between mb-4">
+
+            <div className="bg-slate-900/80 rounded-xl border border-slate-700 p-6">
+              <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <h3 className="font-bold text-white text-lg">Lista de Presenças ({presencas.length})</h3>
                 <span className="flex items-center gap-1 text-[10px] bg-emerald-950 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-800">
@@ -576,26 +743,26 @@ export default function Treinamentos() {
                 <table className="w-full text-left text-sm">
                   <thead className="text-slate-400 border-b border-slate-700/50">
                     <tr>
-                      <th className="pb-3 font-medium">Matrícula / RUT</th>
-                      <th className="pb-3 font-medium">Colaborador</th>
-                      <th className="pb-3 font-medium hidden md:table-cell">Empresa</th>
-                      <th className="pb-3 font-medium hidden md:table-cell">Modo</th>
-                      <th className="pb-3 font-medium text-center">Assinatura</th>
-                      <th className="pb-3 font-medium text-right">Data / Hora</th>
-                      {userRole === 'admin' && <th className="pb-3 font-medium text-right">Ações</th>}
+                      <th className="px-4 pb-3 font-medium">Matrícula / RUT</th>
+                      <th className="px-4 pb-3 font-medium">Colaborador</th>
+                      <th className="px-4 pb-3 font-medium hidden md:table-cell">Empresa</th>
+                      <th className="px-4 pb-3 font-medium hidden md:table-cell">Modo</th>
+                      <th className="px-4 pb-3 font-medium text-center">Assinatura</th>
+                      <th className="px-4 pb-3 font-medium text-right">Data / Hora</th>
+                      {userRole === 'admin' && <th className="px-4 pb-3 font-medium text-right">Ações</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50 text-slate-300">
                     {presencas.map(p => (
                       <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 font-mono text-emerald-400">{p.identificador_lido}</td>
-                        <td className="py-3">
+                        <td className="px-4 py-3 font-mono text-emerald-400">{p.identificador_lido}</td>
+                        <td className="px-4 py-3">
                           <p className="font-bold text-white text-sm">{p.nome}</p>
                         </td>
-                        <td className="py-3 hidden md:table-cell text-sm text-slate-300">
+                        <td className="px-4 py-3 hidden md:table-cell text-sm text-slate-300">
                           {p.planta}
                         </td>
-                        <td className="py-3 hidden md:table-cell">
+                        <td className="px-4 py-3 hidden md:table-cell">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                             p.modo_registro === 'MANUAL' ? 'bg-blue-900/40 text-blue-400' :
                             p.modo_registro === 'NFC' ? 'bg-purple-900/40 text-purple-400' :
@@ -605,7 +772,7 @@ export default function Treinamentos() {
                             {p.modo_registro}
                           </span>
                         </td>
-                        <td className="py-3 text-center">
+                        <td className="px-4 py-3 text-center">
                           {p.assinaturaBase64 ? (
                             <button 
                               onClick={() => setSignatureView(p.assinaturaBase64)}
@@ -617,11 +784,11 @@ export default function Treinamentos() {
                             <span className="text-xs text-slate-600">-</span>
                           )}
                         </td>
-                        <td className="py-3 text-right text-slate-500 text-sm font-medium">
+                        <td className="px-4 py-3 text-right text-slate-500 text-sm font-medium">
                           {p.data_registro ? new Date(p.data_registro).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit'}) : '--/--/---- --:--'}
                         </td>
                         {userRole === 'admin' && (
-                          <td className="py-3 text-right">
+                          <td className="px-4 py-3 text-right">
                             <button
                               onClick={(e) => { e.stopPropagation(); excluirPresenca(p.id); }}
                               className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
@@ -781,8 +948,30 @@ export default function Treinamentos() {
                     className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium appearance-none cursor-pointer pr-10 shadow-inner"
                   >
                     <option value="">Nenhum (Treinamento Aberto)</option>
-                    {publicosAlvo.map(p => (
+                    {publicosAlvo.filter(p => !p.treinamento_vinculado).map(p => (
                       <option key={p.id} value={p.id}>{p.nome}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                    <ChevronDown className="h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>Atribuir Checklist (Opcional)</span>
+                  <span className="text-[10px] font-normal text-slate-400">Modelo de checklist para o instrutor</span>
+                </label>
+                <div className="relative">
+                  <select
+                    value={createChecklistId}
+                    onChange={e => setCreateChecklistId(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-emerald-500 text-white font-medium appearance-none cursor-pointer pr-10 shadow-inner"
+                  >
+                    <option value="">Nenhum (Sem checklist obrigatório)</option>
+                    {checklistTemplates.map(template => (
+                      <option key={template.id} value={template.id}>{template.nome} ({template.items?.length || 0} itens)</option>
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
@@ -1034,18 +1223,133 @@ export default function Treinamentos() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 p-6 flex flex-col items-center">
             <h3 className="text-lg font-bold text-white mb-4">Assinatura do Colaborador</h3>
-            <div className="bg-slate-800 border border-slate-600 rounded-lg p-2 mb-6 w-full">
-              <img src={signatureView} alt="Assinatura" className="w-full h-auto" />
+                  <div className="bg-slate-800 border border-slate-600 rounded-lg p-2 mb-6 w-full">
+                  <img src={signatureView} alt="Assinatura" className="w-full h-auto" />
+                </div>
+                <button 
+                  onClick={() => setSignatureView(null)}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
-            <button 
-              onClick={() => setSignatureView(null)}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors"
-            >
-              Fechar
-            </button>
-          </div>
-        </div>
-      )}
+          )}
+
+          {/* MODAL CHECKLIST DO INSTRUTOR */}
+          {isChecklistModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+              <div className="bg-slate-900 rounded-2xl w-full max-w-3xl overflow-hidden border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
+                <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 sticky top-0 z-10">
+                  <div>
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-400" /> Checklist do Instrutor
+                    </h3>
+                    <p className="text-xs text-slate-400">Marque as etapas concluídas para esta turma.</p>
+                  </div>
+                </div>
+                
+                <div className="p-6 overflow-y-auto flex flex-col md:flex-row gap-8">
+                  
+                  <div className="flex-1 space-y-6">
+                    {checklist.length === 0 ? (
+                      <div className="text-center p-8 text-slate-400 border border-dashed border-slate-700 rounded-xl bg-slate-800/30">
+                        Nenhum modelo de checklist foi atribuído a esta turma.
+                      </div>
+                    ) : (
+                      Array.from(new Set(checklist.map(i => i.categoria || 'GERAL'))).map(categoria => (
+                        <div key={categoria} className="bg-slate-800/50 p-4 rounded-xl border border-blue-900/50">
+                          <h4 className="text-blue-400 font-bold mb-4 flex items-center gap-2">
+                            <Clock className="h-4 w-4"/> {categoria}
+                          </h4>
+                          <div className="space-y-3">
+                            {checklist.filter(i => (i.categoria || 'GERAL') === categoria).map((item, index) => (
+                              <label key={item.id || index} className="flex items-center gap-3 cursor-pointer group">
+                                <input 
+                                  type="checkbox" 
+                                  checked={item.checado || false} 
+                                  onChange={e => {
+                                    const novo = [...checklist];
+                                    const idx = novo.findIndex(n => n.id === item.id);
+                                    if(idx > -1) {
+                                      novo[idx] = { ...novo[idx], checado: e.target.checked };
+                                      setChecklist(novo);
+                                    }
+                                  }} 
+                                  className="w-5 h-5 rounded border-slate-600 bg-slate-900 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900" 
+                                />
+                                <span className="text-sm text-slate-300 group-hover:text-white transition-colors">{item.texto}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+                
+                <div className="px-6 py-4 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3 sticky bottom-0">
+                  <button type="button" onClick={() => setIsChecklistModalOpen(false)} className="px-4 py-2 text-slate-300 hover:text-white font-medium transition-colors">
+                    Cancelar
+                  </button>
+                  <button type="button" onClick={handleSalvarChecklist} disabled={isSubmitting} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2">
+                    {isSubmitting ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Salvar Checklist"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL ATRIBUIR CHECKLIST A TURMA EXISTENTE */}
+          {isAssignModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+              <div className="bg-slate-900 rounded-2xl w-full max-w-md overflow-hidden border border-slate-700 shadow-2xl flex flex-col">
+                <div className="px-6 py-4 border-b border-slate-800 bg-slate-900">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <ListChecks className="h-5 w-5 text-sky-400" /> Atribuir Checklist
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Escolha um modelo de checklist para esta turma.</p>
+                </div>
+                
+                <form onSubmit={handleAssignChecklistSubmit} className="p-6 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                      Modelo de Checklist
+                    </label>
+                    <select
+                      required
+                      value={assignChecklistId}
+                      onChange={e => setAssignChecklistId(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium appearance-none cursor-pointer"
+                    >
+                      <option value="">Selecione um modelo...</option>
+                      {checklistTemplates.map(template => (
+                        <option key={template.id} value={template.id}>{template.nome} ({template.items?.length || 0} itens)</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="pt-4 flex justify-end gap-3">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsAssignModalOpen(false)} 
+                      className="px-4 py-2 text-slate-300 hover:text-white font-medium transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      type="submit" 
+                      disabled={isSubmitting || !assignChecklistId} 
+                      className="px-6 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isSubmitting ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Atribuir"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
     </div>
   );
 }

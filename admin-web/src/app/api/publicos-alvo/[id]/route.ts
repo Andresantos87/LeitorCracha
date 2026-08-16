@@ -4,9 +4,10 @@ import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> | { id: string } }) {
   try {
-    const docRef = doc(db, "publicos_alvo", params.id);
+    const resolvedParams = await params;
+    const docRef = doc(db, "publicos_alvo", resolvedParams.id);
     const docSnap = await getDoc(docRef);
     
     if (!docSnap.exists()) {
@@ -23,16 +24,18 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> | { id: string } }) {
   try {
     const body = await req.json();
     const { nome, descricao, matriculas } = body;
     
-    const docRef = doc(db, "publicos_alvo", params.id);
+    const resolvedParams = await params;
+    const docRef = doc(db, "publicos_alvo", resolvedParams.id);
     const updates: any = {};
     if (nome !== undefined) updates.nome = nome;
     if (descricao !== undefined) updates.descricao = descricao;
     if (matriculas !== undefined) updates.matriculas = Array.isArray(matriculas) ? matriculas : [];
+    if (body.membros !== undefined) updates.membros = Array.isArray(body.membros) ? body.membros : [];
     
     await updateDoc(docRef, updates);
     
@@ -43,14 +46,15 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> | { id: string } }) {
   try {
     const session = await import("@/lib/auth").then(m => m.getSession());
     if (session && session.role !== 'admin' && session.role !== 'gestor') {
       return NextResponse.json({ success: false, error: "Apenas Administradores ou Gestores têm permissão para excluir públicos-alvo." }, { status: 403 });
     }
 
-    const docRef = doc(db, "publicos_alvo", params.id);
+    const resolvedParams = await params;
+    const docRef = doc(db, "publicos_alvo", resolvedParams.id);
     await deleteDoc(docRef);
     
     return NextResponse.json({ success: true, message: "Público-Alvo excluído com sucesso." });

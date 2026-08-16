@@ -1,35 +1,73 @@
-import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { writeBatch, doc } from 'firebase/firestore';
+import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+
+// Helper to normalize strings for comparison
+function cleanString(str: any) {
+  if (!str) return "";
+  let s = String(str).toLowerCase().trim();
+  if (/^\d+$/.test(s)) {
+    s = s.replace(/^0+/, '') || '0';
+  }
+  return s;
+}
 
 export async function POST(req: Request) {
   try {
-    const { colaboradores } = await req.json();
+    const { matriculas } = await req.json();
 
-    if (!colaboradores || !Array.isArray(colaboradores)) {
-      return NextResponse.json({ success: false, error: 'Lista de colaboradores inválida' }, { status: 400 });
+    if (!matriculas || !Array.isArray(matriculas)) {
+      return NextResponse.json({ success: false, error: "Array de matrículas inválido" }, { status: 400 });
     }
 
-    const batch = writeBatch(db);
+    const filePath = path.join(process.cwd(), "colaboradores.json");
+    if (!fs.existsSync(filePath)) {
+      return NextResponse.json({ success: false, error: "Banco de dados não encontrado" }, { status: 404 });
+    }
 
-    colaboradores.forEach((c: any) => {
-      // Usa o e-mail como ID do documento para evitar duplicados
-      const docRef = doc(db, 'colaboradores', c.identificador);
-      batch.set(docRef, {
-        identificador: c.identificador,
-        nome: c.nome,
-        planta: c.planta,
-        empresa: c.empresa || c.planta,
-        pais: c.pais || 'BRASIL',
-        dataCriacao: new Date().toISOString()
-      }, { merge: true }); // merge true garante que se já existir, só atualiza
+    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const results = [];
+    
+    const targetArray = matriculas.map((m: string) => ({ original: m, clean: cleanString(m) }));
+
+    for (const target of targetArray) {
+      let found = null;
+      for (const key in data) {
+        const colab = data[key];
+        if (
+          cleanString(colab.matricula) === target.clean ||
+          cleanString(colab.cod_cracha) === target.clean ||
+          cleanString(key) === target.clean ||
+          cleanString(colab.nome) === target.clean
+        ) {
+          found = { ...colab, _key: key };
+          break; // pega o primeiro correspondente
+        }
+      }
+
+      if (found) {
+        results.push({
+          _id: target.original, // Preserva exatamente o que foi solicitado para o frontend cruzar
+          matricula: found.matricula || found.cod_cracha || found._key || '',
+          nome: found.nome || 'Sem Nome',
+          planta: found.planta || 'Outros',
+          cargo: found.cargo || 'Não Informado',
+          empresa: found.empresa || 'Outros',
+          gestor: found.gestor || '',
+          turno: found.turno || '',
+          area: found.area || '',
+          email: found.email || ''
+        });
+      }
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      data: results 
     });
 
-    await batch.commit();
-
-    return NextResponse.json({ success: true, count: colaboradores.length });
   } catch (error: any) {
-    console.error("ERRO BATCH COLABORADORES:", error);
-    return NextResponse.json({ success: false, error: 'Erro no batch' }, { status: 500 });
+    console.error("Erro na API Batch Colaboradores:", error);
+    return NextResponse.json({ success: false, error: "Erro interno no servidor" }, { status: 500 });
   }
 }

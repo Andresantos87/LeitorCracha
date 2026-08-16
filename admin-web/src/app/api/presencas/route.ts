@@ -40,12 +40,24 @@ export async function GET(req: Request) {
         const raw = String(p.identificador_lido || '').replace(/\D/g, '');
         const mioloA = raw.length >= 10 ? raw.substring(2, raw.length - 2).replace(/^0+/, '') : '';
         const mioloB = raw.length >= 4 ? raw.substring(2).replace(/^0+/, '') : '';
-        user = Object.values(usersDict).find((u: any) => {
-          const mat = String(u.matricula || '').replace(/\D/g, '').replace(/^0+/, '');
+        const usersArray = Object.values(usersDict);
+        // Prioridade 1: Match exato por cod_cracha ou identificador
+        user = usersArray.find((u: any) => {
+          const cracha = String(u.cod_cracha || '').replace(/\D/g, '').replace(/^0+/, '');
           const uid = String(u.identificador || '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
-          return (mat && mat.length >= 4 && (mat === mioloA || mat === mioloB || (raw.length >= 10 && mat.length >= 6 && raw.includes(mat)))) ||
-                 (uid && uid === raw);
-        }) || {};
+          if (cracha && (cracha === raw || cracha === raw.replace(/^0+/, ''))) return true;
+          if (uid && uid === raw) return true;
+          return false;
+        });
+
+        // Prioridade 2: Fuzzy match por matrícula
+        if (!user) {
+          user = usersArray.find((u: any) => {
+            const mat = String(u.matricula || '').replace(/\D/g, '').replace(/^0+/, '');
+            if (mat && mat.length >= 4 && (mat === mioloA || mat === mioloB)) return true;
+            return false;
+          }) || {};
+        }
       }
       
       return {
@@ -97,7 +109,9 @@ export async function POST(req: Request) {
       for (const [key, u] of Object.entries(usersDict)) {
         const kClean = key.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
         const matClean = u.matricula ? String(u.matricula).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : '';
-        if (kClean === idClean || (matClean && matClean === idClean)) {
+        const crachaClean = u.cod_cracha ? String(u.cod_cracha).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : '';
+        
+        if (kClean === idClean || (matClean && matClean === idClean) || (crachaClean && crachaClean === idClean)) {
           user = u;
           break;
         }

@@ -41,7 +41,7 @@ export default function Home() {
         <p className="text-slate-400 mt-2">{t.dashSubtitle}</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Card 1 */}
         <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 shadow-sm backdrop-blur-sm">
           <div className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -52,20 +52,6 @@ export default function Home() {
             {loading ? "..." : treinamentos.length}
           </div>
           <p className="text-xs text-slate-400 mt-1">{t.roomsCreated}</p>
-        </div>
-
-        {/* Card 2 */}
-        <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 shadow-sm backdrop-blur-sm">
-          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="tracking-tight text-sm font-medium text-slate-300">{t.totalColabs}</h3>
-            <Users className="h-4 w-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl font-bold text-white mt-2">
-            {loading ? "..." : (colabStats?.total || 0).toLocaleString('pt-BR')}
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            {t.baseImported}
-          </p>
         </div>
 
         {/* Card 3 */}
@@ -141,9 +127,6 @@ export default function Home() {
             <a href="/colaboradores" className="flex items-center justify-center p-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors border border-slate-600">
               {t.importExcel}
             </a>
-            <button className="flex items-center justify-center p-4 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-lg font-medium transition-colors border border-indigo-500/30">
-              {t.testBq}
-            </button>
           </div>
         </div>
       </div>
