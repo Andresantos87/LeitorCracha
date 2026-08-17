@@ -84,8 +84,6 @@ const CustomSelect = ({ values, onChange, options, placeholder, icon: Icon, disa
           </ul>
         </div>
       )}
-      <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
-      <PromptModal {...promptModal} onCancel={() => setPromptModal(prev => ({...prev, isOpen: false}))} />
     </div>
   );
 };
