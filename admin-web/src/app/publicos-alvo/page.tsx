@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import ConfirmModal from '@/components/ConfirmModal';
+import PromptModal from '@/components/PromptModal';
+import toast from 'react-hot-toast';
 import { Users, Target, Plus, Search, Loader2, Trash2, Edit, X, Check, ChevronDown, Building2, MapPin, Briefcase, UserCircle, Save, Clock, CheckCircle2 } from "lucide-react";
 
 const CustomSelect = ({ values, onChange, options, placeholder, icon: Icon, disabled = false }: any) => {
@@ -81,6 +84,8 @@ const CustomSelect = ({ values, onChange, options, placeholder, icon: Icon, disa
           </ul>
         </div>
       )}
+      <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
+      <PromptModal {...promptModal} onCancel={() => setPromptModal(prev => ({...prev, isOpen: false}))} />
     </div>
   );
 };
@@ -95,12 +100,20 @@ export default function PublicosAlvoPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editTreinamentoVinculado, setEditTreinamentoVinculado] = useState<any>(null);
   const [editPresencas, setEditPresencas] = useState<string[]>([]);
+  
+  const [rolesDisponiveis, setRolesDisponiveis] = useState<string[]>([]);
+  const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
+  const [novoRol, setNovoRol] = useState("");
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   
+  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void, variant: 'danger'|'warning'}>({isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger'});
+  const [promptModal, setPromptModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: (v: string) => void}>({isOpen: false, title: '', message: '', onConfirm: () => {}});
+  
   // New States for Search & Select UI
   const [selectedColaboradores, setSelectedColaboradores] = useState<any[]>([]);
+  const [checkedColabs, setCheckedColabs] = useState<string[]>([]);
   const [pesquisa, setPesquisa] = useState("");
   const [filtroEmpresa, setFiltroEmpresa] = useState<string[]>([]);
   const [filtroPlanta, setFiltroPlanta] = useState<string[]>([]);
@@ -163,7 +176,7 @@ export default function PublicosAlvoPage() {
         setPublicos(data.data);
       }
     } catch (error) {
-      alert("Erro ao carregar públicos-alvo");
+      toast.error("Erro ao carregar públicos-alvo");
     } finally {
       setIsLoading(false);
     }
@@ -196,27 +209,46 @@ export default function PublicosAlvoPage() {
   const updateRol = (id: string, rol: string) => {
     setSelectedColaboradores(prev => prev.map(c => (c._id === id || c.matricula === id) ? { ...c, rol } : c));
   };
+
+  const handleAddRol = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!novoRol.trim()) return;
+    if (!rolesDisponiveis.includes(novoRol.trim())) {
+      setRolesDisponiveis(prev => [...prev, novoRol.trim()]);
+    }
+    setNovoRol("");
+  };
+
+  const handleRemoveRol = (rolToRemove: string) => {
+    setRolesDisponiveis(prev => prev.filter(r => r !== rolToRemove));
+  };
   
   const aplicarRolEmMassa = () => {
-    const rol = window.prompt("Digite o papel (rol) para aplicar a todos da lista (ex: Operador, Brigadista):");
-    if (rol !== null) {
-      setSelectedColaboradores(prev => prev.map(c => ({ ...c, rol })));
-    }
+    setPromptModal({
+      isOpen: true,
+      title: "Atribuir Rol",
+      message: "Digite o papel (rol) para aplicar a todos da lista (ex: Operador, Brigadista):",
+      onConfirm: (rol) => {
+        setSelectedColaboradores(prev => prev.map(c => ({ ...c, rol })));
+        setPromptModal(prev => ({...prev, isOpen: false}));
+        toast.success("Rol aplicado aos selecionados!");
+      }
+    });
   };
 
   const copiarEmails = () => {
     const emails = selectedColaboradores.map(c => c.email).filter(e => e && e.trim() !== "");
     if (emails.length === 0) {
-      alert("Nenhum e-mail encontrado na lista.");
+      toast.error("Nenhum e-mail encontrado na lista.");
       return;
     }
     navigator.clipboard.writeText(emails.join("; "));
-    alert(`${emails.length} e-mail(s) copiado(s) para a área de transferência!`);
+    toast.success(`${emails.length} e-mail(s) copiado(s)!`);
   };
 
   const salvarPublico = async () => {
     if (!nome) {
-      alert("O nome do público-alvo é obrigatório.");
+      toast.error("O nome do público-alvo é obrigatório.");
       return;
     }
     
@@ -231,12 +263,12 @@ export default function PublicosAlvoPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, descricao, matriculas, membros })
+        body: JSON.stringify({ nome, descricao, matriculas, membros, roles_disponiveis: rolesDisponiveis })
       });
       
       const data = await res.json();
       if (data.success) {
-        alert(editId ? "Público-Alvo atualizado!" : "Público-Alvo criado com sucesso!");
+        toast.success(editId ? "Público-Alvo atualizado!" : "Público-Alvo criado!");
         setIsModalOpen(false);
         setEditId(null);
         setNome("");
@@ -244,30 +276,37 @@ export default function PublicosAlvoPage() {
         setSelectedColaboradores([]);
         carregarPublicos();
       } else {
-        alert(data.error || "Erro ao salvar");
+        toast.error(data.error || "Erro ao salvar");
       }
     } catch (error) {
-      alert("Erro de conexão");
+      toast.error("Erro de conexão");
     } finally {
       setIsSaving(false);
     }
   };
 
   const excluirPublico = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este Público-Alvo? Isso não apagará as presenças, apenas a lista de convocação.")) return;
-    
-    try {
-      const res = await fetch(`/api/publicos-alvo/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (data.success) {
-        alert("Público-Alvo excluído!");
-        carregarPublicos();
-      } else {
-        alert(data.error || "Você não tem permissão.");
+    setConfirmModal({
+      isOpen: true,
+      title: "Excluir Público-Alvo",
+      message: "Tem certeza que deseja excluir este Público-Alvo? Isso não apagará as presenças, apenas a lista de convocação.",
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch(`/api/publicos-alvo/${id}`, { method: "DELETE" });
+          const data = await res.json();
+          if (data.success) {
+            toast.success("Público-Alvo excluído!");
+            carregarPublicos();
+          } else {
+            toast.error(data.error || "Erro ao salvar");
+          }
+        } catch (e) {
+          toast.error("Erro ao excluir.");
+        }
       }
-    } catch (e) {
-      alert("Erro ao excluir.");
-    }
+    });
   };
 
   const abrirEdicao = async (pub: any) => {
@@ -276,6 +315,8 @@ export default function PublicosAlvoPage() {
     setEditPresencas(pub.presencas_matriculas || []);
     setNome(pub.nome);
     setDescricao(pub.descricao || "");
+    setRolesDisponiveis(pub.roles_disponiveis || []);
+    setCheckedColabs([]);
     
     setIsModalOpen(true);
     setBuscandoColab(true);
@@ -357,14 +398,29 @@ export default function PublicosAlvoPage() {
     setFiltroPlanta([]);
     setFiltroCargo([]);
     setFiltroGestor([]);
+    setRolesDisponiveis([]);
+    setCheckedColabs([]);
     setIsModalOpen(true);
   };
 
   const toggleColaborador = (colab: any) => {
     if (selectedColaboradores.find(c => c._id === colab._id)) {
       setSelectedColaboradores(selectedColaboradores.filter(c => c._id !== colab._id));
+      setCheckedColabs(prev => prev.filter(id => id !== colab._id));
     } else {
       setSelectedColaboradores([...selectedColaboradores, colab]);
+    }
+  };
+
+  const toggleColabCheck = (id: string) => {
+    setCheckedColabs(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
+
+  const toggleAllColabsCheck = () => {
+    if (checkedColabs.length === selectedColaboradores.length) {
+      setCheckedColabs([]);
+    } else {
+      setCheckedColabs(selectedColaboradores.map(c => c._id));
     }
   };
 
@@ -374,7 +430,17 @@ export default function PublicosAlvoPage() {
   };
 
   const removerTodos = () => {
-    if(confirm("Remover todos os selecionados?")) setSelectedColaboradores([]);
+    setConfirmModal({
+      isOpen: true,
+      title: "Remover Selecionados",
+      message: "Remover todos os selecionados da lista?",
+      variant: "danger",
+      onConfirm: () => {
+        setSelectedColaboradores([]);
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        toast.success("Selecionados removidos.");
+      }
+    });
   };
     
   const removerInvalidos = () => {
@@ -553,11 +619,39 @@ export default function PublicosAlvoPage() {
                           Copiar E-mails
                         </button>
                         <button 
-                          onClick={aplicarRolEmMassa}
-                          className="px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 rounded-md transition-colors border border-emerald-500/20"
+                          onClick={() => setIsRolesModalOpen(true)}
+                          className="px-3 py-1.5 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-500/10 hover:bg-indigo-500/20 rounded-md transition-colors border border-indigo-500/20"
                         >
-                          Atribuir Rol a Todos
+                          Configurar Roles
                         </button>
+                        <div className="relative group">
+                          <select
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                const role = e.target.value;
+                                if (checkedColabs.length === 0) {
+                                  toast.error("Selecione pessoas na caixa à esquerda primeiro.");
+                                  e.target.value = "";
+                                  return;
+                                }
+                                setSelectedColaboradores(prev => prev.map(c => checkedColabs.includes(c._id) ? { ...c, rol: role } : c));
+                                toast.success(`Rol aplicado a ${checkedColabs.length} pessoa(s)!`);
+                                setCheckedColabs([]);
+                                e.target.value = "";
+                              }
+                            }}
+                            disabled={checkedColabs.length === 0}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md outline-none appearance-none pr-8 transition-colors ${checkedColabs.length > 0 ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 cursor-pointer" : "text-slate-500 bg-slate-800/50 border border-slate-700 cursor-not-allowed"}`}
+                          >
+                            <option value="" className="bg-slate-800 text-slate-300">
+                              {checkedColabs.length > 0 ? `Atribuir a ${checkedColabs.length} selecionado(s)...` : "Selecione pessoas para atribuir Rol..."}
+                            </option>
+                            {rolesDisponiveis.map(r => (
+                              <option key={r} value={r} className="bg-slate-800 text-slate-200">{r}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className={`h-3 w-3 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${checkedColabs.length > 0 ? "text-emerald-400" : "text-slate-500"}`} />
+                        </div>
 
                         {selectedColaboradores.some(c => c.cargo === "Não localizado no banco") && (
                           <button 
@@ -598,6 +692,14 @@ export default function PublicosAlvoPage() {
                      <table className="w-full text-left text-sm text-slate-300 border-collapse">
                        <thead className="bg-slate-900/80 text-slate-400 font-bold uppercase text-[10px] border-b border-slate-700 sticky top-0 z-10 backdrop-blur-sm">
                          <tr>
+                           <th className="px-2 py-2 text-center w-8">
+                             <input 
+                               type="checkbox" 
+                               className="rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500/20 cursor-pointer"
+                               checked={selectedColaboradores.length > 0 && checkedColabs.length === selectedColaboradores.length}
+                               onChange={toggleAllColabsCheck}
+                             />
+                           </th>
                            <th className="px-2 py-2 whitespace-nowrap">Colaborador</th>
                            <th className="px-2 py-2 whitespace-nowrap">Matrícula</th>
                            <th className="px-2 py-2 whitespace-nowrap">Cargo</th>
@@ -629,6 +731,14 @@ export default function PublicosAlvoPage() {
                            });
                            return (
                              <tr key={colab._id} className="hover:bg-slate-700/40 transition-colors group">
+                               <td className="px-2 py-1 text-center">
+                                 <input 
+                                   type="checkbox" 
+                                   className="rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500/20 cursor-pointer"
+                                   checked={checkedColabs.includes(colab._id)}
+                                   onChange={() => toggleColabCheck(colab._id)}
+                                 />
+                               </td>
                                <td className="px-2 py-1 text-white font-medium text-[11px] truncate max-w-[150px]" title={colab.nome}>
                                  {colab.nome}
                                </td>
@@ -641,13 +751,19 @@ export default function PublicosAlvoPage() {
                                <td className="px-2 py-1 text-slate-400 text-[10px] truncate max-w-[120px]" title={colab.email}>{colab.email || "-"}</td>
                                <td className="px-2 py-1 text-slate-300 text-[10px] truncate max-w-[120px]" title={`${colab.planta} - ${colab.empresa}`}>{colab.planta} - {colab.empresa}</td>
                                <td className="px-2 py-1">
-                                 <input 
-                                   type="text" 
-                                   value={colab.rol || ""} 
-                                   onChange={(e) => updateRol(colab._id, e.target.value)}
-                                   className="w-full bg-slate-900 border border-slate-600 text-[10px] text-white px-1.5 py-0.5 rounded focus:outline-none focus:border-blue-500"
-                                   placeholder="Ex: Operador"
-                                 />
+                                 <div className="relative">
+                                   <select
+                                     value={colab.rol || ""}
+                                     onChange={(e) => updateRol(colab._id, e.target.value)}
+                                     className="w-full bg-slate-900 border border-slate-600 text-[10px] text-white px-1.5 py-0.5 rounded focus:outline-none focus:border-blue-500 appearance-none pr-5 cursor-pointer"
+                                   >
+                                     <option value="" className="bg-slate-800 text-slate-300">Nenhum</option>
+                                     {rolesDisponiveis.map(r => (
+                                       <option key={r} value={r} className="bg-slate-800 text-slate-200">{r}</option>
+                                     ))}
+                                   </select>
+                                   <ChevronDown className="h-3 w-3 text-slate-400 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                 </div>
                                </td>
                                {editTreinamentoVinculado && (
                                  <td className="px-2 py-1 text-center">
@@ -781,6 +897,78 @@ export default function PublicosAlvoPage() {
            </div>
         </div>
       )}
+
+      {/* MODAL CONFIGURAR ROLES */}
+      {isRolesModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-in fade-in duration-200">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg">
+                    <Target className="h-5 w-5 text-indigo-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Configurar Papéis (Roles)</h3>
+                </div>
+                <button onClick={() => setIsRolesModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1 hover:bg-slate-700 rounded-lg">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-sm text-slate-400 mb-4">
+                  Crie os papéis (roles) disponíveis para este público-alvo. Depois você poderá atribuí-los às pessoas da lista usando a caixa de seleção.
+                </p>
+                <form onSubmit={handleAddRol} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={novoRol}
+                    onChange={(e) => setNovoRol(e.target.value)}
+                    placeholder="Ex: Operador, Brigadista..."
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!novoRol.trim()}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+                  >
+                    <Plus className="h-5 w-5" />
+                    Criar
+                  </button>
+                </form>
+              </div>
+
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                {rolesDisponiveis.length === 0 ? (
+                  <div className="text-center py-8 bg-slate-900/50 rounded-xl border border-slate-800 border-dashed">
+                    <p className="text-slate-500 text-sm">Nenhum papel criado ainda.</p>
+                  </div>
+                ) : (
+                  rolesDisponiveis.map(rol => (
+                    <div key={rol} className="flex items-center justify-between bg-slate-900/80 border border-slate-700/50 p-3 rounded-xl group hover:border-slate-600 transition-colors">
+                      <span className="text-slate-200 font-medium">{rol}</span>
+                      <button onClick={() => handleRemoveRol(rol)} className="text-slate-500 hover:text-red-400 p-1.5 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-700 bg-slate-900/50 flex justify-end">
+              <button
+                onClick={() => setIsRolesModalOpen(false)}
+                className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors"
+              >
+                Concluído
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
+      <PromptModal {...promptModal} onCancel={() => setPromptModal(prev => ({...prev, isOpen: false}))} />
     </div>
   );
 }

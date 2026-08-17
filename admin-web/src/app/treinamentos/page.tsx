@@ -1,11 +1,14 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks } from "lucide-react";
+import ConfirmModal from '@/components/ConfirmModal';
+import toast from 'react-hot-toast';
+import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import SignatureCanvas from "react-signature-canvas";
 
 export default function Treinamentos() {
   const [treinamentos, setTreinamentos] = useState<any[]>([]);
+  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void, variant: 'danger'|'warning'}>({isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger'});
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expandedPastas, setExpandedPastas] = useState<string[]>([]);
@@ -47,6 +50,11 @@ export default function Treinamentos() {
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [checklist, setChecklist] = useState<any[]>([]);
+  const [selectedPresencas, setSelectedPresencas] = useState<string[]>([]);
+  const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
+  const [rolesDisponiveis, setRolesDisponiveis] = useState<string[]>([]);
+  const [novoRol, setNovoRol] = useState("");
+  const [selectedRoleToAssign, setSelectedRoleToAssign] = useState("");
   const [checklistTemplates, setChecklistTemplates] = useState<any[]>([]);
   const [createChecklistId, setCreateChecklistId] = useState("");
   const [assignChecklistId, setAssignChecklistId] = useState("");
@@ -83,6 +91,13 @@ export default function Treinamentos() {
       } else {
         setChecklist([]);
       }
+      if (tr && tr.roles_disponiveis) {
+        setRolesDisponiveis(tr.roles_disponiveis);
+      } else {
+        setRolesDisponiveis([]);
+      }
+      setSelectedPresencas([]);
+      setSelectedRoleToAssign("");
       carregarPresencas(selectedId);
       const interval = setInterval(() => {
         carregarPresencas(selectedId, true);
@@ -130,6 +145,78 @@ export default function Treinamentos() {
     
     return () => clearTimeout(timeoutId);
   }, [manualId]);
+
+  const handleAddRol = () => {
+    if (!novoRol.trim()) return;
+    const formatado = novoRol.trim().toUpperCase();
+    if (!rolesDisponiveis.includes(formatado)) {
+      setRolesDisponiveis([...rolesDisponiveis, formatado]);
+    }
+    setNovoRol("");
+  };
+
+  const handleRemoveRol = (rol: string) => {
+    setRolesDisponiveis(rolesDisponiveis.filter(r => r !== rol));
+  };
+
+  const handleSalvarRoles = async () => {
+    if (!selectedId) return;
+    setIsSubmitting(true);
+    try {
+      await fetch(`/api/treinamentos/${selectedId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roles_disponiveis: rolesDisponiveis })
+      });
+      setTreinamentos(prev => prev.map(t => t.id === selectedId ? { ...t, roles_disponiveis: rolesDisponiveis } : t));
+      carregarTreinamentos();
+      toast.success("Roles configurados com sucesso!");
+      setIsRolesModalOpen(false);
+    } catch(e) {
+      toast.error("Erro ao salvar roles.");
+    }
+    setIsSubmitting(false);
+  };
+
+  const togglePresencaSelection = (id: string) => {
+    setSelectedPresencas(prev => 
+      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAllPresencas = () => {
+    if (selectedPresencas.length === presencas.length && presencas.length > 0) {
+      setSelectedPresencas([]);
+    } else {
+      setSelectedPresencas(presencas.map(p => p.id));
+    }
+  };
+
+  const handleAssignRoleBatch = async () => {
+    if (!selectedId || selectedPresencas.length === 0 || !selectedRoleToAssign) return;
+    try {
+      const res = await fetch(`/api/presencas/batch`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          treinamentoId: selectedId,
+          presencasIds: selectedPresencas,
+          rol: selectedRoleToAssign
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(`${selectedPresencas.length} roles atualizados!`);
+        setSelectedPresencas([]);
+        setSelectedRoleToAssign("");
+        carregarPresencas(selectedId);
+      } else {
+        toast.error(json.error || "Erro ao atribuir roles.");
+      }
+    } catch(e) {
+      toast.error("Erro de conexão.");
+    }
+  };
 
   const carregarPresencas = async (id: string, silent = false) => {
     if (!silent) setLoadingPresencas(true);
@@ -225,7 +312,7 @@ export default function Treinamentos() {
     e.preventDefault();
     if (!manualId.trim() || !selectedId) return;
     if (!hasSignature) {
-      alert("Por favor, colete a assinatura antes de confirmar.");
+      toast.error("Por favor, colete a assinatura antes de confirmar.");
       return;
     }
     
@@ -246,7 +333,7 @@ export default function Treinamentos() {
     
     const json = await res.json();
     if (!json.success) {
-      alert(json.error);
+      toast.error(json.error);
     } else {
       setManualId("");
       setNomeAvulso("");
@@ -261,39 +348,66 @@ export default function Treinamentos() {
 
   const excluirPresenca = async (presencaId: string) => {
     if (!selectedId) return;
-    if (!confirm("Tem certeza que deseja remover esta presença permanentemente?")) return;
+    setConfirmModal({
+      isOpen: true,
+      title: "Remover Presença",
+      message: "Tem certeza que deseja remover esta presença permanentemente?",
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
     
     try {
       const res = await fetch(`/api/presencas?treinamentoId=${selectedId}&presencaId=${presencaId}`, { method: "DELETE" });
       const json = await res.json();
-      if (!json.success) alert(json.error || "Erro ao excluir presença.");
+      if (!json.success) toast.error(json.error || "Erro ao excluir presença.");
       carregarPresencas(selectedId);
       carregarTreinamentos();
     } catch (e) {
-      alert("Erro ao excluir.");
+      toast.error("Erro ao excluir.");
     }
+      }
+    });
   };
 
   const excluirTreinamento = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Tem certeza que deseja excluir esta turma permanentemente?")) return;
+    setConfirmModal({
+      isOpen: true,
+      title: "Excluir Turma",
+      message: "Tem certeza que deseja excluir esta turma permanentemente?",
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
     
     const res = await fetch(`/api/treinamentos?id=${id}`, { method: "DELETE" });
     const json = await res.json();
-    if (!json.success) alert(json.error || "Erro ao excluir turma.");
+    if (!json.success) toast.error(json.error || "Erro ao excluir turma.");
     if (selectedId === id) setSelectedId(null);
     carregarTreinamentos();
+      }
+    });
   };
 
   const excluirPasta = async (nomeCurso: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`ATENÇÃO ADMINISTRADOR: Tem certeza que deseja excluir TODO o curso '${nomeCurso}' e TODAS as suas turmas permanentemente?`)) return;
+    setConfirmModal({
+      isOpen: true,
+      title: "Excluir Curso Inteiro",
+      message: `ATENÇÃO: Tem certeza que deseja excluir TODO o curso '${nomeCurso}' e TODAS as suas turmas permanentemente?`,
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
     
     const res = await fetch(`/api/treinamentos?nome=${encodeURIComponent(nomeCurso)}`, { method: "DELETE" });
     const json = await res.json();
-    if (!json.success) alert(json.error || "Erro ao excluir curso.");
+    if (!json.success) toast.error(json.error || "Erro ao excluir curso.");
     setSelectedId(null);
     carregarTreinamentos();
+      }
+    });
   };
 
   const exportarCSV = (id: string, e: React.MouseEvent) => {
@@ -656,6 +770,14 @@ export default function Treinamentos() {
                     <span>Atribuir Checklist</span>
                   </button>
                 )}
+                
+                <button 
+                  onClick={() => setIsRolesModalOpen(true)}
+                  className="flex items-center space-x-2 px-6 py-3 bg-indigo-900/40 hover:bg-indigo-800/60 text-indigo-300 border border-indigo-700/50 rounded-xl font-bold transition-colors shadow-lg shadow-indigo-900/10"
+                >
+                  <PlusCircle className="h-5 w-5" />
+                  <span>Configurar Roles</span>
+                </button>
               </div>
             </div>
             
@@ -739,10 +861,46 @@ export default function Treinamentos() {
             ) : presencas.length === 0 ? (
               <p className="text-slate-400 text-sm py-4">Nenhuma presença registrada ainda.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto space-y-4">
+                
+                {selectedPresencas.length > 0 && rolesDisponiveis.length > 0 && (
+                  <div className="flex items-center gap-4 bg-indigo-950/30 border border-indigo-900/50 p-3 rounded-xl animate-in fade-in slide-in-from-top-2">
+                    <span className="text-indigo-300 font-bold text-sm px-2">
+                      {selectedPresencas.length} selecionado(s)
+                    </span>
+                    <select
+                      value={selectedRoleToAssign}
+                      onChange={(e) => setSelectedRoleToAssign(e.target.value)}
+                      className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-indigo-500"
+                    >
+                      <option value="">Selecione um Rol...</option>
+                      {rolesDisponiveis.map(rol => (
+                        <option key={rol} value={rol}>{rol}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleAssignRoleBatch}
+                      disabled={!selectedRoleToAssign || isSubmitting}
+                      className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition-colors"
+                    >
+                      Atribuir Rol
+                    </button>
+                  </div>
+                )}
+
                 <table className="w-full text-left text-sm">
                   <thead className="text-slate-400 border-b border-slate-700/50">
                     <tr>
+                      {userRole === 'admin' && (
+                        <th className="px-4 pb-3 font-medium w-10">
+                          <input 
+                            type="checkbox" 
+                            checked={selectedPresencas.length === presencas.length && presencas.length > 0}
+                            onChange={toggleAllPresencas}
+                            className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900"
+                          />
+                        </th>
+                      )}
                       <th className="px-4 pb-3 font-medium">Matrícula / RUT</th>
                       <th className="px-4 pb-3 font-medium">Colaborador</th>
                       <th className="px-4 pb-3 font-medium hidden md:table-cell">Empresa</th>
@@ -754,10 +912,25 @@ export default function Treinamentos() {
                   </thead>
                   <tbody className="divide-y divide-slate-700/50 text-slate-300">
                     {presencas.map(p => (
-                      <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
+                      <tr key={p.id} className={`hover:bg-slate-800/30 transition-colors ${selectedPresencas.includes(p.id) ? 'bg-indigo-900/20' : ''}`}>
+                        {userRole === 'admin' && (
+                          <td className="px-4 py-3">
+                            <input 
+                              type="checkbox"
+                              checked={selectedPresencas.includes(p.id)}
+                              onChange={() => togglePresencaSelection(p.id)}
+                              className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900"
+                            />
+                          </td>
+                        )}
                         <td className="px-4 py-3 font-mono text-emerald-400">{p.identificador_lido}</td>
                         <td className="px-4 py-3">
                           <p className="font-bold text-white text-sm">{p.nome}</p>
+                          {p.rol && (
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-indigo-950 border border-indigo-800 text-indigo-300 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                              {p.rol}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell text-sm text-slate-300">
                           {p.planta}
@@ -1350,6 +1523,78 @@ export default function Treinamentos() {
             </div>
           )}
 
+          {/* MODAL CONFIGURAR ROLES */}
+          {isRolesModalOpen && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+              <div className="bg-slate-900 rounded-2xl w-full max-w-md overflow-hidden border border-slate-700 shadow-2xl flex flex-col">
+                <div className="px-6 py-4 border-b border-slate-800 bg-slate-900">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <PlusCircle className="h-5 w-5 text-indigo-400" /> Configurar Roles (Papéis)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Crie a lista de roles disponíveis para atribuir às pessoas desta turma.</p>
+                </div>
+                
+                <div className="p-6 space-y-6">
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={novoRol}
+                        onChange={(e) => setNovoRol(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddRol()}
+                        placeholder="Ex: ELETRICISTA, SOLDADOR..."
+                        className="flex-1 px-4 py-2 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 text-white font-medium uppercase text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddRol}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-colors shadow-lg"
+                      >
+                        Adicionar
+                      </button>
+                    </div>
+
+                    <div className="bg-slate-950/50 rounded-xl border border-slate-800 p-4 min-h-[120px]">
+                      {rolesDisponiveis.length === 0 ? (
+                        <p className="text-slate-500 text-center text-sm mt-8">Nenhum rol cadastrado. Digite acima e adicione.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {rolesDisponiveis.map(rol => (
+                            <span key={rol} className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-900/30 border border-indigo-700 text-indigo-300 rounded-lg text-sm font-bold tracking-wide">
+                              {rol}
+                              <button onClick={() => handleRemoveRol(rol)} className="text-indigo-400 hover:text-red-400 transition-colors">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 flex justify-end gap-3 border-t border-slate-800">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsRolesModalOpen(false)} 
+                      className="px-4 py-2 text-slate-300 hover:text-white font-medium transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={handleSalvarRoles}
+                      disabled={isSubmitting} 
+                      className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isSubmitting ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Salvar Roles"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+      <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
     </div>
   );
 }

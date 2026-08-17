@@ -10,10 +10,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const body = await req.json();
     
-    // We only expect updates to the checklist object for now
+    // We expect updates to the checklist object or roles_disponiveis
     const updates: any = {};
     if (body.checklist_dinamico !== undefined) {
       updates.checklist_dinamico = body.checklist_dinamico;
+    }
+    if (body.roles_disponiveis !== undefined) {
+      updates.roles_disponiveis = body.roles_disponiveis;
     }
 
     if (Object.keys(updates).length === 0) {

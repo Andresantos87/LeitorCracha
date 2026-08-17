@@ -88,7 +88,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nome, descricao, matriculas, membros } = body;
+    const { nome, descricao, matriculas, membros, roles_disponiveis } = body;
     
     if (!nome) return NextResponse.json({ success: false, error: "Nome é obrigatório" }, { status: 400 });
 
@@ -97,6 +97,7 @@ export async function POST(req: Request) {
       descricao: descricao || "",
       matriculas: Array.isArray(matriculas) ? matriculas : [],
       membros: Array.isArray(membros) ? membros : [],
+      roles_disponiveis: Array.isArray(roles_disponiveis) ? roles_disponiveis : [],
       criado_em: serverTimestamp()
     });
     
@@ -106,6 +107,7 @@ export async function POST(req: Request) {
       descricao: descricao || "",
       matriculas: Array.isArray(matriculas) ? matriculas : [],
       membros: Array.isArray(membros) ? membros : [],
+      roles_disponiveis: Array.isArray(roles_disponiveis) ? roles_disponiveis : [],
       criado_em: new Date().toISOString()
     };
     

@@ -1,9 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
+import ConfirmModal from '@/components/ConfirmModal';
+import toast from 'react-hot-toast';
 import { Plus, Trash2, Shield, User, ShieldAlert } from "lucide-react";
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<any[]>([]);
+  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void, variant: 'danger'|'warning'}>({isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger'});
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,13 +41,20 @@ export default function UsuariosPage() {
 
   const excluirUsuario = async (id: string, email: string) => {
     if (email === "admin@cmpc.com") {
-      alert("Não é possível excluir o Administrador principal.");
+      toast.error("Não é possível excluir o Administrador principal.");
       return;
     }
-    if (!confirm(`Tem certeza que deseja excluir o acesso de ${email}?`)) return;
-    
-    await fetch(`/api/usuarios?id=${id}`, { method: "DELETE" });
-    carregarUsuarios();
+    setConfirmModal({
+      isOpen: true,
+      title: "Excluir Acesso",
+      message: `Tem certeza que deseja excluir o acesso de ${email}?`,
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        await fetch(`/api/usuarios?id=${id}`, { method: "DELETE" });
+        carregarUsuarios();
+      }
+    });
   };
 
   const getRoleBadge = (role: string) => {
@@ -176,6 +186,7 @@ export default function UsuariosPage() {
           </div>
         </div>
       )}
+      <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
     </div>
   );
 }
