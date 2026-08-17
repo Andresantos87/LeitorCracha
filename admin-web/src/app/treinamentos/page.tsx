@@ -107,7 +107,8 @@ export default function Treinamentos() {
     } else {
       setPresencas([]);
     }
-  }, [selectedId, treinamentos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
 
   useEffect(() => {
     if (!manualId || manualId.length < 3) {
