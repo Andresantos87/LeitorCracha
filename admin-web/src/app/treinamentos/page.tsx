@@ -432,26 +432,55 @@ export default function Treinamentos() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Erro ao buscar dados");
 
+      const rawData = json.data;
+
+      // Calcular porcentagem
+      const previstos = rawData.filter((r: any) => r.status !== "CAPACITADO (EXTRA)");
+      const capacitados = previstos.filter((r: any) => r.status === "CAPACITADO");
+      const totalPrevistos = previstos.length;
+      const progresso = totalPrevistos > 0 ? Math.round((capacitados.length / totalPrevistos) * 100) : 0;
+
+      // Ordenar: Capacitados e Extras primeiro, depois Não Capacitados
+      rawData.sort((a: any, b: any) => {
+        const orderA = a.status.includes("CAPACITADO") ? 0 : 1;
+        const orderB = b.status.includes("CAPACITADO") ? 0 : 1;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.nomeColaborador.localeCompare(b.nomeColaborador);
+      });
+
       const doc = new jsPDF("landscape");
       
       // Cabeçalho
       doc.setFontSize(18);
+      doc.setTextColor(40);
       doc.text("Relatório de Aderência", 14, 22);
+      
+      // Estatísticas
+      doc.setFontSize(14);
+      doc.setTextColor(39, 174, 96);
+      doc.text(`Aderência da Turma: ${progresso}%`, 200, 22);
+
       doc.setFontSize(11);
       doc.setTextColor(100);
       doc.text(`Treinamento: ${nomeTreinamento}`, 14, 30);
       doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, 36);
 
-      const tableData = json.data.map((r: any) => [
-        r.nomeColaborador,
-        r.matricula,
-        r.cargo,
-        r.planta,
-        r.empresa,
-        r.rol,
-        r.status,
-        r.dataPresenca ? new Date(r.dataPresenca).toLocaleString('pt-BR') : "-"
-      ]);
+      const tableData = rawData.map((r: any) => {
+        let statusText = r.status;
+        if (statusText === "CAPACITADO" || statusText === "CAPACITADO (EXTRA)") {
+          statusText = `(OK) ${statusText}`;
+        }
+        return [
+          r.nomeColaborador,
+          r.matricula,
+          r.cargo,
+          r.planta,
+          r.empresa,
+          r.rol,
+          statusText,
+          r.dataPresenca ? new Date(r.dataPresenca).toLocaleString('pt-BR') : "-"
+        ];
+      });
 
       autoTable(doc, {
         startY: 45,
@@ -461,16 +490,25 @@ export default function Treinamentos() {
         headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 9 },
         bodyStyles: { fontSize: 8 },
         didParseCell: function(data) {
-          if (data.section === 'body' && data.column.index === 6) {
-            if (data.cell.raw === 'CAPACITADO') {
-              data.cell.styles.textColor = [39, 174, 96]; // Verde
-              data.cell.styles.fontStyle = 'bold';
-            } else if (data.cell.raw === 'FALTANTE / PENDENTE') {
-              data.cell.styles.textColor = [192, 57, 43]; // Vermelho
-              data.cell.styles.fontStyle = 'bold';
-            } else if (data.cell.raw === 'CAPACITADO (EXTRA)') {
-              data.cell.styles.textColor = [243, 156, 18]; // Laranja
-              data.cell.styles.fontStyle = 'bold';
+          const rowData = data.row.raw as any[];
+          const status = rowData[6] as string;
+          
+          if (data.section === 'body') {
+            if (status.includes("NÃO CAPACITADO") || status.includes("FALTANTE")) {
+              data.cell.styles.textColor = [150, 150, 150]; // Cinzinha
+            }
+            
+            if (data.column.index === 6) {
+              if (status.includes("CAPACITADO (EXTRA)")) {
+                data.cell.styles.textColor = [243, 156, 18]; // Laranja
+                data.cell.styles.fontStyle = 'bold';
+              } else if (status.includes("CAPACITADO")) {
+                data.cell.styles.textColor = [39, 174, 96]; // Verde
+                data.cell.styles.fontStyle = 'bold';
+              } else {
+                data.cell.styles.textColor = [150, 150, 150]; // Cinza (NÃO CAPACITADO)
+                data.cell.styles.fontStyle = 'normal';
+              }
             }
           }
         }

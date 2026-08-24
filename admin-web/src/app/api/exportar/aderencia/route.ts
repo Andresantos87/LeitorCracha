@@ -98,12 +98,23 @@ export async function GET(req: Request) {
         ].filter(Boolean);
 
         let presencaEncontrada = null;
-        for (const idCheck of idsToCheck) {
-            if (presencasMap.has(idCheck)) {
-                presencaEncontrada = presencasMap.get(idCheck);
-                presencasProcessadas.add(idCheck);
-                break;
+        let presencaKey = null;
+
+        for (const [key, pData] of presencasMap.entries()) {
+            for (const idCheck of idsToCheck) {
+                if (key === idCheck || 
+                    (key && idCheck && key.endsWith(idCheck)) || 
+                    (idCheck && key && idCheck.endsWith(key))) {
+                    presencaEncontrada = pData;
+                    presencaKey = key;
+                    break;
+                }
             }
+            if (presencaEncontrada) break;
+        }
+
+        if (presencaEncontrada && presencaKey) {
+            presencasProcessadas.add(presencaKey);
         }
 
         // Adicionar ao relatório
@@ -115,7 +126,7 @@ export async function GET(req: Request) {
             planta: p.planta,
             empresa: p.empresa,
             rol: p.rol,
-            status: presencaEncontrada ? "CAPACITADO" : "FALTANTE / PENDENTE",
+            status: presencaEncontrada ? "CAPACITADO" : "NÃO CAPACITADO",
             dataPresenca: presencaEncontrada?.data_registro?.toDate()?.toISOString() || ""
         });
     });
