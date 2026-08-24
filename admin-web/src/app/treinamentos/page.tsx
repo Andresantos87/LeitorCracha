@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import SignatureCanvas from "react-signature-canvas";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function Treinamentos() {
   const [treinamentos, setTreinamentos] = useState<any[]>([]);
@@ -421,6 +423,65 @@ export default function Treinamentos() {
     window.open(`/api/exportar/aderencia?id=${id}`, '_blank');
   };
 
+  const exportarAderenciaPDF = async (id: string, nomeTreinamento: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const loadingToast = toast.loading("Gerando PDF...");
+    try {
+      const res = await fetch(`/api/exportar/aderencia?id=${id}&formato=json`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Erro ao buscar dados");
+
+      const doc = new jsPDF("landscape");
+      
+      // Cabeçalho
+      doc.setFontSize(18);
+      doc.text("Relatório de Aderência", 14, 22);
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Treinamento: ${nomeTreinamento}`, 14, 30);
+      doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, 36);
+
+      const tableData = json.data.map((r: any) => [
+        r.nomeColaborador,
+        r.matricula,
+        r.cargo,
+        r.planta,
+        r.empresa,
+        r.rol,
+        r.status,
+        r.dataPresenca ? new Date(r.dataPresenca).toLocaleString('pt-BR') : "-"
+      ]);
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['Nome', 'Matrícula', 'Cargo', 'Planta', 'Empresa', 'Papel', 'Status', 'Data Presença']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 9 },
+        bodyStyles: { fontSize: 8 },
+        didParseCell: function(data) {
+          if (data.section === 'body' && data.column.index === 6) {
+            if (data.cell.raw === 'CAPACITADO') {
+              data.cell.styles.textColor = [39, 174, 96]; // Verde
+              data.cell.styles.fontStyle = 'bold';
+            } else if (data.cell.raw === 'FALTANTE / PENDENTE') {
+              data.cell.styles.textColor = [192, 57, 43]; // Vermelho
+              data.cell.styles.fontStyle = 'bold';
+            } else if (data.cell.raw === 'CAPACITADO (EXTRA)') {
+              data.cell.styles.textColor = [243, 156, 18]; // Laranja
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
+      });
+
+      doc.save(`aderencia_${nomeTreinamento.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+      toast.success("PDF gerado com sucesso!", { id: loadingToast });
+    } catch(err) {
+      toast.error("Erro ao gerar PDF de aderência", { id: loadingToast });
+    }
+  };
+
   const selectedTreinamento = treinamentos.find(t => t.id === selectedId);
 
   const renderProgress = () => {
@@ -716,14 +777,24 @@ export default function Treinamentos() {
                                   <span>Excel</span>
                                 </button>
                                 {t.publico_alvo_id && (
-                                  <button 
-                                    onClick={(e) => exportarAderenciaCSV(t.id, e)}
-                                    className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-amber-300 hover:text-white bg-amber-900/30 hover:bg-amber-800/50 rounded-lg transition-colors border border-amber-800/50"
-                                    title="Relatório de Aderência (Previstos x Capacitados)"
-                                  >
-                                    <Target className="h-3.5 w-3.5" />
-                                    <span className="hidden sm:inline">Aderência</span>
-                                  </button>
+                                  <>
+                                    <button 
+                                      onClick={(e) => exportarAderenciaCSV(t.id, e)}
+                                      className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-amber-300 hover:text-white bg-amber-900/30 hover:bg-amber-800/50 rounded-lg transition-colors border border-amber-800/50"
+                                      title="Relatório de Aderência (Excel)"
+                                    >
+                                      <Target className="h-3.5 w-3.5" />
+                                      <span className="hidden sm:inline">Aderência CSV</span>
+                                    </button>
+                                    <button 
+                                      onClick={(e) => exportarAderenciaPDF(t.id, t.nome, e)}
+                                      className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-rose-300 hover:text-white bg-rose-900/30 hover:bg-rose-800/50 rounded-lg transition-colors border border-rose-800/50"
+                                      title="Relatório de Aderência (PDF)"
+                                    >
+                                      <FileText className="h-3.5 w-3.5" />
+                                      <span className="hidden sm:inline">Aderência PDF</span>
+                                    </button>
+                                  </>
                                 )}
                                 {userRole === 'admin' && (
                                   <button 

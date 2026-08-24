@@ -143,6 +143,12 @@ export async function GET(req: Request) {
         }
     });
 
+    // Ver se pede JSON
+    const formato = searchParams.get("formato");
+    if (formato === "json") {
+      return NextResponse.json({ success: true, data: relatorioRegistros });
+    }
+
     // Gerar CSV
     const cabecalho = "NOME_TREINAMENTO,NOME_COLABORADOR,MATRICULA,CARGO,PLANTA,EMPRESA,PAPEL_ROL,STATUS,DATA_PRESENCA\n";
     const linhas = relatorioRegistros.map(r => {
