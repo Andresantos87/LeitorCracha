@@ -477,7 +477,6 @@ export default function Treinamentos() {
         return [
           r.nomeColaborador,
           r.matricula,
-          r.cargo,
           r.planta,
           r.empresa,
           r.rol,
@@ -488,14 +487,14 @@ export default function Treinamentos() {
 
       autoTable(doc, {
         startY: 45,
-        head: [['Nome', 'Matrícula', 'Cargo', 'Planta', 'Empresa', 'Papel', 'Status', 'Data Presença']],
+        head: [['Nome', 'Matrícula', 'Planta', 'Empresa', 'Papel', 'Status', 'Data Presença']],
         body: tableData,
         theme: 'grid',
         headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 9 },
         bodyStyles: { fontSize: 8 },
         didParseCell: function(data) {
           const rowData = data.row.raw as any[];
-          const status = rowData[6] as string;
+          const status = rowData[5] as string; // Status é agora o índice 5 (0: Nome, 1: Matrícula, 2: Planta, 3: Empresa, 4: Papel, 5: Status, 6: Data)
           
           if (data.section === 'body') {
             // Deixar a linha cinzinha para quem não foi
@@ -506,7 +505,7 @@ export default function Treinamentos() {
             }
             
             // Mas sobrescrever a cor especificamente da coluna de STATUS
-            if (data.column.index === 6) {
+            if (data.column.index === 5) {
               if (status.includes("CAPACITADO (EXTRA)")) {
                 data.cell.styles.textColor = [243, 156, 18]; // Laranja
                 data.cell.styles.fontStyle = 'bold';
