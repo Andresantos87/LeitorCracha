@@ -2,11 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import ConfirmModal from '@/components/ConfirmModal';
 import toast from 'react-hot-toast';
-import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks, X } from "lucide-react";
+import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks, X, FileText } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import SignatureCanvas from "react-signature-canvas";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export default function Treinamentos() {
   const [treinamentos, setTreinamentos] = useState<any[]>([]);
@@ -427,6 +425,9 @@ export default function Treinamentos() {
     e.stopPropagation();
     const loadingToast = toast.loading("Gerando PDF...");
     try {
+      const { jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
+      
       const res = await fetch(`/api/exportar/aderencia?id=${id}&formato=json`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Erro ao buscar dados");
