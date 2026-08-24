@@ -64,6 +64,16 @@ export async function GET(req: Request) {
         presencasMap.set(identLimpo, pData);
     });
 
+    const matchIds = (a: string, b: string) => {
+        if (!a || !b) return false;
+        const ca = String(a).replace(/^0+/, '');
+        const cb = String(b).replace(/^0+/, '');
+        if (ca === cb) return true;
+        const no3100A = ca.startsWith('3100') ? ca.substring(4) : ca;
+        const no3100B = cb.startsWith('3100') ? cb.substring(4) : cb;
+        return no3100A === no3100B;
+    };
+
     // Construir a lista de pessoas "Previstas" (Público-Alvo)
     const membros = publicoAlvo.membros || publicoAlvo.matriculas || [];
     const previstosEnriquecidos = membros.map((membro: any) => {
@@ -96,15 +106,12 @@ export async function GET(req: Request) {
             String(p.identificador).replace(/^0+/, ''),
             String(p.cod_cracha).replace(/^0+/, '')
         ].filter(Boolean);
-
         let presencaEncontrada = null;
         let presencaKey = null;
 
         for (const [key, pData] of presencasMap.entries()) {
             for (const idCheck of idsToCheck) {
-                if (key === idCheck || 
-                    (key && idCheck && key.endsWith(idCheck)) || 
-                    (idCheck && key && idCheck.endsWith(key))) {
+                if (matchIds(key, idCheck)) {
                     presencaEncontrada = pData;
                     presencaKey = key;
                     break;
@@ -138,7 +145,17 @@ export async function GET(req: Request) {
         
         if (!presencasProcessadas.has(identLimpo)) {
             // É um extra! Vamos tentar enriquecer com base no colsMap usando o identificador
-            const colab = colsMap.get(identLimpo) || colsMap.get(pData.identificador_lido);
+            let colab = colsMap.get(identLimpo) || colsMap.get(pData.identificador_lido);
+            
+            if (!colab) {
+                // Busca mais flexível (ignora prefixos como 3100)
+                for (const [key, val] of colsMap.entries()) {
+                    if (matchIds(identLimpo, key)) {
+                        colab = val;
+                        break;
+                    }
+                }
+            }
             
             relatorioRegistros.push({
                 nomeTreinamento: treinamento.nome,
