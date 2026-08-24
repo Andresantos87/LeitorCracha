@@ -79,7 +79,19 @@ export async function GET(req: Request) {
     const previstosEnriquecidos = membros.map((membro: any) => {
         const id_original = membro.matricula || membro;
         const cleanM = String(id_original).replace(/^0+/, '');
-        const colab = colsMap.get(cleanM) || colsMap.get(id_original);
+        let colab = colsMap.get(cleanM) || colsMap.get(id_original);
+        
+        // Se o cargo vier como ESTAGIARIO, tenta buscar pela matricula se existe um cadastro melhor
+        if (colab && colab.cargo && colab.cargo.includes("ESTAGIARIO")) {
+            const matricula = colab.matricula;
+            if (matricula && colsMap.has(matricula)) {
+                const melhorColab = colsMap.get(matricula);
+                if (melhorColab && !melhorColab.cargo.includes("ESTAGIARIO")) {
+                    colab = melhorColab;
+                }
+            }
+        }
+
         
         return {
             _id: id_original,
