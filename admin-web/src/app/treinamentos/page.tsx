@@ -416,6 +416,11 @@ export default function Treinamentos() {
     window.open(`/api/exportar?id=${id}`, '_blank');
   };
 
+  const exportarAderenciaCSV = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(`/api/exportar/aderencia?id=${id}`, '_blank');
+  };
+
   const selectedTreinamento = treinamentos.find(t => t.id === selectedId);
 
   const renderProgress = () => {
@@ -710,6 +715,16 @@ export default function Treinamentos() {
                                   <Download className="h-3.5 w-3.5" />
                                   <span>Excel</span>
                                 </button>
+                                {t.publico_alvo_id && (
+                                  <button 
+                                    onClick={(e) => exportarAderenciaCSV(t.id, e)}
+                                    className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-amber-300 hover:text-white bg-amber-900/30 hover:bg-amber-800/50 rounded-lg transition-colors border border-amber-800/50"
+                                    title="Relatório de Aderência (Previstos x Capacitados)"
+                                  >
+                                    <Target className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">Aderência</span>
+                                  </button>
+                                )}
                                 {userRole === 'admin' && (
                                   <button 
                                     onClick={(e) => excluirTreinamento(t.id, e)}
