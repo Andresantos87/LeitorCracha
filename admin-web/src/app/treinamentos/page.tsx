@@ -494,10 +494,12 @@ export default function Treinamentos() {
           const status = rowData[6] as string;
           
           if (data.section === 'body') {
+            // Deixar a linha cinzinha para quem não foi
             if (status.includes("NÃO CAPACITADO") || status.includes("FALTANTE")) {
-              data.cell.styles.textColor = [150, 150, 150]; // Cinzinha
+              data.cell.styles.textColor = [150, 150, 150]; // Cinza
             }
             
+            // Mas sobrescrever a cor especificamente da coluna de STATUS
             if (data.column.index === 6) {
               if (status.includes("CAPACITADO (EXTRA)")) {
                 data.cell.styles.textColor = [243, 156, 18]; // Laranja
@@ -506,8 +508,8 @@ export default function Treinamentos() {
                 data.cell.styles.textColor = [39, 174, 96]; // Verde
                 data.cell.styles.fontStyle = 'bold';
               } else {
-                data.cell.styles.textColor = [150, 150, 150]; // Cinza (NÃO CAPACITADO)
-                data.cell.styles.fontStyle = 'normal';
+                data.cell.styles.textColor = [192, 57, 43]; // Vermelho
+                data.cell.styles.fontStyle = 'bold';
               }
             }
           }
