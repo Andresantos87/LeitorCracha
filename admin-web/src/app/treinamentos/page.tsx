@@ -442,8 +442,12 @@ export default function Treinamentos() {
 
       // Ordenar: Capacitados e Extras primeiro, depois Não Capacitados
       rawData.sort((a: any, b: any) => {
-        const orderA = a.status.includes("CAPACITADO") ? 0 : 1;
-        const orderB = b.status.includes("CAPACITADO") ? 0 : 1;
+        const isCapacitadoA = a.status === "CAPACITADO" || a.status === "CAPACITADO (EXTRA)";
+        const isCapacitadoB = b.status === "CAPACITADO" || b.status === "CAPACITADO (EXTRA)";
+        
+        const orderA = isCapacitadoA ? 0 : 1;
+        const orderB = isCapacitadoB ? 0 : 1;
+        
         if (orderA !== orderB) return orderA - orderB;
         return a.nomeColaborador.localeCompare(b.nomeColaborador);
       });
@@ -497,6 +501,8 @@ export default function Treinamentos() {
             // Deixar a linha cinzinha para quem não foi
             if (status.includes("NÃO CAPACITADO") || status.includes("FALTANTE")) {
               data.cell.styles.textColor = [150, 150, 150]; // Cinza
+            } else {
+              data.cell.styles.textColor = [40, 40, 40]; // Preto/Escuro normal para quem foi
             }
             
             // Mas sobrescrever a cor especificamente da coluna de STATUS
@@ -504,11 +510,11 @@ export default function Treinamentos() {
               if (status.includes("CAPACITADO (EXTRA)")) {
                 data.cell.styles.textColor = [243, 156, 18]; // Laranja
                 data.cell.styles.fontStyle = 'bold';
+              } else if (status.includes("NÃO CAPACITADO") || status.includes("FALTANTE")) {
+                data.cell.styles.textColor = [192, 57, 43]; // Vermelho
+                data.cell.styles.fontStyle = 'bold';
               } else if (status.includes("CAPACITADO")) {
                 data.cell.styles.textColor = [39, 174, 96]; // Verde
-                data.cell.styles.fontStyle = 'bold';
-              } else {
-                data.cell.styles.textColor = [192, 57, 43]; // Vermelho
                 data.cell.styles.fontStyle = 'bold';
               }
             }
