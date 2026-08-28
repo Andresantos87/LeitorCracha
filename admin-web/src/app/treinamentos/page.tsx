@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Fragment, useMemo } from "react";
 import ConfirmModal from '@/components/ConfirmModal';
 import toast from 'react-hot-toast';
 import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks, X, FileText } from "lucide-react";
@@ -12,8 +12,16 @@ export default function Treinamentos() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expandedPastas, setExpandedPastas] = useState<string[]>([]);
+  const [draggedTurma, setDraggedTurma] = useState<any>(null);
+  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [movingTurma, setMovingTurma] = useState<any>(null);
+  const [targetFolderName, setTargetFolderName] = useState("");
+  const [targetSubpastaName, setTargetSubpastaName] = useState("");
+  const [selectedSubpasta, setSelectedSubpasta] = useState<{nomeCurso: string, subpasta: string, ids: string[]} | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [nomeTreinamento, setNomeTreinamento] = useState("");
+  const [subpastaTreinamento, setSubpastaTreinamento] = useState("");
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createMode, setCreateMode] = useState<'EXISTING' | 'NEW'>('EXISTING');
@@ -36,6 +44,10 @@ export default function Treinamentos() {
   const [selectedColab, setSelectedColab] = useState<any>(null);
   const [isSearchingId, setIsSearchingId] = useState(false);
   const [userRole, setUserRole] = useState("admin");
+  const [userName, setUserName] = useState("");
+  const [filterFacilitador, setFilterFacilitador] = useState("");
+  const [filterCurso, setFilterCurso] = useState("");
+  const [facilitadoresList, setFacilitadoresList] = useState<any[]>([]);
   
   // Signature
   const sigCanvas = useRef<any>(null);
@@ -61,9 +73,11 @@ export default function Treinamentos() {
 
   useEffect(() => {
     carregarTreinamentos();
+    carregarFacilitadores();
     fetch("/api/auth").then(res => res.json()).then(json => {
       if (json.success && json.session) {
         setUserRole(json.session.role || "leitor");
+        setUserName(json.session.nome || "");
       }
     }).catch(() => {});
     fetch("/api/empresas").then(res => res.json()).then(json => {
@@ -109,6 +123,28 @@ export default function Treinamentos() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
+
+  useEffect(() => {
+    if (selectedSubpasta && selectedSubpasta.ids.length > 0) {
+      setLoadingPresencas(true);
+      const fetchSubpasta = async () => {
+        try {
+          const allPresencas = await Promise.all(
+            selectedSubpasta.ids.map(async (id) => {
+              const r = await fetch(`/api/presencas?treinamentoId=${id}`);
+              const j = await r.json();
+              return j.success ? j.data : [];
+            })
+          );
+          setPresencas(allPresencas.flat().sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+        } catch (e) {}
+        setLoadingPresencas(false);
+      };
+      fetchSubpasta();
+    } else if (!selectedId) {
+      setPresencas([]);
+    }
+  }, [selectedSubpasta]);
 
   useEffect(() => {
     if (!manualId || manualId.length < 3) {
@@ -274,6 +310,18 @@ export default function Treinamentos() {
     setIsSubmitting(false);
   };
 
+  const uniqueCursos = useMemo(() => {
+    return Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean).sort();
+  }, [treinamentos]);
+
+  const carregarFacilitadores = async () => {
+    try {
+      const res = await fetch("/api/facilitadores");
+      const json = await res.json();
+      if (json.success) setFacilitadoresList(json.data);
+    } catch (e) {}
+  };
+
   const carregarTreinamentos = async () => {
     const res = await fetch(`/api/treinamentos?t=${Date.now()}`);
     const json = await res.json();
@@ -291,6 +339,7 @@ export default function Treinamentos() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         nome: nomeTreinamento, 
+        subpasta: subpastaTreinamento.trim() || undefined,
         turma: turmaTreinamento, 
         pais: createPais, 
         planta: createPlanta, 
@@ -303,6 +352,7 @@ export default function Treinamentos() {
     setIsSubmitting(false);
     setIsModalOpen(false);
     setNomeTreinamento("");
+    setSubpastaTreinamento("");
     setTurmaTreinamento("");
     setCreatePublicoAlvoId("");
     setCreateChecklistId("");
@@ -389,6 +439,102 @@ export default function Treinamentos() {
     carregarTreinamentos();
       }
     });
+  };
+
+
+  const handleMoveTurma = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!movingTurma || !targetFolderName.trim()) return;
+    
+    setIsSubmitting(true);
+    try {
+      const { db } = await import('@/lib/firebase');
+      const { doc, updateDoc } = await import('firebase/firestore');
+      
+      let novaTurma = movingTurma.turma;
+      if (novaTurma && novaTurma.trim() !== "") {
+        if (movingTurma.nome !== targetFolderName.trim()) {
+          novaTurma = `${movingTurma.nome} - ${novaTurma}`;
+        }
+      } else {
+        novaTurma = movingTurma.nome;
+      }
+      
+      await updateDoc(doc(db, "treinamentos", movingTurma.id), {
+        nome: targetFolderName.trim(),
+        subpasta: targetSubpastaName.trim() || undefined,
+        turma: novaTurma
+      });
+      
+      toast.success("Turma movida com sucesso!");
+      setIsMoveModalOpen(false);
+      setMovingTurma(null);
+      setTargetFolderName("");
+      setTargetSubpastaName("");
+      carregarTreinamentos();
+    } catch (err) {
+      toast.error("Erro ao mover a turma.");
+    }
+    setIsSubmitting(false);
+  };
+
+
+  const handleDropTurma = async (e: React.DragEvent, targetFolder: string, targetSubpasta: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverTarget(null);
+    if (!draggedTurma) return;
+    if (draggedTurma.nome === targetFolder && (draggedTurma.subpasta || "") === targetSubpasta) return;
+
+    const loadingToast = toast.loading("Movendo...");
+    try {
+      const { db } = await import('@/lib/firebase');
+      const { doc, updateDoc } = await import('firebase/firestore');
+
+      let novaTurma = draggedTurma.turma;
+      let novaSubpasta = targetSubpasta.trim();
+      
+      if (draggedTurma.nome !== targetFolder.trim()) {
+        if (novaTurma && novaTurma.trim() !== "") {
+          novaTurma = `${draggedTurma.nome} - ${novaTurma}`;
+        } else {
+          novaTurma = draggedTurma.nome;
+        }
+        
+        if (!novaSubpasta) {
+           novaSubpasta = draggedTurma.nome;
+        }
+      }
+
+      await updateDoc(doc(db, "treinamentos", draggedTurma.id), {
+        nome: targetFolder.trim(),
+        subpasta: novaSubpasta || undefined,
+        turma: novaTurma
+      });
+
+      toast.success("Turma movida com sucesso!", { id: loadingToast });
+      carregarTreinamentos();
+    } catch (error) {
+      toast.error("Erro ao mover.", { id: loadingToast });
+    }
+    setDraggedTurma(null);
+  };
+
+  const toggleStatusAgenda = async (id: string, currentStatus: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const novoStatus = currentStatus === 'CONCLUIDO' ? 'AGENDADO' : 'CONCLUIDO';
+    
+    setTreinamentos(prev => prev.map(t => t.id === id ? { ...t, status_agenda: novoStatus } : t));
+    
+    try {
+      const { db } = await import('@/lib/firebase');
+      const { doc, updateDoc } = await import('firebase/firestore');
+      await updateDoc(doc(db, "treinamentos", id), { status_agenda: novoStatus });
+      toast.success(novoStatus === 'CONCLUIDO' ? "Turma concluída!" : "Turma reaberta (Agendada)");
+    } catch (err) {
+      toast.error("Erro ao alterar status");
+      carregarTreinamentos();
+    }
   };
 
   const excluirPasta = async (nomeCurso: string, e: React.MouseEvent) => {
@@ -621,7 +767,7 @@ export default function Treinamentos() {
           <h2 className="text-3xl font-bold tracking-tight">Treinamentos</h2>
           <p className="text-slate-400 mt-2">Crie as sessões e exporte as presenças para o Excel.</p>
         </div>
-        {!selectedTreinamento ? (
+        {(!selectedTreinamento && !selectedSubpasta) ? (
           <button 
             onClick={() => {
               const cursos = Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean);
@@ -642,7 +788,7 @@ export default function Treinamentos() {
           </button>
         ) : (
           <button 
-            onClick={() => setSelectedId(null)}
+            onClick={() => { setSelectedId(null); setSelectedSubpasta(null); }}
             className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors border border-slate-700"
           >
             <span className="font-bold">←</span>
@@ -651,42 +797,90 @@ export default function Treinamentos() {
         )}
       </div>
 
-      {!selectedTreinamento && (
+      {!selectedTreinamento && !selectedSubpasta && (
         <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
-          {/* Filtro por País (Brasil vs Chile) */}
-          <div className="flex flex-wrap items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 w-fit shadow-md">
-            <button
-              onClick={() => setFilterPais('TODOS')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all ${filterPais === 'TODOS' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-            >
-              🌐 Todos os Países
-            </button>
-            <button
-              onClick={() => setFilterPais('BRASIL')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 ${filterPais === 'BRASIL' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-            >
-              <span>🇧🇷</span> Brasil (Rainbow / Guaíba)
-            </button>
-            <button
-              onClick={() => setFilterPais('CHILE')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 ${filterPais === 'CHILE' ? 'bg-red-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-            >
-              <span>🇨🇱</span> Chile (SAT / Laja / Pacífico)
-            </button>
+          {/* Controles: Filtros */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            {/* Filtro por País (Brasil vs Chile) */}
+            <div className="flex flex-wrap items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 w-fit shadow-md">
+              <button
+                onClick={() => setFilterPais('TODOS')}
+                className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all ${filterPais === 'TODOS' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+              >
+                🌍 Todos os Países
+              </button>
+              <button
+                onClick={() => setFilterPais('BRASIL')}
+                className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 ${filterPais === 'BRASIL' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+              >
+                <span>🇧🇷</span> Brasil (Rainbow / Guaíba)
+              </button>
+              <button
+                onClick={() => setFilterPais('CHILE')}
+                className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 ${filterPais === 'CHILE' ? 'bg-red-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+              >
+                <span>🇨🇱</span> Chile (SAT / Laja / Pacífico)
+              </button>
+            </div>
+            
+            {/* Filtro: Curso e Facilitadores */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <select
+                  value={filterCurso}
+                  onChange={(e) => setFilterCurso(e.target.value)}
+                  className="px-4 py-2 bg-slate-900/90 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-xl text-sm font-bold shadow-md focus:outline-none focus:border-sky-500 appearance-none pr-8 cursor-pointer max-w-[200px] truncate"
+                >
+                  <option value="">📁 Todos os Cursos</option>
+                  {uniqueCursos.map(c => (
+                    <option key={c as string} value={c as string}>{c as string}</option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                  <ChevronDown className="h-4 w-4" />
+                </div>
+              </div>
+
+              <div className="relative">
+                <select
+                  value={filterFacilitador}
+                onChange={(e) => setFilterFacilitador(e.target.value)}
+                className="px-4 py-2 bg-slate-900/90 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-xl text-sm font-bold shadow-md focus:outline-none focus:border-sky-500 appearance-none pr-8 cursor-pointer"
+              >
+                <option value="">👤 Todos os Facilitadores</option>
+                <option value="MEUS">⭐ Meus Treinamentos</option>
+                {facilitadoresList.map(f => (
+                  <option key={f.id} value={f.nome}>{f.nome}</option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                <ChevronDown className="h-4 w-4" />
+              </div>
+            </div>
+            </div>
           </div>
 
           {loading ? (
             <div className="p-12 text-center bg-slate-800/50 rounded-xl border border-slate-700 text-slate-400">
               Carregando pastas de treinamento...
             </div>
-          ) : treinamentos.filter(t => filterPais === 'TODOS' || t.pais === filterPais).length === 0 ? (
+          ) : treinamentos.filter(t => filterPais === 'TODOS' || t.pais === filterPais).filter(t => !filterCurso || t.nome === filterCurso).filter(t => {
+                  if (!filterFacilitador) return true;
+                  if (filterFacilitador === 'MEUS') return t.facilitador_nome === userName || t.instrutor_email === userName;
+                  return t.facilitador_nome === filterFacilitador || t.instrutor_email === filterFacilitador;
+                }).length === 0 ? (
             <div className="p-12 text-center bg-slate-800/50 rounded-xl border border-slate-700 text-slate-400">
               Nenhum treinamento encontrado para este filtro.
             </div>
           ) : (
             Object.entries(
               treinamentos
-                .filter(t => filterPais === 'TODOS' || t.pais === filterPais)
+                .filter(t => filterPais === 'TODOS' || t.pais === filterPais).filter(t => !filterCurso || t.nome === filterCurso)
+                .filter(t => {
+                  if (!filterFacilitador) return true;
+                  if (filterFacilitador === 'MEUS') return t.facilitador_nome === userName || t.instrutor_email === userName;
+                  return t.facilitador_nome === filterFacilitador || t.instrutor_email === filterFacilitador;
+                })
                 .reduce((acc: { [key: string]: any[] }, curr: any) => {
                 const nome = curr.nome || "Outros / Sem Nome";
                 if (!acc[nome]) acc[nome] = [];
@@ -698,7 +892,13 @@ export default function Treinamentos() {
               const totalPessoas = turmasList.reduce((sum, t) => sum + (t._count?.registros || 0), 0);
 
               return (
-                <div key={nomeCurso} className="bg-slate-900/80 rounded-2xl border border-slate-700/80 overflow-hidden shadow-lg transition-all">
+                <div 
+                    key={nomeCurso} 
+                    className={`bg-slate-900/80 rounded-2xl border ${dragOverTarget === nomeCurso ? 'border-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'border-slate-700/80'} overflow-hidden shadow-lg transition-all`}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverTarget(nomeCurso); }}
+                    onDragLeave={() => setDragOverTarget(null)}
+                    onDrop={(e) => handleDropTurma(e, nomeCurso, "")}
+                  >
                   {/* Cabeçalho da Pasta (Acordeão) */}
                   <div 
                     onClick={() => {
@@ -777,26 +977,96 @@ export default function Treinamentos() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                          {turmasList.map(t => (
+                          {Object.entries(
+                            turmasList.reduce((acc: { [key: string]: any[] }, curr: any) => {
+                              const sp = curr.subpasta || "Geral";
+                              if (!acc[sp]) acc[sp] = [];
+                              acc[sp].push(curr);
+                              return acc;
+                            }, {})
+                          ).map(([spName, spTurmas]) => (
+                            <Fragment key={spName}>
+                              {spName !== "Geral" && (
+                                <tr 
+                                  className={`bg-indigo-900/20 hover:bg-indigo-900/40 transition-colors border-y border-indigo-500/30 cursor-pointer group ${dragOverTarget === spName ? 'bg-indigo-800/40 border-indigo-400' : ''}`}
+                                  onDragOver={(e) => { e.preventDefault(); setDragOverTarget(spName); }}
+                                  onDragLeave={() => setDragOverTarget(null)}
+                                  onDrop={(e) => handleDropTurma(e, nomeCurso, spName)}
+                                  onClick={() => {
+                                    setSelectedId(null);
+                                    setSelectedSubpasta({
+                                      nomeCurso,
+                                      subpasta: spName,
+                                      ids: (spTurmas as any[]).map((t: any) => t.id)
+                                    });
+                                  }}
+                                >
+                                  <td colSpan={6} className="px-4 py-3 font-bold text-indigo-300 group-hover:text-indigo-200">
+                                    <div className="flex items-center gap-2">
+                                      <FolderOpen className="w-4 h-4 text-indigo-400" />
+                                      <span className="uppercase tracking-wider">{spName}</span>
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-normal border border-indigo-500/30">
+                                        {(spTurmas as any[]).length} turmas
+                                      </span>
+                                      <span className="ml-2 text-xs font-normal text-indigo-400/70 group-hover:text-indigo-300">
+                                        Clique para ver presença unificada
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedId(null);
+                                        setSelectedSubpasta({ nomeCurso, subpasta: spName, ids: (spTurmas as any[]).map((t: any) => t.id) });
+                                      }}
+                                      className="inline-flex items-center space-x-1.5 px-3 py-1 text-[10px] font-bold text-indigo-300 hover:text-white bg-indigo-600/30 hover:bg-indigo-500/50 rounded-lg transition-colors border border-indigo-500/50 uppercase"
+                                    >
+                                      <ListChecks className="h-3.5 w-3.5" />
+                                      <span className="hidden sm:inline">Unificado</span>
+                                    </button>
+                                  </td>
+                                </tr>
+                              )}
+                              {(spTurmas as any[]).map((t: any) => (
                             <tr 
                               key={t.id}
-                              onClick={() => setSelectedId(t.id)}
-                              className="transition-colors cursor-pointer hover:bg-slate-800/60 group"
+                              draggable
+                              onDragStart={(e) => { 
+                                setDraggedTurma(t); 
+                                e.dataTransfer.effectAllowed = "move"; 
+                                e.dataTransfer.setData("text/plain", t.id); // Required for Firefox
+                              }}
+                              onDragEnd={() => { setDraggedTurma(null); setDragOverTarget(null); }}
+                              onClick={() => {
+                                setSelectedSubpasta(null);
+                                setSelectedId(t.id);
+                              }}
+                              className={`transition-colors cursor-pointer hover:bg-slate-800/60 group ${draggedTurma?.id === t.id ? 'opacity-50' : ''}`}
                             >
                               <td className="px-4 py-3.5 font-bold text-white group-hover:text-sky-300 transition-colors">
                                 <div className="flex items-center gap-2 flex-wrap">
+                                  {spName !== "Geral" && (
+                                    <div className="w-2 h-2 rounded-full bg-indigo-500/50 mr-1" title="Pertence a sub-pasta"></div>
+                                  )}
                                   <span>{t.turma || "Turma Principal / Única"}</span>
                                   <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">
-                                    🏢 {t.planta || (t.pais === 'CHILE' ? 'CHILE (SAT)' : 'GUAÍBA (RAINBOW)')}
+                                    📍 {t.planta || (t.pais === 'CHILE' ? 'CHILE (SAT)' : 'GUAÍBA (RAINBOW)')}
                                   </span>
                                 </div>
                               </td>
                               <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{t.id}</td>
-                              <td className="px-4 py-3.5">
-                                <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800">
-                                  <PlayCircle className="h-3 w-3" /> Ativo
-                                </span>
-                              </td>
+                              <td className="px-4 py-3.5" onClick={(e) => toggleStatusAgenda(t.id, t.status_agenda, e)}>
+                                  {t.status_agenda === 'CONCLUIDO' ? (
+                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800 cursor-pointer hover:bg-emerald-900/50 transition-colors" title="Turma Concluída. Clique para desmarcar.">
+                                      <CheckCircle2 className="h-3 w-3" /> Concluído
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 cursor-pointer hover:bg-slate-700 transition-colors" title="Clique para marcar como Concluída">
+                                      <Clock className="h-3 w-3" /> {t.status_agenda || 'Agendado'}
+                                    </span>
+                                  )}
+                                </td>
                               <td className="px-4 py-3.5">
                                 {t.checklist_dinamico && t.checklist_dinamico.length > 0 ? (
                                   t.checklist_dinamico.every((item: any) => item.checado) ? (
@@ -842,6 +1112,19 @@ export default function Treinamentos() {
                                     </button>
                                   </>
                                 )}
+                                                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMovingTurma(t);
+                                    setTargetFolderName("");
+                                    setTargetSubpastaName("");
+                                    setIsMoveModalOpen(true);
+                                  }}
+                                  className="flex items-center p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
+                                  title="Mover Turma"
+                                >
+                                  <FolderPlus className="h-4 w-4" />
+                                </button>
                                 {userRole === 'admin' && (
                                   <button 
                                     onClick={(e) => excluirTreinamento(t.id, e)}
@@ -854,6 +1137,8 @@ export default function Treinamentos() {
                               </td>
                             </tr>
                           ))}
+                          </Fragment>
+                        ))}
                         </tbody>
                       </table>
                     </div>
@@ -865,7 +1150,86 @@ export default function Treinamentos() {
         </div>
       )}
 
-      {selectedTreinamento && (
+            {selectedSubpasta && (
+        <div className="space-y-6 animate-in slide-in-from-bottom-4">
+          <div className="bg-slate-900/80 rounded-xl border border-indigo-500/30 p-6 flex flex-col md:flex-row gap-8 shadow-[0_0_15px_rgba(99,102,241,0.1)]">
+            <div className="flex-1 space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{selectedSubpasta.nomeCurso}</h3>
+                <h2 className="text-3xl font-black text-white flex items-center gap-3">
+                  <FolderOpen className="h-8 w-8 text-indigo-400" />
+                  {selectedSubpasta.subpasta}
+                </h2>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    Visão Unificada
+                  </span>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                    {selectedSubpasta.ids.length} turmas
+                  </span>
+                </div>
+              </div>
+              <p className="text-slate-300 text-sm leading-relaxed max-w-2xl">
+                Esta é uma visão unificada. A lista abaixo contém as presenças combinadas de todas as turmas que pertencem a esta área.
+              </p>
+            </div>
+            <div className="flex flex-col items-center justify-center gap-3 bg-slate-950 p-6 rounded-2xl border border-slate-800">
+              <button 
+                onClick={() => {
+                  toast.success("Em breve: Exportação unificada!");
+                }}
+                className="w-full py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
+              >
+                <Download className="h-5 w-5" /> Exportar Consolidado
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 rounded-xl border border-slate-700 overflow-hidden">
+            <div className="p-4 bg-slate-800/50 border-b border-slate-700 flex justify-between items-center">
+              <h3 className="font-bold text-white flex items-center gap-2">
+                <ListChecks className="h-5 w-5 text-indigo-400" />
+                Presenças Registradas ({presencas.filter(p => selectedSubpasta.ids.includes(p.treinamentoId)).length})
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-300">
+                <thead className="text-xs uppercase text-slate-400 bg-slate-950 border-b border-slate-800">
+                  <tr>
+                    <th className="px-4 py-3">Colaborador</th>
+                    <th className="px-4 py-3">CPF</th>
+                    <th className="px-4 py-3">Empresa</th>
+                    <th className="px-4 py-3">Turma Origem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {presencas.filter(p => selectedSubpasta.ids.includes(p.treinamentoId)).map(p => (
+                    <tr key={p.id} className="hover:bg-slate-800/60 transition-colors">
+                      <td className="px-4 py-3 font-medium text-white">{p.colaborador_nome}</td>
+                      <td className="px-4 py-3">{p.colaborador_cpf}</td>
+                      <td className="px-4 py-3">{p.empresa}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs text-sky-400 bg-sky-900/20 px-2 py-1 rounded border border-sky-800/30">
+                          {treinamentos.find(t => t.id === p.treinamentoId)?.turma || "Turma Principal"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {presencas.filter(p => selectedSubpasta.ids.includes(p.treinamentoId)).length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                        Nenhuma presença registrada nesta sub-pasta ainda.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+{selectedTreinamento && (
         <div className="space-y-6 animate-in slide-in-from-bottom-4">
           <div className="bg-slate-900/80 rounded-xl border border-slate-700 p-6 flex flex-col md:flex-row gap-8">
             <div className="flex-1 space-y-4">
@@ -1229,7 +1593,21 @@ export default function Treinamentos() {
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                  <span>Nome / Código da Turma</span>
+                    <span>Sub-pasta / Área (Opcional)</span>
+                    <span className="text-[10px] font-normal text-slate-400">Agrupador visual (ex: Linha de Fibras)</span>
+                  </label>
+                  <input 
+                    type="text"
+                    value={subpastaTreinamento}
+                    onChange={e => setSubpastaTreinamento(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium placeholder:text-slate-600 shadow-inner"
+                    placeholder="Ex: Linha de Fibras"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>Nome / Código da Turma</span>
                   <span className="text-[10px] font-normal text-slate-400">Identificador da sessão</span>
                 </label>
                 <input 
@@ -1505,7 +1883,7 @@ export default function Treinamentos() {
 
             <div className="w-full md:w-96 bg-slate-950 rounded-2xl border-2 border-slate-800 p-6 flex flex-col items-center justify-center text-center shadow-inner">
               <h4 className="font-extrabold text-emerald-400 mb-1 text-lg uppercase tracking-wider">QR Code para Alunos</h4>
-              <div className="bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg text-white font-bold text-xs mb-3 max-w-full truncate text-blue-300">
+              <div className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg text-white font-bold text-xs mb-3 w-full text-blue-300 break-words">
                 📚 {selectedTreinamento.nome} {selectedTreinamento.turma ? `(${selectedTreinamento.turma})` : ''}
               </div>
               <p className="text-xs text-slate-400 mb-5">Peça aos alunos ou instrutores para escanearem a tela</p>
@@ -1727,7 +2105,63 @@ export default function Treinamentos() {
             </div>
           )}
 
-      <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
+      
+        {isMoveModalOpen && movingTurma && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+              <div className="p-6 border-b border-slate-800/80 bg-slate-900/50 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <FolderPlus className="h-5 w-5 text-sky-400" />
+                  Mover Turma
+                </h3>
+                <button onClick={() => { setIsMoveModalOpen(false); setMovingTurma(null); }} className="text-slate-400 hover:text-white transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <form onSubmit={handleMoveTurma} className="p-6 space-y-5">
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-300">
+                    Você está movendo a turma <strong className="text-white">{movingTurma.turma || movingTurma.nome}</strong>.
+                  </p>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Para qual pasta deseja mover?</label>
+                    <select
+                      required
+                      value={targetFolderName}
+                      onChange={(e) => setTargetFolderName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all appearance-none outline-none"
+                    >
+                      <option value="" disabled>Selecione a pasta destino</option>
+                      {Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean).map((curso: any) => (
+                        <option key={curso} value={curso}>{curso}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Qual a Sub-pasta / Área? (Opcional)</label>
+                    <input
+                      type="text"
+                      value={targetSubpastaName}
+                      onChange={(e) => setTargetSubpastaName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder:text-slate-600 outline-none"
+                      placeholder="Ex: Linha de Fibras"
+                    />
+                  </div>
+                </div>
+                <div className="pt-2 flex gap-3">
+                  <button type="button" onClick={() => { setIsMoveModalOpen(false); setMovingTurma(null); }} className="flex-1 px-4 py-3 text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-xl font-medium transition-colors">
+                    Cancelar
+                  </button>
+                  <button type="submit" disabled={isSubmitting || !targetFolderName} className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+                    {isSubmitting ? 'Movendo...' : 'Confirmar e Mover'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
     </div>
   );
 }

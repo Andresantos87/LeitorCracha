@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@empresas-cmpc/cmpc-design-system-cl-raiz-react": "file:../../@empresas-cmpc/@empresas-cmpc/cmpc-design-system-cl-raiz-react",
     "@google-cloud/bigquery": "^8.3.1",
     "@types/react-signature-canvas": "^1.0.7",
     "csv-parser": "^3.2.1",

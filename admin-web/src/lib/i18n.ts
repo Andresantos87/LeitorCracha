@@ -9,6 +9,8 @@ export interface Translations {
   colaboradores: string;
   relatorios: string;
   usuarios: string;
+  facilitadores: string;
+  agenda: string;
   logout: string;
   user: string;
 
@@ -65,6 +67,8 @@ export const translations: Record<Language, Translations> = {
     colaboradores: "Colaboradores (Excel)",
     relatorios: "Relatórios",
     usuarios: "Usuários",
+    facilitadores: "Facilitadores",
+    agenda: "Agenda",
     logout: "Sair",
     user: "Usuário",
 
@@ -117,6 +121,8 @@ export const translations: Record<Language, Translations> = {
     colaboradores: "Colaboradores (Excel)",
     relatorios: "Reportes",
     usuarios: "Usuarios",
+    facilitadores: "Facilitadores",
+    agenda: "Agenda",
     logout: "Salir",
     user: "Usuario",
 

@@ -145,6 +145,7 @@ export async function GET(req: Request) {
             planta: p.planta,
             empresa: p.empresa,
             rol: p.rol,
+            facilitador: presencaEncontrada?.facilitador_nome || treinamento.facilitador_nome || "Nenhum",
             status: presencaEncontrada ? "CAPACITADO" : "NÃO CAPACITADO",
             dataPresenca: presencaEncontrada?.data_registro?.toDate()?.toISOString() || ""
         });
@@ -177,6 +178,7 @@ export async function GET(req: Request) {
                 planta: colab ? colab.planta : (pData.planta || "Não informado"),
                 empresa: colab ? colab.empresa : (pData.empresa || "Não informado"),
                 rol: "Nenhum (Extra)",
+                facilitador: pData.facilitador_nome || treinamento.facilitador_nome || "Nenhum",
                 status: "CAPACITADO (EXTRA)",
                 dataPresenca: pData.data_registro?.toDate()?.toISOString() || ""
             });
@@ -190,10 +192,10 @@ export async function GET(req: Request) {
     }
 
     // Gerar CSV
-    const cabecalho = "NOME_TREINAMENTO,NOME_COLABORADOR,MATRICULA,CARGO,PLANTA,EMPRESA,PAPEL_ROL,STATUS,DATA_PRESENCA\n";
+    const cabecalho = "NOME_TREINAMENTO,NOME_COLABORADOR,MATRICULA,CARGO,PLANTA,EMPRESA,PAPEL_ROL,FACILITADOR,STATUS,DATA_PRESENCA\n";
     const linhas = relatorioRegistros.map(r => {
       const dataFormatada = r.dataPresenca ? r.dataPresenca : "-";
-      return `"${r.nomeTreinamento}","${r.nomeColaborador}","${r.matricula}","${r.cargo}","${r.planta}","${r.empresa}","${r.rol}","${r.status}","${dataFormatada}"`;
+      return `"${r.nomeTreinamento}","${r.nomeColaborador}","${r.matricula}","${r.cargo}","${r.planta}","${r.empresa}","${r.rol}","${r.facilitador}","${r.status}","${dataFormatada}"`;
     }).join("\n");
 
     // Adicionar BOM para Excel abrir UTF-8 corretamente

@@ -36,7 +36,13 @@ export async function GET() {
           registros: count
         },
         publico_alvo_id: data.publico_alvo_id || null,
-        checklist_dinamico: data.checklist_dinamico || []
+        facilitador_id: data.facilitador_id || null,
+        facilitador_nome: data.facilitador_nome || null,
+        checklist_dinamico: data.checklist_dinamico || [],
+        data_agendada: data.data_agendada || null,
+        horario_agendado: data.horario_agendado || null,
+        carga_horaria: data.carga_horaria || null,
+        status_agenda: data.status_agenda || 'CONCLUIDO'
       };
     }));
     
@@ -50,7 +56,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nome, instrutor_email, turma, pais = 'BRASIL', planta = '', publico_alvo_id, checklistTemplateId } = body;
+    const { nome, instrutor_email, turma, pais = 'BRASIL', planta = '', publico_alvo_id, checklistTemplateId, facilitador_id, facilitador_nome, data_agendada, horario_agendado, carga_horaria, status_agenda } = body;
     
     if (!nome) return NextResponse.json({ success: false, error: "Nome é obrigatório" }, { status: 400 });
 
@@ -83,6 +89,12 @@ export async function POST(req: Request) {
       checklist_dinamico
     };
     if (publico_alvo_id) docData.publico_alvo_id = publico_alvo_id;
+    if (facilitador_id) docData.facilitador_id = facilitador_id;
+    if (facilitador_nome) docData.facilitador_nome = facilitador_nome;
+    if (data_agendada) docData.data_agendada = data_agendada;
+    if (horario_agendado) docData.horario_agendado = horario_agendado;
+    if (carga_horaria) docData.carga_horaria = carga_horaria;
+    if (status_agenda) docData.status_agenda = status_agenda;
 
     const docRef = await addDoc(collection(db, "treinamentos"), docData);
     

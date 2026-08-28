@@ -28,14 +28,16 @@ export async function GET(req: Request) {
     const presencasSnap = await getDocs(q);
 
     // Gerar CSV
-    const cabecalho = "NOME_TREINAMENTO,ID_TREINAMENTO,IDENTIFICADOR_LIDO,NOME_COLABORADOR,EMPRESA_PLANTA,MODO_LEITURA,ASSINATURA_REGISTRADA,DATA_HORA\n";
+    const cabecalho = "NOME_TREINAMENTO,ID_TREINAMENTO,IDENTIFICADOR_LIDO,NOME_COLABORADOR,EMPRESA_PLANTA,MODO_LEITURA,ASSINATURA_REGISTRADA,DATA_HORA,FACILITADOR,PAPEL_ROL\n";
     const linhas = presencasSnap.docs.map(p => {
       const pData = p.data();
       const dataFormatada = pData.data_registro?.toDate()?.toISOString() || new Date().toISOString();
       const nomeColab = pData.nome || "Desconhecido";
       const empresaColab = pData.planta || pData.empresa || "Não informado";
       const assinado = pData.assinaturaBase64 || pData.assinatura ? "SIM (Assinado)" : "NÃO";
-      return `"${treinamento.nome}","${id}","${pData.identificador_lido}","${nomeColab}","${empresaColab}","${pData.modo_registro}","${assinado}","${dataFormatada}"`;
+      const facilitador = pData.facilitador_nome || treinamento.facilitador_nome || "Nenhum";
+      const papel = pData.rol || "GERAL";
+      return `"${treinamento.nome}","${id}","${pData.identificador_lido}","${nomeColab}","${empresaColab}","${pData.modo_registro}","${assinado}","${dataFormatada}","${facilitador}","${papel}"`;
     }).join("\n");
 
     const csvStr = cabecalho + linhas;

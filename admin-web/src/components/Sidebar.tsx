@@ -19,6 +19,8 @@ export function Sidebar({ role, userName }: { role?: string; userName?: string }
     { name: t.publicosAlvo, path: "/publicos-alvo", roles: ["admin", "gestor"] },
     { name: t.colaboradores, path: "/colaboradores", roles: ["admin", "gestor", "leitor"] },
     { name: t.relatorios, path: "/relatorios", roles: ["admin", "gestor", "leitor"] },
+    { name: t.agenda, path: "/agenda", roles: ["admin", "gestor", "leitor"] },
+    { name: t.facilitadores, path: "/facilitadores", roles: ["admin", "gestor"] },
     { name: t.usuarios, path: "/usuarios", roles: ["admin"] },
   ];
 
