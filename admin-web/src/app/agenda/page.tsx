@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
-import { Calendar as CalendarIcon, Upload, RefreshCw, CalendarDays, Edit3, ArrowRight, Sparkles, ChevronLeft, ChevronRight, Check, RotateCcw, LayoutGrid, List } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Calendar as CalendarIcon, Upload, RefreshCw, CalendarDays, Edit3, ArrowRight, Sparkles, ChevronLeft, ChevronRight, Check, RotateCcw, LayoutGrid, List, MessageSquare, X, Send, Bot } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function AgendaPage() {
@@ -19,6 +19,56 @@ export default function AgendaPage() {
   const [userRole, setUserRole] = useState("leitor");
   const [filterFacilitador, setFilterFacilitador] = useState("");
   const [filterCurso, setFilterCurso] = useState("");
+  
+  // AI Chat States
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{role: 'ai'|'user', content: string}[]>([
+    { role: 'ai', content: 'Ola! Sou seu Assistente de Agenda. Como posso ajudar a criar ou excluir treinamentos hoje?' }
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isChatOpen && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, isChatOpen]);
+
+  const handleSendChatMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    const userMsg = chatInput.trim();
+    setChatInput("");
+    setChatMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setIsChatLoading(true);
+
+    try {
+      const res = await fetch('/api/ai-agenda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: userMsg,
+          history: chatMessages
+        })
+      });
+      const data = await res.json();
+      
+      if (data.reply) {
+        setChatMessages(prev => [...prev, { role: 'ai', content: data.reply }]);
+      }
+      
+      if (data.refreshNeeded) {
+        carregarAgendas();
+      }
+    } catch (e) {
+      setChatMessages(prev => [...prev, { role: 'ai', content: 'Desculpe, ocorreu um erro de conexao.' }]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
 
   useEffect(() => {
     carregarAgendas();
@@ -623,6 +673,79 @@ export default function AgendaPage() {
           </div>
         </div>
       )}
+
+      {/* Floating Bot Button */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-[0_0_20px_rgba(79,70,229,0.5)] flex items-center justify-center transition-transform hover:scale-110 z-40"
+      >
+        <Bot className="w-7 h-7" />
+      </button>
+
+      {/* Chat Drawer/Modal */}
+      {isChatOpen && (
+        <div className="fixed inset-y-0 right-0 w-full md:w-[400px] bg-slate-900 border-l border-slate-700 shadow-2xl z-50 flex flex-col animate-in slide-in-from-right-full">
+          {/* Header */}
+          <div className="px-5 py-4 bg-indigo-600 flex items-center justify-between shadow-md">
+            <div className="flex items-center gap-3 text-white">
+              <Bot className="w-6 h-6" />
+              <h2 className="font-bold text-lg">Assistente IA</h2>
+            </div>
+            <button onClick={() => setIsChatOpen(false)} className="text-indigo-200 hover:text-white transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-900/50">
+            {chatMessages.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
+                  msg.role === 'user' 
+                    ? 'bg-sky-600 text-white rounded-br-sm shadow-md' 
+                    : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-bl-sm shadow-md'
+                }`}>
+                  {msg.content.split('\n').map((line, i) => (
+                    <span key={i}>{line}<br/></span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {isChatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-slate-800 text-slate-400 border border-slate-700 rounded-2xl rounded-bl-sm px-4 py-3 text-sm flex gap-1 items-center shadow-md">
+                  <div className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input Area */}
+          <form onSubmit={handleSendChatMessage} className="p-4 bg-slate-900 border-t border-slate-800">
+            <div className="relative">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                placeholder="Ex: Crie turmas para amanha..."
+                className="w-full bg-slate-950 border border-slate-700 rounded-full pl-5 pr-12 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 shadow-inner"
+                disabled={isChatLoading}
+              />
+              <button 
+                type="submit" 
+                disabled={!chatInput.trim() || isChatLoading}
+                className="absolute right-2 top-2 p-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-full transition-colors"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
+

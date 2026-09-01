@@ -17,6 +17,7 @@ export async function GET(req: Request) {
     const plantasFilter = searchParams.getAll('planta');
     const cargosFilter = searchParams.getAll('cargo');
     const gestoresFilter = searchParams.getAll('gestor');
+    const areasFilter = searchParams.getAll('area');
     const page = parseInt(searchParams.get('page') || "1");
     const limit = parseInt(searchParams.get('limit') || "50");
 
@@ -90,11 +91,13 @@ export async function GET(req: Request) {
       const plaClean = cleanString(colab.planta);
       const cargoClean = cleanString(colab.cargo);
       const gestorClean = cleanString(colab.gestor || colab.superior_imediato);
+      const areaClean = cleanString(colab.area);
 
       // Filtros
       if (empresasFilter.length > 0 && !empresasFilter.includes(empClean)) continue;
       if (plantasFilter.length > 0 && !plantasFilter.includes(plaClean)) continue;
       if (cargosFilter.length > 0 && !cargosFilter.includes(cargoClean)) continue;
+      if (areasFilter.length > 0 && !areasFilter.includes(areaClean)) continue;
       
       if (gestoresFilter.length > 0) {
         if (!gestoresFilter.includes(gestorClean)) continue;

@@ -11,6 +11,7 @@
   "dependencies": {
     "@empresas-cmpc/cmpc-design-system-cl-raiz-react": "file:../../@empresas-cmpc/@empresas-cmpc/cmpc-design-system-cl-raiz-react",
     "@google-cloud/bigquery": "^8.3.1",
+    "@google/generative-ai": "^0.24.1",
     "@types/react-signature-canvas": "^1.0.7",
     "csv-parser": "^3.2.1",
     "firebase": "^12.16.0",
@@ -18,13 +19,14 @@
     "jose": "^6.2.4",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
-    "lucide-react": "^1.25.0",
+    "lucide-react": "^1.38.0",
     "next": "16.2.10",
     "qrcode.react": "^4.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hot-toast": "^2.6.0",
     "react-signature-canvas": "^1.1.0-alpha.2",
+    "recharts": "^3.10.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

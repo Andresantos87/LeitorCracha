@@ -37,6 +37,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (matriculas !== undefined) updates.matriculas = Array.isArray(matriculas) ? matriculas : [];
     if (body.membros !== undefined) updates.membros = Array.isArray(body.membros) ? body.membros : [];
     if (body.roles_disponiveis !== undefined) updates.roles_disponiveis = Array.isArray(body.roles_disponiveis) ? body.roles_disponiveis : [];
+    if (body.pasta !== undefined) updates.pasta = body.pasta;
     
     await updateDoc(docRef, updates);
     

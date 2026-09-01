@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import ConfirmModal from '@/components/ConfirmModal';
 import PromptModal from '@/components/PromptModal';
 import toast from 'react-hot-toast';
-import { Users, Target, Plus, Search, Loader2, Trash2, Edit, X, Check, ChevronDown, Building2, MapPin, Briefcase, UserCircle, Save, Clock, CheckCircle2 } from "lucide-react";
+import { Users, Target, Plus, Search, Loader2, Trash2, Edit, X, Check, ChevronDown, Building2, MapPin, Briefcase, UserCircle, Save, Clock, CheckCircle2, FolderOpen } from "lucide-react";
 
 const CustomSelect = ({ values, onChange, options, placeholder, icon: Icon, disabled = false }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -104,9 +104,11 @@ export default function PublicosAlvoPage() {
   const [novoRol, setNovoRol] = useState("");
 
   const [nome, setNome] = useState("");
+  const [pastaPublico, setPastaPublico] = useState("");
   const [descricao, setDescricao] = useState("");
   
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void, variant: 'danger'|'warning'}>({isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger'});
+
   const [promptModal, setPromptModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: (v: string) => void}>({isOpen: false, title: '', message: '', onConfirm: () => {}});
   
   // New States for Search & Select UI
@@ -117,6 +119,7 @@ export default function PublicosAlvoPage() {
   const [filtroPlanta, setFiltroPlanta] = useState<string[]>([]);
   const [filtroCargo, setFiltroCargo] = useState<string[]>([]);
   const [filtroGestor, setFiltroGestor] = useState<string[]>([]);
+  const [filtroArea, setFiltroArea] = useState<string[]>([]);
   const [resultadosColab, setResultadosColab] = useState<any[]>([]);
   const [totalEncontrados, setTotalEncontrados] = useState(0);
   const [buscandoColab, setBuscandoColab] = useState(false);
@@ -124,6 +127,7 @@ export default function PublicosAlvoPage() {
   const [plantasOptions, setPlantasOptions] = useState<string[]>([]);
   const [cargosOptions, setCargosOptions] = useState<string[]>([]);
   const [gestoresOptions, setGestoresOptions] = useState<string[]>([]);
+  const [areasOptions, setAreasOptions] = useState<string[]>([]);
 
   useEffect(() => {
     carregarPublicos();
@@ -151,10 +155,11 @@ export default function PublicosAlvoPage() {
           setPlantasOptions(sortedPlantas);
           setCargosOptions(d.cargos);
           setGestoresOptions(d.gestores);
+          if (d.areas) setAreasOptions(d.areas);
         }
       })
       .catch(() => {});
-  }, [filtroEmpresa, filtroPlanta]);
+  }, [filtroEmpresa, filtroPlanta, filtroArea]);
 
   useEffect(() => {
     if (isSearchModalOpen) {
@@ -163,7 +168,7 @@ export default function PublicosAlvoPage() {
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [pesquisa, filtroEmpresa, filtroPlanta, filtroCargo, filtroGestor, isSearchModalOpen]);
+  }, [pesquisa, filtroEmpresa, filtroPlanta, filtroCargo, filtroGestor, filtroArea, isSearchModalOpen]);
 
   const carregarPublicos = async () => {
     setIsLoading(true);
@@ -189,6 +194,7 @@ export default function PublicosAlvoPage() {
       filtroPlanta.forEach(p => params.append('planta', p));
       filtroCargo.forEach(c => params.append('cargo', c));
       filtroGestor.forEach(g => params.append('gestor', g));
+      filtroArea.forEach(a => params.append('area', a));
       params.append('limit', '2000'); // Limite alto para evitar sobrecarga excessiva no navegador, mas suficiente para a maioria dos pblicos-alvo
       
       const res = await fetch(`/api/colaboradores?${params.toString()}`);
@@ -261,7 +267,7 @@ export default function PublicosAlvoPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, descricao, matriculas, membros, roles_disponiveis: rolesDisponiveis })
+        body: JSON.stringify({ nome, descricao, pasta: pastaPublico, matriculas, membros, roles_disponiveis: rolesDisponiveis })
       });
       
       const data = await res.json();
@@ -270,6 +276,7 @@ export default function PublicosAlvoPage() {
         setIsModalOpen(false);
         setEditId(null);
         setNome("");
+        setPastaPublico("");
         setDescricao("");
         setSelectedColaboradores([]);
         carregarPublicos();
@@ -282,6 +289,34 @@ export default function PublicosAlvoPage() {
       setIsSaving(false);
     }
   };
+  const handleRenamePasta = async (oldPastaName: string, newPastaName: string) => {
+    if (!newPastaName || newPastaName.trim() === "" || oldPastaName === newPastaName) return;
+    setIsLoading(true);
+    
+    // Encontrar todos os publicos que estão nesta pasta
+    const pubsToUpdate = publicos.filter(p => 
+      oldPastaName === "Sem Agrupamento" ? !p.pasta : p.pasta === oldPastaName
+    );
+    
+    try {
+      await Promise.all(pubsToUpdate.map(pub => {
+        return fetch(`/api/publicos-alvo/${pub.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pasta: newPastaName })
+        });
+      }));
+      
+      toast.success("Pasta renomeada com sucesso!");
+      carregarPublicos();
+    } catch (error) {
+      toast.error("Erro ao renomear pasta");
+    } finally {
+      setIsLoading(false);
+      setPromptModal({ ...promptModal, isOpen: false });
+    }
+  };
+
 
   const excluirPublico = async (id: string) => {
     setConfirmModal({
@@ -312,6 +347,7 @@ export default function PublicosAlvoPage() {
     setEditTreinamentoVinculado(pub.treinamento_vinculado || null);
     setEditPresencas(pub.presencas_matriculas || []);
     setNome(pub.nome);
+    setPastaPublico(pub.pasta || "");
     setDescricao(pub.descricao || "");
     setRolesDisponiveis(pub.roles_disponiveis || []);
     setCheckedColabs([]);
@@ -382,6 +418,7 @@ export default function PublicosAlvoPage() {
     setFiltroPlanta([]);
     setFiltroCargo([]);
     setFiltroGestor([]);
+    setFiltroArea([]);
   };
 
   const abrirCriacao = () => {
@@ -389,6 +426,7 @@ export default function PublicosAlvoPage() {
     setEditTreinamentoVinculado(null);
     setEditPresencas([]);
     setNome("");
+    setPastaPublico("");
     setDescricao("");
     setSelectedColaboradores([]);
     setPesquisa("");
@@ -396,6 +434,7 @@ export default function PublicosAlvoPage() {
     setFiltroPlanta([]);
     setFiltroCargo([]);
     setFiltroGestor([]);
+    setFiltroArea([]);
     setRolesDisponiveis([]);
     setCheckedColabs([]);
     setIsModalOpen(true);
@@ -445,6 +484,7 @@ export default function PublicosAlvoPage() {
     setSelectedColaboradores(prev => prev.filter(c => c.cargo !== "Não localizado no banco"));
   };
 
+  const uniquePastas = Array.from(new Set(publicos.map(p => p.pasta).filter(Boolean))).sort();
   const filtrados = publicos.filter(p => p.nome.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
@@ -492,71 +532,109 @@ export default function PublicosAlvoPage() {
           <p className="text-slate-400 text-lg">Nenhum público-alvo encontrado.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtrados.map((pub) => (
-            <div 
-              key={pub.id} 
-              onClick={() => abrirEdicao(pub)}
-              className="bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800 hover:border-slate-600 transition-all group cursor-pointer relative"
-            >
-              <div className="flex justify-between items-start mb-4">
-                  <div className="flex gap-3">
-                    <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl shrink-0">
-                      <Users className="h-6 w-6" />
-                    </div>
-                    {pub.treinamento_vinculado ? (
-                       <div className="flex flex-col justify-center">
-                          <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Vinculado a:</span>
-                          <span className="text-xs text-emerald-100 bg-emerald-900/40 px-2 py-0.5 rounded border border-emerald-700/50 line-clamp-1" title={pub.treinamento_vinculado.nome}>
-                            {pub.treinamento_vinculado.nome}
-                          </span>
-                       </div>
-                    ) : (
-                       <div className="flex flex-col justify-center">
-                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status:</span>
-                          <span className="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">Aguardando Vínculo</span>
-                       </div>
-                    )}
-                  </div>
+        <div className="space-y-10">
+          {Object.entries(
+            filtrados.reduce((acc: any, curr: any) => {
+              const p = curr.pasta || "Sem Agrupamento";
+              if (!acc[p]) acc[p] = [];
+              acc[p].push(curr);
+              return acc;
+            }, {})
+          ).sort(([a], [b]) => a === "Sem Agrupamento" ? 1 : b === "Sem Agrupamento" ? -1 : a.localeCompare(b))
+          .map(([pastaNome, pubs]: any) => (
+            <div key={pastaNome} className="bg-slate-900/40 rounded-2xl p-6 border border-slate-700/40">
+              <div className="flex items-center gap-3 mb-6 border-b border-slate-700/50 pb-4 group/folder">
+                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                  <FolderOpen className="h-5 w-5" />
+                </div>
+                <h2 className="text-xl font-extrabold text-white tracking-wide">{pastaNome}</h2>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                  {pubs.length} {pubs.length === 1 ? 'lista' : 'listas'}
+                </span>
+                
+                {pastaNome !== "Sem Agrupamento" && (
                   <button 
-                    onClick={(e) => { e.stopPropagation(); excluirPublico(pub.id); }} 
-                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100 z-10 shrink-0"
+                    onClick={() => setPromptModal({
+                      isOpen: true,
+                      title: 'Renomear Pasta',
+                      message: `Digite o novo nome para a pasta "${pastaNome}":`,
+                      onConfirm: (newName) => handleRenamePasta(pastaNome, newName)
+                    })}
+                    className="ml-2 p-1.5 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-all opacity-0 group-hover/folder:opacity-100"
+                    title="Renomear Pasta"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Edit className="h-4 w-4" />
                   </button>
-                </div>
-              <h3 className="text-xl font-bold text-white mb-1 truncate group-hover:text-blue-400 transition-colors flex items-center gap-2">
-                {pub.nome} <Edit className="h-4 w-4 opacity-0 group-hover:opacity-100" />
-              </h3>
-              <p className="text-sm text-slate-400 mb-4 line-clamp-2 min-h-[40px]">{pub.descricao || "Sem descrição"}</p>
-              
-              {pub.treinamento_vinculado && (
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avanço da Turma</span>
-                    <span className="text-[10px] font-bold text-blue-400">
-                      {pub.matriculas?.length > 0 
-                        ? Math.round(((pub.presencas_matriculas?.length || 0) / pub.matriculas.length) * 100) 
-                        : 0}%
-                    </span>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {pubs.map((pub: any) => (
+                  <div 
+                    key={pub.id} 
+                    onClick={() => abrirEdicao(pub)}
+                    className="bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800 hover:border-slate-600 transition-all group cursor-pointer relative"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex gap-3">
+                          <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl shrink-0">
+                            <Users className="h-6 w-6" />
+                          </div>
+                          {pub.treinamento_vinculado ? (
+                             <div className="flex flex-col justify-center">
+                                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Vinculado a:</span>
+                                <span className="text-xs text-emerald-100 bg-emerald-900/40 px-2 py-0.5 rounded border border-emerald-700/50 line-clamp-1" title={pub.treinamento_vinculado.nome}>
+                                  {pub.treinamento_vinculado.nome}
+                                </span>
+                             </div>
+                          ) : (
+                             <div className="flex flex-col justify-center">
+                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status:</span>
+                                <span className="text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">Aguardando Vínculo</span>
+                             </div>
+                          )}
+                        </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); excluirPublico(pub.id); }} 
+                          className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100 z-10 shrink-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    <h3 className="text-xl font-bold text-white mb-1 truncate group-hover:text-blue-400 transition-colors flex items-center gap-2">
+                      {pub.nome} <Edit className="h-4 w-4 opacity-0 group-hover:opacity-100" />
+                    </h3>
+                    <p className="text-sm text-slate-400 mb-4 line-clamp-2 min-h-[40px]">{pub.descricao || "Sem descrição"}</p>
+                    
+                    {pub.treinamento_vinculado && (
+                      <div className="mb-4">
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avanço da Turma</span>
+                          <span className="text-[10px] font-bold text-blue-400">
+                            {pub.matriculas?.length > 0 
+                              ? Math.round(((pub.presencas_matriculas?.length || 0) / pub.matriculas.length) * 100) 
+                              : 0}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-700">
+                          <div 
+                            className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                            style={{ width: `${pub.matriculas?.length > 0 ? Math.round(((pub.presencas_matriculas?.length || 0) / pub.matriculas.length) * 100) : 0}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="pt-4 border-t border-slate-700/50 flex items-center justify-between">
+                      <span className="text-xs text-slate-500">
+                        Criado em: {new Date(pub.criado_em).toLocaleDateString()}
+                      </span>
+                      <span className="bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1.5">
+                        <Users className="h-3 w-3" />
+                        {pub.matriculas.length} pessoas
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-700">
-                    <div 
-                      className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
-                      style={{ width: `${pub.matriculas?.length > 0 ? Math.round(((pub.presencas_matriculas?.length || 0) / pub.matriculas.length) * 100) : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="pt-4 border-t border-slate-700/50 flex items-center justify-between">
-                <span className="text-xs text-slate-500">
-                  Criado em: {new Date(pub.criado_em).toLocaleDateString()}
-                </span>
-                <span className="bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1.5">
-                  <Users className="h-3 w-3" />
-                  {pub.matriculas.length} pessoas
-                </span>
+                ))}
               </div>
             </div>
           ))}
@@ -570,13 +648,24 @@ export default function PublicosAlvoPage() {
             <div className="px-5 py-3 border-b border-slate-700 flex flex-wrap gap-3 justify-between items-center bg-slate-900/80 shrink-0">
               <div className="flex items-center gap-3 flex-1 min-w-[300px]">
                 <Target className="h-6 w-6 text-blue-400 shrink-0" />
-                <input
-                  type="text"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  placeholder="Digite o nome deste Público-Alvo..."
-                  className="bg-slate-900/50 border border-slate-600 focus:border-blue-500 rounded-lg px-3 py-1.5 text-lg font-bold text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500/20 outline-none w-full max-w-md transition-all"
-                />
+                  <input
+                    type="text"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Digite o nome deste Público-Alvo..."
+                    className="bg-slate-900/50 border border-slate-600 focus:border-blue-500 rounded-lg px-3 py-1.5 text-lg font-bold text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500/20 outline-none w-full max-w-sm transition-all"
+                  />
+                  <input
+                    type="text"
+                    value={pastaPublico}
+                    onChange={(e) => setPastaPublico(e.target.value)}
+                    placeholder="Pasta / Agrupador (Opcional)"
+                    list="pastas_publicos_existentes"
+                    className="bg-slate-900/50 border border-slate-600 focus:border-indigo-500 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-300 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/20 outline-none w-full max-w-xs transition-all"
+                  />
+                  <datalist id="pastas_publicos_existentes">
+                    {uniquePastas.map((c: any) => <option key={c} value={c} />)}
+                  </datalist>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button 
@@ -805,9 +894,10 @@ export default function PublicosAlvoPage() {
              </div>
              
              <div className="p-6 border-b border-slate-700/50 bg-slate-900/30 shrink-0">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-5">
                   <CustomSelect values={filtroEmpresa} onChange={setFiltroEmpresa} options={empresasOptions} placeholder="Todas as Empresas" icon={Building2} />
                   <CustomSelect values={filtroPlanta} onChange={setFiltroPlanta} options={plantasOptions} placeholder="Todas as Plantas" icon={MapPin} />
+                  <CustomSelect values={filtroArea} onChange={setFiltroArea} options={areasOptions} placeholder="Todas as Áreas" icon={Target} />
                   <CustomSelect values={filtroCargo} onChange={setFiltroCargo} options={cargosOptions} placeholder="Todos os Cargos" icon={Briefcase} />
                   <CustomSelect values={filtroGestor} onChange={setFiltroGestor} options={gestoresOptions} placeholder="Todos os Gestores" icon={UserCircle} disabled={gestoresOptions.length === 0} />
                 </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment } from "firebase/firestore";
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +37,15 @@ export async function POST(req: Request) {
     if (id_sessao) dataToSave.id_sessao = id_sessao;
 
     await setDoc(presencaRef, dataToSave);
+
+    // Increment presencas_count counter on the treinamento document atomically
+    try {
+      await updateDoc(doc(db, "treinamentos", id_treinamento), {
+        presencas_count: increment(1)
+      });
+    } catch(e) {
+      console.warn("Nao foi possivel incrementar presencas_count:", e);
+    }
 
     return NextResponse.json({ success: true, data: { id_treinamento, identificador_lido, modo_registro, id_sessao } });
   } catch (error: any) {

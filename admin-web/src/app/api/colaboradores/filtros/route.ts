@@ -60,12 +60,14 @@ export async function GET(req: Request) {
     const plantasSet = new Set<string>();
     const cargosSet = new Set<string>();
     const gestoresSet = new Set<string>();
+    const areasSet = new Set<string>();
     
     for (const colab of mergedColabs.values()) {
       const empClean = cleanString(colab.empresa);
       const plaClean = cleanString(colab.planta);
       const cargoClean = cleanString(colab.cargo);
       const gestorClean = cleanString(colab.gestor || colab.superior_imediato);
+      const areaClean = cleanString(colab.area);
 
       if (empClean) empresasSet.add(empClean);
       if (plaClean) plantasSet.add(plaClean);
@@ -77,6 +79,7 @@ export async function GET(req: Request) {
       if (match) {
         if (cargoClean) cargosSet.add(cargoClean);
         if (gestorClean) gestoresSet.add(gestorClean);
+        if (areaClean) areasSet.add(areaClean);
       }
     }
     
@@ -85,7 +88,8 @@ export async function GET(req: Request) {
       empresas: Array.from(empresasSet).sort(), 
       plantas: Array.from(plantasSet).sort(),
       cargos: Array.from(cargosSet).sort(),
-      gestores: Array.from(gestoresSet).sort()
+      gestores: Array.from(gestoresSet).sort(),
+      areas: Array.from(areasSet).sort()
     });
   } catch (error: any) {
     console.error("ERRO ROTA FILTROS:", error);

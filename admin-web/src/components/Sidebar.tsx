@@ -16,6 +16,7 @@ export function Sidebar({ role, userName }: { role?: string; userName?: string }
     { name: t.dashboard, path: "/", roles: ["admin", "gestor"] },
     { name: t.treinamentos, path: "/treinamentos", roles: ["admin", "gestor"] },
     { name: t.checklists, path: "/checklists", roles: ["admin", "gestor"] },
+    { name: "Calendário", path: "/calendario", roles: ["admin", "gestor", "leitor"] },
     { name: t.publicosAlvo, path: "/publicos-alvo", roles: ["admin", "gestor"] },
     { name: t.colaboradores, path: "/colaboradores", roles: ["admin", "gestor", "leitor"] },
     { name: t.relatorios, path: "/relatorios", roles: ["admin", "gestor", "leitor"] },

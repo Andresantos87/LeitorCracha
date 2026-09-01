@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, deleteDoc, serverTimestamp, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, updateDoc, serverTimestamp, increment, collection, getDocs, query, orderBy } from 'firebase/firestore';
 
 import fs from 'fs';
 import path from 'path';
@@ -139,8 +139,60 @@ export async function POST(req: Request) {
 
     const nomeFinal = dataToSave.nome ? String(dataToSave.nome).trim() : '';
 
+    let targetTreinamentoId = treinamentoId;
+
+    if (treinamentoId.startsWith('PASTA_')) {
+      const pastaName = treinamentoId.replace('PASTA_', '');
+      
+      const treinamentosRef = collection(db, 'treinamentos');
+      const turmasSnap = await getDocs(treinamentosRef);
+      const turmasDaPasta = turmasSnap.docs.filter(d => d.data().nome === pastaName);
+      
+      if (turmasDaPasta.length === 0) {
+        return NextResponse.json({ success: false, error: 'Pasta não encontrada ou sem turmas.' }, { status: 404 });
+      }
+
+      const paRef = collection(db, 'publicos_alvo');
+      const paSnap = await getDocs(paRef);
+      const paDocs = paSnap.docs;
+
+      let matchedTurmaId = null;
+      const mat = user?.matricula ? String(user.matricula).trim().toLowerCase() : null;
+      const cracha = user?.cod_cracha ? String(user.cod_cracha).trim().toLowerCase() : null;
+      const nomeSearch = nomeFinal ? nomeFinal.toLowerCase() : null;
+      const idSearch = idLimpo.toLowerCase();
+
+      for (const tDoc of turmasDaPasta) {
+        const tData = tDoc.data();
+        if (tData.publico_alvo_id) {
+          const pDoc = paDocs.find(p => p.id === tData.publico_alvo_id);
+          if (pDoc) {
+            const pData = pDoc.data();
+            const matriculas = pData.matriculas || [];
+            const membros = pData.membros || [];
+            
+            let isMember = false;
+            if (mat && matriculas.some((m: string) => String(m).trim().toLowerCase() === mat)) isMember = true;
+            if (cracha && matriculas.some((m: string) => String(m).trim().toLowerCase() === cracha)) isMember = true;
+            if (matriculas.some((m: string) => String(m).trim().toLowerCase() === idSearch)) isMember = true;
+            
+            if (!isMember && nomeSearch) {
+              isMember = membros.some((m: any) => m.nome && String(m.nome).toLowerCase() === nomeSearch);
+            }
+
+            if (isMember) {
+              matchedTurmaId = tDoc.id;
+              break;
+            }
+          }
+        }
+      }
+
+      targetTreinamentoId = matchedTurmaId || turmasDaPasta[0].id;
+    }
+
     // Verifica se já existe na turma (por ID, por Nome ou por Matrícula do SAT)
-    const presencasRef = collection(db, 'treinamentos', treinamentoId, 'presencas');
+    const presencasRef = collection(db, 'treinamentos', targetTreinamentoId, 'presencas');
     const allPresencasSnap = await getDocs(presencasRef);
 
     for (const d of allPresencasSnap.docs) {
@@ -172,21 +224,25 @@ export async function POST(req: Request) {
       }
     }
 
-    // Referência para presencas/{idLimpo} e salvamento
-    const docRef = doc(db, 'treinamentos', treinamentoId, 'presencas', idLimpo);
+    const docRef = doc(db, 'treinamentos', targetTreinamentoId, 'presencas', idLimpo);
     await setDoc(docRef, dataToSave);
+
+    // Increment presencas_count atomically
+    try {
+      await updateDoc(doc(db, 'treinamentos', targetTreinamentoId), { presencas_count: increment(1) });
+    } catch(e) { console.warn('Nao foi possivel incrementar presencas_count:', e); }
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Presença registrada com sucesso.', 
+      message: 'Presenca registrada com sucesso.', 
       nome: dataToSave.nome || idLimpo, 
       identificador: idLimpo,
-      empresa: dataToSave.empresa || dataToSave.planta || (user ? user.empresa || user.planta : 'Não Informada'),
-      cargo: dataToSave.cargo || (user ? user.cargo : 'Não Informado')
+      empresa: dataToSave.empresa || dataToSave.planta || (user ? user.empresa || user.planta : 'Nao Informada'),
+      cargo: dataToSave.cargo || (user ? user.cargo : 'Nao Informado')
     });
   } catch (error: any) {
     console.error("ERRO PRESENCA MANUAL:", error);
-    return NextResponse.json({ success: false, error: error?.message || 'Erro ao salvar presença manual.' }, { status: 500 });
+    return NextResponse.json({ success: false, error: error?.message || 'Erro ao salvar presenca manual.' }, { status: 500 });
   }
 }
 
@@ -197,15 +253,20 @@ export async function DELETE(req: Request) {
     const presencaId = searchParams.get('presencaId');
 
     if (!treinamentoId || !presencaId) {
-      return NextResponse.json({ success: false, error: 'treinamentoId e presencaId são obrigatórios' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'treinamentoId e presencaId sao obrigatorios' }, { status: 400 });
     }
 
     const docRef = doc(db, 'treinamentos', treinamentoId, 'presencas', presencaId);
     await deleteDoc(docRef);
 
-    return NextResponse.json({ success: true, message: 'Presença removida com sucesso.' });
+    // Decrement presencas_count atomically
+    try {
+      await updateDoc(doc(db, 'treinamentos', treinamentoId), { presencas_count: increment(-1) });
+    } catch(e) { console.warn('Nao foi possivel decrementar presencas_count:', e); }
+
+    return NextResponse.json({ success: true, message: 'Presenca removida com sucesso.' });
   } catch (error: any) {
     console.error("ERRO DELETE PRESENCA:", error);
-    return NextResponse.json({ success: false, error: 'Erro ao remover presença.' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Erro ao remover presenca.' }, { status: 500 });
   }
 }

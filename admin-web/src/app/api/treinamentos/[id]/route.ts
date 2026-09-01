@@ -12,12 +12,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     
     // We expect updates to the checklist object or roles_disponiveis
     const updates: any = {};
-    if (body.checklist_dinamico !== undefined) {
-      updates.checklist_dinamico = body.checklist_dinamico;
-    }
-    if (body.roles_disponiveis !== undefined) {
-      updates.roles_disponiveis = body.roles_disponiveis;
-    }
+    if (body.checklist_dinamico !== undefined) updates.checklist_dinamico = body.checklist_dinamico;
+    if (body.roles_disponiveis !== undefined) updates.roles_disponiveis = body.roles_disponiveis;
+    if (body.nome !== undefined) updates.nome = body.nome;
+    if (body.subpasta !== undefined) updates.subpasta = body.subpasta;
+    if (body.turma !== undefined) updates.turma = body.turma;
+    if (body.pais !== undefined) updates.pais = body.pais;
+    if (body.planta !== undefined) updates.planta = body.planta;
+    if (body.publico_alvo_id !== undefined) updates.publico_alvo_id = body.publico_alvo_id;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: "Nenhum campo para atualizar" }, { status: 400 });

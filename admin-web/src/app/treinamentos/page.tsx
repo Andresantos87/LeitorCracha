@@ -768,24 +768,42 @@ export default function Treinamentos() {
           <p className="text-slate-400 mt-2">Crie as sessões e exporte as presenças para o Excel.</p>
         </div>
         {(!selectedTreinamento && !selectedSubpasta) ? (
-          <button 
-            onClick={() => {
-              const cursos = Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean);
-              if (cursos.length > 0) {
-                setCreateMode('EXISTING');
-                setNomeTreinamento(cursos[0] as string);
-              } else {
-                setCreateMode('NEW');
-                setNomeTreinamento("");
-              }
-              setTurmaTreinamento("");
-              setIsModalOpen(true);
-            }}
-            className="flex items-center space-x-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-sky-600/30"
-          >
-            <FolderPlus className="h-4 w-4" />
-            <span>+ Cadastrar Curso / Turma</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button 
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/sync-presencas', { method: 'POST' });
+                  if (res.ok) {
+                    alert('Roteamento Inteligente concluído! As presenças da Turma Geral foram distribuídas para as turmas específicas corretas.');
+                    window.location.reload();
+                  }
+                } catch (e) {
+                  alert('Erro ao sincronizar.');
+                }
+              }}
+              className="flex items-center space-x-2 px-5 py-2.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-xl font-bold text-sm transition-all shadow-lg border border-emerald-500/30"
+            >
+              <span>✨ Distribuir Turma Geral</span>
+            </button>
+            <button 
+              onClick={() => {
+                const cursos = Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean);
+                if (cursos.length > 0) {
+                  setCreateMode('EXISTING');
+                  setNomeTreinamento(cursos[0] as string);
+                } else {
+                  setCreateMode('NEW');
+                  setNomeTreinamento("");
+                }
+                setTurmaTreinamento("");
+                setIsModalOpen(true);
+              }}
+              className="flex items-center space-x-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-sky-600/30"
+            >
+              <FolderPlus className="h-4 w-4" />
+              <span>+ Cadastrar Curso / Turma</span>
+            </button>
+          </div>
         ) : (
           <button 
             onClick={() => { setSelectedId(null); setSelectedSubpasta(null); }}
@@ -927,9 +945,43 @@ export default function Treinamentos() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <button 
-                        type="button"
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            let tg = turmasList.find((t: any) => t.turma?.toUpperCase().includes('TODAS AS TURMAS') || t.turma?.toUpperCase() === 'GERAL');
+                            if (tg) {
+                              setSelectedId(tg.id);
+                              setIsShareModalOpen(true);
+                            } else {
+                              const res = await fetch('/api/treinamentos', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  nome: nomeCurso,
+                                  turma: 'TODAS AS TURMAS',
+                                  pais: turmasList[0]?.pais || 'BRASIL'
+                                })
+                              });
+                              if (res.ok) {
+                                const json = await res.json();
+                                await carregarTreinamentos();
+                                setSelectedId(json.data.id);
+                                setIsShareModalOpen(true);
+                              } else {
+                                alert('Erro ao criar turma geral');
+                              }
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-emerald-500/30 flex items-center gap-1.5 shadow-sm"
+                          title="Abrir QR Code Geral para todas as turmas desta pasta"
+                        >
+                          <QrCode className="h-4 w-4" />
+                          <span className="hidden sm:inline">QR Code Geral</span>
+                        </button>
+                        <button 
+                          type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setCreateMode('EXISTING');

@@ -9,15 +9,31 @@ export async function GET() {
     const q = query(collection(db, "treinamentos"), orderBy("data", "desc"));
     const snapshot = await getDocs(q);
     
-    const treinamentos = await Promise.all(snapshot.docs.map(async (d) => {
+    // Fetch all publicos_alvo for quick lookup of previstos
+    const publicosQ = query(collection(db, "publicos_alvo"));
+    const publicosSnap = await getDocs(publicosQ);
+    const publicosMap: Record<string, any> = {};
+    publicosSnap.docs.forEach(doc => {
+      publicosMap[doc.id] = doc.data();
+    });
+    
+    // Chunk function to avoid Firebase RESOURCE_EXHAUSTED Quota due to too many concurrent getCountFromServer
+    const chunkArray = (arr: any[], size: number): any[][] => arr.length ? [arr.slice(0, size), ...chunkArray(arr.slice(size), size)] : [];
+    const chunks = chunkArray(snapshot.docs, 20);
+    const treinamentos: any[] = [];
+    
+    for (const chunk of chunks) {
+      const chunkResults = await Promise.all(chunk.map(async (d) => {
       const data = d.data();
+      
+      // Faz a contagem em tempo real para refletir escritas diretas do app Kotlin
       let count = 0;
       try {
-        const presencasRef = collection(db, "treinamentos", d.id, "presencas");
-        const countSnapshot = await getCountFromServer(presencasRef);
-        count = countSnapshot.data().count || 0;
-      } catch (e) {
-        console.warn("Erro ao contar presenças:", e);
+        const presencasColl = collection(db, 'treinamentos', d.id, 'presencas');
+        const snapshot = await getCountFromServer(presencasColl);
+        count = snapshot.data().count;
+      } catch(e) {
+        count = typeof data.presencas_count === 'number' ? data.presencas_count : 0;
       }
       
       const isChileName = /laja|santa fe|pacifico|talca|nacimiento|cordillera|puente alto|valdivia|mininco|chile/i.test(data.nome || '') || /laja|santa fe|pacifico|talca|nacimiento|cordillera|puente alto|valdivia|mininco|chile/i.test(data.planta || '');
@@ -28,12 +44,13 @@ export async function GET() {
         nome: data.nome,
         turma: data.turma || "",
         pais: paisFinal,
-        planta: data.planta || (paisFinal === 'CHILE' ? 'CHILE (SAT)' : 'GUAÍBA (RAINBOW)'),
+        planta: data.planta || (paisFinal === 'CHILE' ? 'CHILE (SAT)' : 'GUAIBA (RAINBOW)'),
         data: data.data?.toDate()?.toISOString() || new Date().toISOString(),
         instrutor_email: data.instrutor_email,
         status_encerrado: data.status_encerrado || false,
         _count: {
-          registros: count
+          registros: count,
+          previstos: (data.publico_alvo_id && publicosMap[data.publico_alvo_id] && publicosMap[data.publico_alvo_id].matriculas) ? publicosMap[data.publico_alvo_id].matriculas.length : 0
         },
         publico_alvo_id: data.publico_alvo_id || null,
         facilitador_id: data.facilitador_id || null,
@@ -44,7 +61,9 @@ export async function GET() {
         carga_horaria: data.carga_horaria || null,
         status_agenda: data.status_agenda || 'CONCLUIDO'
       };
-    }));
+      }));
+      treinamentos.push(...chunkResults);
+    }
     
     return NextResponse.json({ success: true, data: treinamentos });
   } catch (error: any) {
@@ -128,6 +147,14 @@ export async function DELETE(req: Request) {
     if (nome) {
       const q = query(collection(db, "treinamentos"), where("nome", "==", nome));
       const snapshot = await getDocs(q);
+    
+    // Fetch all publicos_alvo for quick lookup of previstos
+    const publicosQ = query(collection(db, "publicos_alvo"));
+    const publicosSnap = await getDocs(publicosQ);
+    const publicosMap: Record<string, any> = {};
+    publicosSnap.docs.forEach(doc => {
+      publicosMap[doc.id] = doc.data();
+    });
       const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, "treinamentos", d.id)));
       await Promise.all(deletePromises);
       return NextResponse.json({ success: true, deletedCount: snapshot.size });
