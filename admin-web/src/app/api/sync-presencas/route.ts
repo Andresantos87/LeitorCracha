@@ -63,7 +63,7 @@ export async function POST() {
             // Move presence!
             await setDoc(doc(db, 'treinamentos', turmaDestino.id, 'presencas', pDoc.id), pData);
             await deleteDoc(doc(db, 'treinamentos', turmaGeral.id, 'presencas', pDoc.id));
-            console.log(Moveu presenza  da  para );
+            console.log('Moveu presenca ' + idLido + ' da ' + turmaGeral.turma + ' para ' + turmaDestino.turma);
           }
         }
       }
@@ -88,3 +88,4 @@ export async function POST() {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
