@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect, useRef, Fragment, useMemo } from "react";
 import ConfirmModal from '@/components/ConfirmModal';
 import toast from 'react-hot-toast';
@@ -19,14 +19,15 @@ export default function Treinamentos() {
   const [targetFolderName, setTargetFolderName] = useState("");
   const [targetSubpastaName, setTargetSubpastaName] = useState("");
   const [selectedSubpasta, setSelectedSubpasta] = useState<{nomeCurso: string, subpasta: string, ids: string[]} | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editTurmaId, setEditTurmaId] = useState<string | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
   const [nomeTreinamento, setNomeTreinamento] = useState("");
   const [subpastaTreinamento, setSubpastaTreinamento] = useState("");
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createMode, setCreateMode] = useState<'EXISTING' | 'NEW'>('EXISTING');
   const [createPais, setCreatePais] = useState<'BRASIL' | 'CHILE'>('BRASIL');
-  const [createPlanta, setCreatePlanta] = useState("GUAÍBA (RAINBOW)");
+  const [createPlanta, setCreatePlanta] = useState("GUAÃBA (RAINBOW)");
   const [filterPais, setFilterPais] = useState<'TODOS' | 'BRASIL' | 'CHILE'>('TODOS');
   const [empresasDict, setEmpresasDict] = useState<{ brasil: string[], chile: string[], todas: string[] }>({ brasil: [], chile: [], todas: [] });
   const [nomeAvulso, setNomeAvulso] = useState("");
@@ -54,7 +55,7 @@ export default function Treinamentos() {
   const [hasSignature, setHasSignature] = useState(false);
   const [signatureView, setSignatureView] = useState<string | null>(null);
 
-  // States para a lista de presenças
+  // States para a lista de presenÃ§as
   const [presencas, setPresencas] = useState<any[]>([]);
   const [loadingPresencas, setLoadingPresencas] = useState(false);
 
@@ -153,7 +154,7 @@ export default function Treinamentos() {
       return;
     }
     
-    // Se o usuário acabou de selecionar na lista, não busca de novo
+    // Se o usuÃ¡rio acabou de selecionar na lista, nÃ£o busca de novo
     if (selectedColab && (selectedColab.identificador === manualId || selectedColab.nome === manualId)) {
       return;
     }
@@ -165,7 +166,7 @@ export default function Treinamentos() {
         const json = await res.json();
         if (json.success && json.data) {
           setColabResults(json.data);
-          // Auto-seleciona se for o único resultado e for ID/RUT (contém número)
+          // Auto-seleciona se for o Ãºnico resultado e for ID/RUT (contÃ©m nÃºmero)
           if (json.data.length === 1 && /\d/.test(manualId)) {
              setSelectedColab(json.data[0]);
              setManualId(json.data[0].identificador);
@@ -251,7 +252,7 @@ export default function Treinamentos() {
         toast.error(json.error || "Erro ao atribuir roles.");
       }
     } catch(e) {
-      toast.error("Erro de conexão.");
+      toast.error("Erro de conexÃ£o.");
     }
   };
 
@@ -401,8 +402,8 @@ export default function Treinamentos() {
     if (!selectedId) return;
     setConfirmModal({
       isOpen: true,
-      title: "Remover Presença",
-      message: "Tem certeza que deseja remover esta presença permanentemente?",
+      title: "Remover PresenÃ§a",
+      message: "Tem certeza que deseja remover esta presenÃ§a permanentemente?",
       variant: "danger",
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -411,7 +412,7 @@ export default function Treinamentos() {
     try {
       const res = await fetch(`/api/presencas?treinamentoId=${selectedId}&presencaId=${presencaId}`, { method: "DELETE" });
       const json = await res.json();
-      if (!json.success) toast.error(json.error || "Erro ao excluir presença.");
+      if (!json.success) toast.error(json.error || "Erro ao excluir presenÃ§a.");
       carregarPresencas(selectedId);
       carregarTreinamentos();
     } catch (e) {
@@ -530,7 +531,7 @@ export default function Treinamentos() {
       const { db } = await import('@/lib/firebase');
       const { doc, updateDoc } = await import('firebase/firestore');
       await updateDoc(doc(db, "treinamentos", id), { status_agenda: novoStatus });
-      toast.success(novoStatus === 'CONCLUIDO' ? "Turma concluída!" : "Turma reaberta (Agendada)");
+      toast.success(novoStatus === 'CONCLUIDO' ? "Turma concluÃ­da!" : "Turma reaberta (Agendada)");
     } catch (err) {
       toast.error("Erro ao alterar status");
       carregarTreinamentos();
@@ -542,7 +543,7 @@ export default function Treinamentos() {
     setConfirmModal({
       isOpen: true,
       title: "Excluir Curso Inteiro",
-      message: `ATENÇÃO: Tem certeza que deseja excluir TODO o curso '${nomeCurso}' e TODAS as suas turmas permanentemente?`,
+      message: `ATENÃ‡ÃƒO: Tem certeza que deseja excluir TODO o curso '${nomeCurso}' e TODAS as suas turmas permanentemente?`,
       variant: "danger",
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -586,7 +587,7 @@ export default function Treinamentos() {
       const totalPrevistos = previstos.length;
       const progresso = totalPrevistos > 0 ? Math.round((capacitados.length / totalPrevistos) * 100) : 0;
 
-      // Ordenar: Capacitados e Extras primeiro, depois Não Capacitados
+      // Ordenar: Capacitados e Extras primeiro, depois NÃ£o Capacitados
       rawData.sort((a: any, b: any) => {
         const isCapacitadoA = a.status === "CAPACITADO" || a.status === "CAPACITADO (EXTRA)";
         const isCapacitadoB = b.status === "CAPACITADO" || b.status === "CAPACITADO (EXTRA)";
@@ -600,20 +601,20 @@ export default function Treinamentos() {
 
       const doc = new jsPDF("landscape");
       
-      // Cabeçalho
+      // CabeÃ§alho
       doc.setFontSize(18);
       doc.setTextColor(40);
-      doc.text("Relatório de Aderência", 14, 22);
+      doc.text("RelatÃ³rio de AderÃªncia", 14, 22);
       
-      // Estatísticas
+      // EstatÃ­sticas
       doc.setFontSize(14);
       doc.setTextColor(39, 174, 96);
-      doc.text(`Aderência da Turma: ${progresso}%`, 200, 22);
+      doc.text(`AderÃªncia da Turma: ${progresso}%`, 200, 22);
 
       doc.setFontSize(11);
       doc.setTextColor(100);
       doc.text(`Treinamento: ${nomeTreinamento}`, 14, 30);
-      doc.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 14, 36);
+      doc.text(`Data de EmissÃ£o: ${new Date().toLocaleDateString('pt-BR')}`, 14, 36);
 
       const tableData = rawData.map((r: any) => {
         let statusText = r.status;
@@ -633,18 +634,18 @@ export default function Treinamentos() {
 
       autoTable(doc, {
         startY: 45,
-        head: [['Nome', 'Matrícula', 'Planta', 'Empresa', 'Papel', 'Status', 'Data Presença']],
+        head: [['Nome', 'MatrÃ­cula', 'Planta', 'Empresa', 'Papel', 'Status', 'Data PresenÃ§a']],
         body: tableData,
         theme: 'grid',
         headStyles: { fillColor: [41, 128, 185], textColor: 255, fontSize: 9 },
         bodyStyles: { fontSize: 8 },
         didParseCell: function(data) {
           const rowData = data.row.raw as any[];
-          const status = rowData[5] as string; // Status é agora o índice 5 (0: Nome, 1: Matrícula, 2: Planta, 3: Empresa, 4: Papel, 5: Status, 6: Data)
+          const status = rowData[5] as string; // Status Ã© agora o Ã­ndice 5 (0: Nome, 1: MatrÃ­cula, 2: Planta, 3: Empresa, 4: Papel, 5: Status, 6: Data)
           
           if (data.section === 'body') {
-            // Deixar a linha cinzinha para quem não foi
-            if (status.includes("NÃO CAPACITADO") || status.includes("FALTANTE")) {
+            // Deixar a linha cinzinha para quem nÃ£o foi
+            if (status.includes("NÃƒO CAPACITADO") || status.includes("FALTANTE")) {
               data.cell.styles.textColor = [150, 150, 150]; // Cinza
             } else {
               data.cell.styles.textColor = [40, 40, 40]; // Preto/Escuro normal para quem foi
@@ -655,7 +656,7 @@ export default function Treinamentos() {
               if (status.includes("CAPACITADO (EXTRA)")) {
                 data.cell.styles.textColor = [243, 156, 18]; // Laranja
                 data.cell.styles.fontStyle = 'bold';
-              } else if (status.includes("NÃO CAPACITADO") || status.includes("FALTANTE")) {
+              } else if (status.includes("NÃƒO CAPACITADO") || status.includes("FALTANTE")) {
                 data.cell.styles.textColor = [192, 57, 43]; // Vermelho
                 data.cell.styles.fontStyle = 'bold';
               } else if (status.includes("CAPACITADO")) {
@@ -670,7 +671,7 @@ export default function Treinamentos() {
       doc.save(`aderencia_${nomeTreinamento.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
       toast.success("PDF gerado com sucesso!", { id: loadingToast });
     } catch(err) {
-      toast.error("Erro ao gerar PDF de aderência", { id: loadingToast });
+      toast.error("Erro ao gerar PDF de aderÃªncia", { id: loadingToast });
     }
   };
 
@@ -709,7 +710,7 @@ export default function Treinamentos() {
           <div>
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
               <Target className="h-4 w-4 text-blue-400" />
-              Progresso do Público-Alvo
+              Progresso do PÃºblico-Alvo
             </h4>
             <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">{publico.nome}</p>
           </div>
@@ -765,7 +766,7 @@ export default function Treinamentos() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Treinamentos</h2>
-          <p className="text-slate-400 mt-2">Crie as sessões e exporte as presenças para o Excel.</p>
+          <p className="text-slate-400 mt-2">Crie as sessÃµes e exporte as presenÃ§as para o Excel.</p>
         </div>
         {(!selectedTreinamento && !selectedSubpasta) ? (
           <div className="flex flex-col sm:flex-row gap-3">
@@ -774,7 +775,7 @@ export default function Treinamentos() {
                 try {
                   const res = await fetch('/api/sync-presencas', { method: 'POST' });
                   if (res.ok) {
-                    alert('Roteamento Inteligente concluído! As presenças da Turma Geral foram distribuídas para as turmas específicas corretas.');
+                    alert('Roteamento Inteligente concluÃ­do! As presenÃ§as da Turma Geral foram distribuÃ­das para as turmas especÃ­ficas corretas.');
                     window.location.reload();
                   }
                 } catch (e) {
@@ -783,7 +784,7 @@ export default function Treinamentos() {
               }}
               className="flex items-center space-x-2 px-5 py-2.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-xl font-bold text-sm transition-all shadow-lg border border-emerald-500/30"
             >
-              <span>✨ Distribuir Turma Geral</span>
+              <span>âœ¨ Distribuir Turma Geral</span>
             </button>
             <button 
               onClick={() => {
@@ -809,7 +810,7 @@ export default function Treinamentos() {
             onClick={() => { setSelectedId(null); setSelectedSubpasta(null); }}
             className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors border border-slate-700"
           >
-            <span className="font-bold">←</span>
+            <span className="font-bold">â†</span>
             <span>Voltar para Lista</span>
           </button>
         )}
@@ -819,25 +820,25 @@ export default function Treinamentos() {
         <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
           {/* Controles: Filtros */}
           <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-            {/* Filtro por País (Brasil vs Chile) */}
+            {/* Filtro por PaÃ­s (Brasil vs Chile) */}
             <div className="flex flex-wrap items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 w-fit shadow-md">
               <button
                 onClick={() => setFilterPais('TODOS')}
                 className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all ${filterPais === 'TODOS' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
               >
-                🌍 Todos os Países
+                ðŸŒ Todos os PaÃ­ses
               </button>
               <button
                 onClick={() => setFilterPais('BRASIL')}
                 className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 ${filterPais === 'BRASIL' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
               >
-                <span>🇧🇷</span> Brasil (Rainbow / Guaíba)
+                <span>ðŸ‡§ðŸ‡·</span> Brasil (Rainbow / GuaÃ­ba)
               </button>
               <button
                 onClick={() => setFilterPais('CHILE')}
                 className={`px-3.5 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1.5 ${filterPais === 'CHILE' ? 'bg-red-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
               >
-                <span>🇨🇱</span> Chile (SAT / Laja / Pacífico)
+                <span>ðŸ‡¨ðŸ‡±</span> Chile (SAT / Laja / PacÃ­fico)
               </button>
             </div>
             
@@ -849,7 +850,7 @@ export default function Treinamentos() {
                   onChange={(e) => setFilterCurso(e.target.value)}
                   className="px-4 py-2 bg-slate-900/90 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-xl text-sm font-bold shadow-md focus:outline-none focus:border-sky-500 appearance-none pr-8 cursor-pointer max-w-[200px] truncate"
                 >
-                  <option value="">📁 Todos os Cursos</option>
+                  <option value="">ðŸ“ Todos os Cursos</option>
                   {uniqueCursos.map(c => (
                     <option key={c as string} value={c as string}>{c as string}</option>
                   ))}
@@ -865,8 +866,8 @@ export default function Treinamentos() {
                 onChange={(e) => setFilterFacilitador(e.target.value)}
                 className="px-4 py-2 bg-slate-900/90 border border-slate-800 hover:bg-slate-800 text-slate-300 rounded-xl text-sm font-bold shadow-md focus:outline-none focus:border-sky-500 appearance-none pr-8 cursor-pointer"
               >
-                <option value="">👤 Todos os Facilitadores</option>
-                <option value="MEUS">⭐ Meus Treinamentos</option>
+                <option value="">ðŸ‘¤ Todos os Facilitadores</option>
+                <option value="MEUS">â­ Meus Treinamentos</option>
                 {facilitadoresList.map(f => (
                   <option key={f.id} value={f.nome}>{f.nome}</option>
                 ))}
@@ -917,7 +918,7 @@ export default function Treinamentos() {
                     onDragLeave={() => setDragOverTarget(null)}
                     onDrop={(e) => handleDropTurma(e, nomeCurso, "")}
                   >
-                  {/* Cabeçalho da Pasta (Acordeão) */}
+                  {/* CabeÃ§alho da Pasta (AcordeÃ£o) */}
                   <div 
                     onClick={() => {
                       if (isExpanded) {
@@ -934,14 +935,14 @@ export default function Treinamentos() {
                       </div>
                       <div>
                         <h3 className="text-lg font-extrabold text-white tracking-wide flex items-center gap-2">
-                          <span>{turmasList[0]?.pais === 'CHILE' ? '🇨🇱' : '🇧🇷'}</span>
+                          <span>{turmasList[0]?.pais === 'CHILE' ? 'ðŸ‡¨ðŸ‡±' : 'ðŸ‡§ðŸ‡·'}</span>
                           <span>{nomeCurso}</span>
                           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
                             {turmasList.length} {turmasList.length === 1 ? "turma" : "turmas"}
                           </span>
                         </h3>
                         <p className="text-xs text-slate-400 mt-1">
-                          Total de {totalPessoas} presenças registradas nesta pasta
+                          Total de {totalPessoas} presenÃ§as registradas nesta pasta
                         </p>
                       </div>
                     </div>
@@ -1021,11 +1022,11 @@ export default function Treinamentos() {
                         <thead className="text-xs uppercase text-slate-400 border-b border-slate-800">
                           <tr>
                             <th className="px-4 py-3 font-semibold">Turma / Identificador</th>
-                            <th className="px-4 py-3 font-semibold">ID da Sessão</th>
+                            <th className="px-4 py-3 font-semibold">ID da SessÃ£o</th>
                             <th className="px-4 py-3 font-semibold">Status</th>
                             <th className="px-4 py-3 font-semibold">Checklist</th>
-                            <th className="px-4 py-3 font-semibold">Presenças</th>
-                            <th className="px-4 py-3 font-semibold text-right">Ações</th>
+                            <th className="px-4 py-3 font-semibold">PresenÃ§as</th>
+                            <th className="px-4 py-3 font-semibold text-right">AÃ§Ãµes</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -1061,7 +1062,7 @@ export default function Treinamentos() {
                                         {(spTurmas as any[]).length} turmas
                                       </span>
                                       <span className="ml-2 text-xs font-normal text-indigo-400/70 group-hover:text-indigo-300">
-                                        Clique para ver presença unificada
+                                        Clique para ver presenÃ§a unificada
                                       </span>
                                     </div>
                                   </td>
@@ -1101,20 +1102,20 @@ export default function Treinamentos() {
                                   {spName !== "Geral" && (
                                     <div className="w-2 h-2 rounded-full bg-indigo-500/50 mr-1" title="Pertence a sub-pasta"></div>
                                   )}
-                                  <span>{t.turma || "Turma Principal / Única"}</span>
+                                  <span>{t.turma || "Turma Principal / Ãšnica"}</span>
                                   <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">
-                                    📍 {t.planta || (t.pais === 'CHILE' ? 'CHILE (SAT)' : 'GUAÍBA (RAINBOW)')}
+                                    ðŸ“ {t.planta || (t.pais === 'CHILE' ? 'CHILE (SAT)' : 'GUAÃBA (RAINBOW)')}
                                   </span>
                                 </div>
                               </td>
                               <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{t.id}</td>
                               <td className="px-4 py-3.5" onClick={(e) => toggleStatusAgenda(t.id, t.status_agenda, e)}>
                                   {t.status_agenda === 'CONCLUIDO' ? (
-                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800 cursor-pointer hover:bg-emerald-900/50 transition-colors" title="Turma Concluída. Clique para desmarcar.">
-                                      <CheckCircle2 className="h-3 w-3" /> Concluído
+                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800 cursor-pointer hover:bg-emerald-900/50 transition-colors" title="Turma ConcluÃ­da. Clique para desmarcar.">
+                                      <CheckCircle2 className="h-3 w-3" /> ConcluÃ­do
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 cursor-pointer hover:bg-slate-700 transition-colors" title="Clique para marcar como Concluída">
+                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 cursor-pointer hover:bg-slate-700 transition-colors" title="Clique para marcar como ConcluÃ­da">
                                       <Clock className="h-3 w-3" /> {t.status_agenda || 'Agendado'}
                                     </span>
                                   )}
@@ -1122,11 +1123,11 @@ export default function Treinamentos() {
                               <td className="px-4 py-3.5">
                                 {t.checklist_dinamico && t.checklist_dinamico.length > 0 ? (
                                   t.checklist_dinamico.every((item: any) => item.checado) ? (
-                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800" title="Checklist concluído">
+                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800" title="Checklist concluÃ­do">
                                       <CheckCircle2 className="h-3 w-3" /> Realizado
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-amber-900/30 text-amber-400 border border-amber-800" title={`${t.checklist_dinamico.filter((i:any)=>i.checado).length} de ${t.checklist_dinamico.length} itens concluídos`}>
+                                    <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-amber-900/30 text-amber-400 border border-amber-800" title={`${t.checklist_dinamico.filter((i:any)=>i.checado).length} de ${t.checklist_dinamico.length} itens concluÃ­dos`}>
                                       <Clock className="h-3 w-3" /> Pendente
                                     </span>
                                   )
@@ -1149,18 +1150,18 @@ export default function Treinamentos() {
                                     <button 
                                       onClick={(e) => exportarAderenciaCSV(t.id, e)}
                                       className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-amber-300 hover:text-white bg-amber-900/30 hover:bg-amber-800/50 rounded-lg transition-colors border border-amber-800/50"
-                                      title="Relatório de Aderência (Excel)"
+                                      title="RelatÃ³rio de AderÃªncia (Excel)"
                                     >
                                       <Target className="h-3.5 w-3.5" />
-                                      <span className="hidden sm:inline">Aderência CSV</span>
+                                      <span className="hidden sm:inline">AderÃªncia CSV</span>
                                     </button>
                                     <button 
                                       onClick={(e) => exportarAderenciaPDF(t.id, t.nome, e)}
                                       className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-rose-300 hover:text-white bg-rose-900/30 hover:bg-rose-800/50 rounded-lg transition-colors border border-rose-800/50"
-                                      title="Relatório de Aderência (PDF)"
+                                      title="RelatÃ³rio de AderÃªncia (PDF)"
                                     >
                                       <FileText className="h-3.5 w-3.5" />
-                                      <span className="hidden sm:inline">Aderência PDF</span>
+                                      <span className="hidden sm:inline">AderÃªncia PDF</span>
                                     </button>
                                   </>
                                 )}
@@ -1214,7 +1215,7 @@ export default function Treinamentos() {
                 </h2>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                    Visão Unificada
+                    VisÃ£o Unificada
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">
                     {selectedSubpasta.ids.length} turmas
@@ -1222,13 +1223,13 @@ export default function Treinamentos() {
                 </div>
               </div>
               <p className="text-slate-300 text-sm leading-relaxed max-w-2xl">
-                Esta é uma visão unificada. A lista abaixo contém as presenças combinadas de todas as turmas que pertencem a esta área.
+                Esta Ã© uma visÃ£o unificada. A lista abaixo contÃ©m as presenÃ§as combinadas de todas as turmas que pertencem a esta Ã¡rea.
               </p>
             </div>
             <div className="flex flex-col items-center justify-center gap-3 bg-slate-950 p-6 rounded-2xl border border-slate-800">
               <button 
                 onClick={() => {
-                  toast.success("Em breve: Exportação unificada!");
+                  toast.success("Em breve: ExportaÃ§Ã£o unificada!");
                 }}
                 className="w-full py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
               >
@@ -1241,7 +1242,7 @@ export default function Treinamentos() {
             <div className="p-4 bg-slate-800/50 border-b border-slate-700 flex justify-between items-center">
               <h3 className="font-bold text-white flex items-center gap-2">
                 <ListChecks className="h-5 w-5 text-indigo-400" />
-                Presenças Registradas ({presencas.filter(p => selectedSubpasta.ids.includes(p.treinamentoId)).length})
+                PresenÃ§as Registradas ({presencas.filter(p => selectedSubpasta.ids.includes(p.treinamentoId)).length})
               </h3>
             </div>
             <div className="overflow-x-auto">
@@ -1270,7 +1271,7 @@ export default function Treinamentos() {
                   {presencas.filter(p => selectedSubpasta.ids.includes(p.treinamentoId)).length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
-                        Nenhuma presença registrada nesta sub-pasta ainda.
+                        Nenhuma presenÃ§a registrada nesta sub-pasta ainda.
                       </td>
                     </tr>
                   )}
@@ -1290,7 +1291,7 @@ export default function Treinamentos() {
                 {selectedTreinamento.turma && (
                   <p className="text-sm font-black text-emerald-400 uppercase tracking-widest mt-1">{selectedTreinamento.turma}</p>
                 )}
-                <p className="text-slate-400 text-sm mt-1">Sessão em andamento. Instrua os colaboradores a registrarem presença.</p>
+                <p className="text-slate-400 text-sm mt-1">SessÃ£o em andamento. Instrua os colaboradores a registrarem presenÃ§a.</p>
               </div>
 
               <div className="pt-4 flex flex-wrap items-center gap-4">
@@ -1337,7 +1338,7 @@ export default function Treinamentos() {
             <div className="bg-slate-900/80 rounded-xl border border-amber-900/50 p-6 animate-in slide-in-from-top-4">
               <h3 className="font-bold text-amber-400 text-lg mb-4 flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                Matrículas Pendentes de Capacitação
+                MatrÃ­culas Pendentes de CapacitaÃ§Ã£o
               </h3>
               <div className="flex flex-wrap gap-2">
                 {publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id)?.matriculas
@@ -1391,7 +1392,7 @@ export default function Treinamentos() {
             <div className="bg-slate-900/80 rounded-xl border border-slate-700 p-6">
               <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <h3 className="font-bold text-white text-lg">Lista de Presenças ({presencas.length})</h3>
+                <h3 className="font-bold text-white text-lg">Lista de PresenÃ§as ({presencas.length})</h3>
                 <span className="flex items-center gap-1 text-[10px] bg-emerald-950 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-ping"></span> Ao vivo
                 </span>
@@ -1399,16 +1400,16 @@ export default function Treinamentos() {
               <button 
                 onClick={() => { carregarPresencas(selectedTreinamento.id); carregarTreinamentos(); }}
                 className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-slate-700 flex items-center gap-1.5 shadow-sm"
-                title="Forçar atualização da lista agora"
+                title="ForÃ§ar atualizaÃ§Ã£o da lista agora"
               >
-                🔄 Atualizar Agora
+                ðŸ”„ Atualizar Agora
               </button>
             </div>
             
             {loadingPresencas ? (
-              <p className="text-slate-400 text-sm py-4">Carregando presenças...</p>
+              <p className="text-slate-400 text-sm py-4">Carregando presenÃ§as...</p>
             ) : presencas.length === 0 ? (
-              <p className="text-slate-400 text-sm py-4">Nenhuma presença registrada ainda.</p>
+              <p className="text-slate-400 text-sm py-4">Nenhuma presenÃ§a registrada ainda.</p>
             ) : (
               <div className="overflow-x-auto space-y-4">
                 
@@ -1450,13 +1451,13 @@ export default function Treinamentos() {
                           />
                         </th>
                       )}
-                      <th className="px-4 pb-3 font-medium">Matrícula / RUT</th>
+                      <th className="px-4 pb-3 font-medium">MatrÃ­cula / RUT</th>
                       <th className="px-4 pb-3 font-medium">Colaborador</th>
                       <th className="px-4 pb-3 font-medium hidden md:table-cell">Empresa</th>
                       <th className="px-4 pb-3 font-medium hidden md:table-cell">Modo</th>
                       <th className="px-4 pb-3 font-medium text-center">Assinatura</th>
                       <th className="px-4 pb-3 font-medium text-right">Data / Hora</th>
-                      {userRole === 'admin' && <th className="px-4 pb-3 font-medium text-right">Ações</th>}
+                      {userRole === 'admin' && <th className="px-4 pb-3 font-medium text-right">AÃ§Ãµes</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50 text-slate-300">
@@ -1514,7 +1515,7 @@ export default function Treinamentos() {
                             <button
                               onClick={(e) => { e.stopPropagation(); excluirPresenca(p.id); }}
                               className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-                              title="Remover Presença"
+                              title="Remover PresenÃ§a"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -1561,13 +1562,13 @@ export default function Treinamentos() {
                 }}
                 className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-bold text-sm shadow-inner cursor-pointer"
               >
-                <optgroup label="🇧🇷 Plantas Brasil (Rainbow)">
-                  <option value="GUAÍBA (RAINBOW)">🏢 Guaíba (Brasil)</option>
+                <optgroup label="ðŸ‡§ðŸ‡· Plantas Brasil (Rainbow)">
+                  <option value="GUAÃBA (RAINBOW)">ðŸ¢ GuaÃ­ba (Brasil)</option>
                 </optgroup>
-                <optgroup label="🇨🇱 Plantas Chile (SAT)">
-                  <option value="SANTA FE (SAT)">🏭 Santa Fe (Chile)</option>
-                  <option value="LAJA (SAT)">🏭 Laja (Chile)</option>
-                  <option value="PACIFICO (SAT)">🏭 Pacífico (Chile)</option>
+                <optgroup label="ðŸ‡¨ðŸ‡± Plantas Chile (SAT)">
+                  <option value="SANTA FE (SAT)">ðŸ­ Santa Fe (Chile)</option>
+                  <option value="LAJA (SAT)">ðŸ­ Laja (Chile)</option>
+                  <option value="PACIFICO (SAT)">ðŸ­ PacÃ­fico (Chile)</option>
                 </optgroup>
               </select>
             </div>
@@ -1602,7 +1603,7 @@ export default function Treinamentos() {
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
                     <span>Selecione a Pasta / Curso</span>
-                    <span className="text-[10px] font-normal text-sky-400">Adicionando à pasta existente</span>
+                    <span className="text-[10px] font-normal text-sky-400">Adicionando Ã  pasta existente</span>
                   </label>
                   <div className="relative">
                     <select
@@ -1612,7 +1613,7 @@ export default function Treinamentos() {
                     >
                       {Array.from(new Set(treinamentos.filter(t => t.pais === createPais).map(t => t.nome))).filter(Boolean).map((nome: any) => (
                         <option key={nome} value={nome} className="bg-slate-900 py-2 text-white">
-                          📁 {nome}
+                          ðŸ“ {nome}
                         </option>
                       ))}
                     </select>
@@ -1637,15 +1638,15 @@ export default function Treinamentos() {
                     value={nomeTreinamento}
                     onChange={e => setNomeTreinamento(e.target.value)}
                     className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium placeholder:text-slate-600 shadow-inner"
-                    placeholder="Ex: NR-10 Integração Elétrica"
+                    placeholder="Ex: NR-10 IntegraÃ§Ã£o ElÃ©trica"
                   />
-                  <p className="text-[11px] text-slate-400">Este nome criará a pasta principal onde todas as turmas deste curso ficarão organizadas.</p>
+                  <p className="text-[11px] text-slate-400">Este nome criarÃ¡ a pasta principal onde todas as turmas deste curso ficarÃ£o organizadas.</p>
                 </div>
               )}
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                    <span>Sub-pasta / Área (Opcional)</span>
+                    <span>Sub-pasta / Ãrea (Opcional)</span>
                     <span className="text-[10px] font-normal text-slate-400">Agrupador visual (ex: Linha de Fibras)</span>
                   </label>
                   <input 
@@ -1659,8 +1660,8 @@ export default function Treinamentos() {
 
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                    <span>Nome / Código da Turma</span>
-                  <span className="text-[10px] font-normal text-slate-400">Identificador da sessão</span>
+                    <span>Nome / CÃ³digo da Turma</span>
+                  <span className="text-[10px] font-normal text-slate-400">Identificador da sessÃ£o</span>
                 </label>
                 <input 
                   type="text"
@@ -1668,14 +1669,14 @@ export default function Treinamentos() {
                   value={turmaTreinamento}
                   onChange={e => setTurmaTreinamento(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium placeholder:text-slate-600 shadow-inner"
-                  placeholder="Ex: Turma A - Manhã (26/07), ou Turma 01"
+                  placeholder="Ex: Turma A - ManhÃ£ (26/07), ou Turma 01"
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                  <span>Público-Alvo (Opcional)</span>
-                  <span className="text-[10px] font-normal text-slate-400">Vincular lista de convocação</span>
+                  <span>PÃºblico-Alvo (Opcional)</span>
+                  <span className="text-[10px] font-normal text-slate-400">Vincular lista de convocaÃ§Ã£o</span>
                 </label>
                 <div className="relative">
                   <select
@@ -1705,7 +1706,7 @@ export default function Treinamentos() {
                     onChange={e => setCreateChecklistId(e.target.value)}
                     className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-emerald-500 text-white font-medium appearance-none cursor-pointer pr-10 shadow-inner"
                   >
-                    <option value="">Nenhum (Sem checklist obrigatório)</option>
+                    <option value="">Nenhum (Sem checklist obrigatÃ³rio)</option>
                     {checklistTemplates.map(template => (
                       <option key={template.id} value={template.id}>{template.nome} ({template.items?.length || 0} itens)</option>
                     ))}
@@ -1719,7 +1720,7 @@ export default function Treinamentos() {
               <div className="pt-4 flex items-center justify-end space-x-3 border-t border-slate-800/80 mt-6">
                 <button 
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => { setIsModalOpen(false); setEditTurmaId(null); }}
                   className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
                 >
                   Cancelar
@@ -1730,7 +1731,7 @@ export default function Treinamentos() {
                   className="px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-sky-600/30 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
                 >
                   <PlusCircle className="h-4 w-4" />
-                  {isSubmitting ? 'Salvando...' : createMode === 'NEW' ? 'Cadastrar Novo Curso' : 'Adicionar Turma'}
+                  {isSubmitting ? 'Salvando...' : editTurmaId ? 'Salvar Alterações' : createMode === 'NEW' ? 'Cadastrar Novo Curso' : 'Adicionar Turma'}
                 </button>
               </div>
             </form>
@@ -1747,7 +1748,7 @@ export default function Treinamentos() {
             
             <form onSubmit={handleManualSubmit} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">ID / Matrícula / CPF</label>
+                <label className="text-sm font-medium text-slate-300">ID / MatrÃ­cula / CPF</label>
                 <input 
                   type="text" 
                   required
@@ -1762,7 +1763,7 @@ export default function Treinamentos() {
                   <div className="text-xs text-blue-400 mt-2 animate-pulse">Buscando no banco de dados...</div>
                 )}
                 
-                {/* Se há uma pessoa já selecionada, mostra em destaque */}
+                {/* Se hÃ¡ uma pessoa jÃ¡ selecionada, mostra em destaque */}
                 {selectedColab && (
                   <div className="mt-3 p-3 bg-emerald-900/20 border border-emerald-900/50 rounded-lg animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex justify-between items-start">
@@ -1774,11 +1775,11 @@ export default function Treinamentos() {
                         {selectedColab.planta}
                       </span>
                     </div>
-                    <button type="button" onClick={() => { setSelectedColab(null); setManualId(""); setColabResults([]); }} className="text-xs text-slate-400 mt-3 hover:text-white underline">Limpar Seleção</button>
+                    <button type="button" onClick={() => { setSelectedColab(null); setManualId(""); setColabResults([]); }} className="text-xs text-slate-400 mt-3 hover:text-white underline">Limpar SeleÃ§Ã£o</button>
                   </div>
                 )}
 
-                {/* Lista de resultados quando há mais de 1 ou quando ainda não selecionou */}
+                {/* Lista de resultados quando hÃ¡ mais de 1 ou quando ainda nÃ£o selecionou */}
                 {!selectedColab && colabResults.length > 0 && !isSearchingId && (
                   <div className="mt-3 max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                     {colabResults.map((colab, i) => (
@@ -1804,7 +1805,7 @@ export default function Treinamentos() {
                 {colabResults.length === 0 && !isSearchingId && manualId.length >= 3 && !selectedColab && (
                   <div className="mt-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-3 animate-in fade-in">
                     <p className="text-xs text-amber-300 font-semibold flex items-center gap-1.5">
-                      <span>⚠️ Colaborador não localizado no banco. Preencha os dados manualmente abaixo:</span>
+                      <span>âš ï¸ Colaborador nÃ£o localizado no banco. Preencha os dados manualmente abaixo:</span>
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
@@ -1845,14 +1846,14 @@ export default function Treinamentos() {
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
                   <span className="text-sm font-bold text-slate-200 flex items-center gap-2">
                     <PenTool className="h-4 w-4 text-sky-400" />
-                    Assinatura do Colaborador (Faça no quadro abaixo):
+                    Assinatura do Colaborador (FaÃ§a no quadro abaixo):
                   </span>
                   <button 
                     type="button" 
                     onClick={() => { sigCanvas.current?.clear(); setHasSignature(false); }}
                     className="self-end sm:self-auto px-3 py-1 text-xs font-semibold text-red-400 hover:text-white bg-red-950/40 hover:bg-red-900/60 rounded-lg border border-red-900/50 transition-colors"
                   >
-                    🧹 Limpar Assinatura
+                    ðŸ§¹ Limpar Assinatura
                   </button>
                 </div>
                 <div className="bg-slate-950 rounded-xl overflow-hidden border-2 border-sky-500/60 shadow-inner">
@@ -1879,7 +1880,7 @@ export default function Treinamentos() {
                   disabled={isManualSubmitting}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
-                  {isManualSubmitting ? 'Registrando...' : 'Confirmar Presença'}
+                  {isManualSubmitting ? 'Registrando...' : 'Confirmar PresenÃ§a'}
                 </button>
               </div>
             </form>
@@ -1894,7 +1895,7 @@ export default function Treinamentos() {
               <div>
                 <h3 className="text-2xl font-bold text-white flex items-center gap-2 mb-2">
                   <UserPlus className="h-7 w-7 text-blue-400" />
-                  Opções de Presença
+                  OpÃ§Ãµes de PresenÃ§a
                 </h3>
                 <p className="text-sm text-slate-400">Escolha como deseja registrar os alunos desta turma.</p>
               </div>
@@ -1907,7 +1908,7 @@ export default function Treinamentos() {
                   <div className="bg-blue-600/20 group-hover:bg-blue-600/30 p-3 rounded-xl border border-blue-500/30 transition-colors"><UserPlus className="h-6 w-6 text-blue-400" /></div>
                   <div>
                     <h4 className="font-bold text-white text-base">Registro Manual (Pelo PC)</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Buscar pelo nome, CPF ou matrícula e assinar na tela</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Buscar pelo nome, CPF ou matrÃ­cula e assinar na tela</p>
                   </div>
                 </button>
 
@@ -1920,7 +1921,7 @@ export default function Treinamentos() {
                   <div className="bg-emerald-600/20 group-hover:bg-emerald-600/30 p-3 rounded-xl border border-emerald-500/30 transition-colors"><ScanLine className="h-6 w-6 text-emerald-400" /></div>
                   <div>
                     <h4 className="font-bold text-white text-base">Abrir Tela de Auto-Registro</h4>
-                    <p className="text-xs text-slate-400 mt-0.5">Abre a página em uma nova aba do navegador no seu PC</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Abre a pÃ¡gina em uma nova aba do navegador no seu PC</p>
                   </div>
                 </a>
               </div>
@@ -1936,12 +1937,12 @@ export default function Treinamentos() {
             <div className="w-full md:w-96 bg-slate-950 rounded-2xl border-2 border-slate-800 p-6 flex flex-col items-center justify-center text-center shadow-inner">
               <h4 className="font-extrabold text-emerald-400 mb-1 text-lg uppercase tracking-wider">QR Code para Alunos</h4>
               <div className="bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg text-white font-bold text-xs mb-3 w-full text-blue-300 break-words">
-                📚 {selectedTreinamento.nome} {selectedTreinamento.turma ? `(${selectedTreinamento.turma})` : ''}
+                ðŸ“š {selectedTreinamento.nome} {selectedTreinamento.turma ? `(${selectedTreinamento.turma})` : ''}
               </div>
-              <p className="text-xs text-slate-400 mb-5">Peça aos alunos ou instrutores para escanearem a tela</p>
+              <p className="text-xs text-slate-400 mb-5">PeÃ§a aos alunos ou instrutores para escanearem a tela</p>
               
               <div className="bg-white p-5 rounded-2xl shadow-2xl border-4 border-emerald-500/30">
-                {/* QR Code gigante com a URL real do ambiente e parâmetros de turma embutidos */}
+                {/* QR Code gigante com a URL real do ambiente e parÃ¢metros de turma embutidos */}
                 <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/registrar/${selectedTreinamento.id}?nome=${encodeURIComponent(selectedTreinamento.nome)}&turma=${encodeURIComponent(selectedTreinamento.turma || "")}&pais=${selectedTreinamento.pais || "BRASIL"}`} size={260} level="H" />
               </div>
               
@@ -1949,7 +1950,7 @@ export default function Treinamentos() {
                 <strong className="block text-blue-400 mb-1 font-bold flex items-center gap-1.5">
                   <Smartphone className="h-4 w-4 inline" /> Como Funciona:
                 </strong>
-                Os alunos escaneiam com a câmera do celular para assinar no próprio celular. O instrutor pode escanear com o APP Android para ler crachás NFC!
+                Os alunos escaneiam com a cÃ¢mera do celular para assinar no prÃ³prio celular. O instrutor pode escanear com o APP Android para ler crachÃ¡s NFC!
               </div>
             </div>
           </div>
@@ -1981,7 +1982,7 @@ export default function Treinamentos() {
                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
                       <CheckCircle2 className="h-5 w-5 text-emerald-400" /> Checklist do Instrutor
                     </h3>
-                    <p className="text-xs text-slate-400">Marque as etapas concluídas para esta turma.</p>
+                    <p className="text-xs text-slate-400">Marque as etapas concluÃ­das para esta turma.</p>
                   </div>
                 </div>
                 
@@ -1990,7 +1991,7 @@ export default function Treinamentos() {
                   <div className="flex-1 space-y-6">
                     {checklist.length === 0 ? (
                       <div className="text-center p-8 text-slate-400 border border-dashed border-slate-700 rounded-xl bg-slate-800/30">
-                        Nenhum modelo de checklist foi atribuído a esta turma.
+                        Nenhum modelo de checklist foi atribuÃ­do a esta turma.
                       </div>
                     ) : (
                       Array.from(new Set(checklist.map(i => i.categoria || 'GERAL'))).map(categoria => (
@@ -2092,9 +2093,9 @@ export default function Treinamentos() {
               <div className="bg-slate-900 rounded-2xl w-full max-w-md overflow-hidden border border-slate-700 shadow-2xl flex flex-col">
                 <div className="px-6 py-4 border-b border-slate-800 bg-slate-900">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <PlusCircle className="h-5 w-5 text-indigo-400" /> Configurar Roles (Papéis)
+                    <PlusCircle className="h-5 w-5 text-indigo-400" /> Configurar Roles (PapÃ©is)
                   </h3>
-                  <p className="text-xs text-slate-400 mt-1">Crie a lista de roles disponíveis para atribuir às pessoas desta turma.</p>
+                  <p className="text-xs text-slate-400 mt-1">Crie a lista de roles disponÃ­veis para atribuir Ã s pessoas desta turma.</p>
                 </div>
                 
                 <div className="p-6 space-y-6">
@@ -2173,7 +2174,7 @@ export default function Treinamentos() {
               <form onSubmit={handleMoveTurma} className="p-6 space-y-5">
                 <div className="space-y-4">
                   <p className="text-sm text-slate-300">
-                    Você está movendo a turma <strong className="text-white">{movingTurma.turma || movingTurma.nome}</strong>.
+                    VocÃª estÃ¡ movendo a turma <strong className="text-white">{movingTurma.turma || movingTurma.nome}</strong>.
                   </p>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">Para qual pasta deseja mover?</label>
@@ -2190,7 +2191,7 @@ export default function Treinamentos() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Qual a Sub-pasta / Área? (Opcional)</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Qual a Sub-pasta / Ãrea? (Opcional)</label>
                     <input
                       type="text"
                       value={targetSubpastaName}
@@ -2217,3 +2218,5 @@ export default function Treinamentos() {
     </div>
   );
 }
+
+
