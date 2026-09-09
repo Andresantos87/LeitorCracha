@@ -648,17 +648,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun extrairRutOuIdentificador(raw: String): String {
         var texto = raw.trim()
-        if (texto.contains("RUN=", ignoreCase = true)) {
-            texto = texto.substringAfter("RUN=", "").substringAfter("run=", "").substringBefore("&").trim()
-        } else if (texto.contains("RUT=", ignoreCase = true)) {
-            texto = texto.substringAfter("RUT=", "").substringAfter("rut=", "").substringBefore("&").trim()
-        } else if (texto.contains("id=", ignoreCase = true) && texto.contains("http", ignoreCase = true)) {
-            texto = texto.substringAfter("id=", "").substringAfter("ID=", "").substringBefore("&").trim()
-        } else if (texto.startsWith("http", ignoreCase = true) || texto.contains("/")) {
+        
+        val matchRun = Regex("(?i)run=([^&]+)").find(texto)
+        if (matchRun != null) return matchRun.groupValues[1].replace("/", "_").replace("#", "").trim()
+        
+        val matchRut = Regex("(?i)rut=([^&]+)").find(texto)
+        if (matchRut != null) return matchRut.groupValues[1].replace("/", "_").replace("#", "").trim()
+        
+        val matchId = Regex("(?i)id=([^&]+)").find(texto)
+        if (matchId != null && texto.contains("http", ignoreCase = true)) {
+            return matchId.groupValues[1].replace("/", "_").replace("#", "").trim()
+        }
+        
+        if (texto.startsWith("http", ignoreCase = true) || texto.contains("/")) {
             texto = texto.substringAfterLast("/").substringBefore("?").trim()
         }
         texto = texto.replace("/", "_").replace("#", "").replace("$", "").replace("[", "").replace("]", "").trim()
-        return texto
+        
+        return if (texto.isBlank()) raw.take(20) else texto
     }
 
     private fun atualizarSessaoAtiva(id: String, display: String, pais: String) {
@@ -821,6 +828,19 @@ class MainActivity : AppCompatActivity() {
     // --- COMUNICAÇÃO COM O FIREBASE CLOUD ---
     private suspend fun enviarParaServidor(identificadorRaw: String, modo: String) {
         val identificador = extrairRutOuIdentificador(identificadorRaw)
+        
+        if (identificador.isBlank()) {
+            withContext(Dispatchers.Main) {
+                isWaitingForTag = false
+                progressBar.visibility = View.GONE
+                tvStatus.text = "Erro: QR Code não contém um ID válido!"
+                tvStatus.setTextColor(getColor(R.color.colorError))
+                tvResult.text = "QR RAW:\n" + identificadorRaw.take(50)
+                tvResult.visibility = View.VISIBLE
+            }
+            return
+        }
+
         val colab = buscarNomeNaAPI(identificador)
         
         val isProprio = identificador.startsWith("31")
