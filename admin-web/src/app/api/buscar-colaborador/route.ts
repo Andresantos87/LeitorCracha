@@ -57,6 +57,7 @@ export async function GET(req: Request) {
     const queryLower = removeAccents(queryStr.trim());
     const queryParts = queryLower.split(' ').filter(p => p.length > 0);
     const queryClean = queryStr.trim().replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+    const queryNoDV = queryStr.trim().includes('-') ? queryStr.trim().split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : queryClean;
     const hasDigits = /\d/.test(queryStr);
 
     let results = [];
@@ -80,8 +81,10 @@ export async function GET(req: Request) {
 
         if (
           uIdClean === queryClean ||
+          uIdClean === queryNoDV ||
           u.identificador.toLowerCase() === queryStr.trim().toLowerCase() ||
           matClean === queryClean ||
+          matClean === queryNoDV ||
           crachaClean === queryClean ||
           (crachaClean !== '' && rawDigits.includes(crachaClean)) ||
           (mioloA !== '' && (matClean === mioloA || uIdClean === mioloA || crachaClean === mioloA)) ||

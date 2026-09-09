@@ -650,10 +650,10 @@ class MainActivity : AppCompatActivity() {
         var texto = raw.trim()
         
         val matchRun = Regex("(?i)run=([^&]+)").find(texto)
-        if (matchRun != null) return matchRun.groupValues[1].replace("/", "_").replace("#", "").trim()
+        if (matchRun != null) return matchRun.groupValues[1].substringBefore("-").replace("/", "_").replace("#", "").trim()
         
         val matchRut = Regex("(?i)rut=([^&]+)").find(texto)
-        if (matchRut != null) return matchRut.groupValues[1].replace("/", "_").replace("#", "").trim()
+        if (matchRut != null) return matchRut.groupValues[1].substringBefore("-").replace("/", "_").replace("#", "").trim()
         
         val matchId = Regex("(?i)id=([^&]+)").find(texto)
         if (matchId != null && texto.contains("http", ignoreCase = true)) {
