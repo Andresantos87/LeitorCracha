@@ -23,6 +23,7 @@ export default function Treinamentos() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [nomeTreinamento, setNomeTreinamento] = useState("");
   const [subpastaTreinamento, setSubpastaTreinamento] = useState("");
+  const [isNovaSubpasta, setIsNovaSubpasta] = useState(false);
   const [turmaTreinamento, setTurmaTreinamento] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createMode, setCreateMode] = useState<'EXISTING' | 'NEW'>('EXISTING');
@@ -799,22 +800,6 @@ export default function Treinamentos() {
         {(!selectedTreinamento && !selectedSubpasta) ? (
           <div className="flex flex-col sm:flex-row gap-3">
             <button 
-              onClick={async () => {
-                try {
-                  const res = await fetch('/api/sync-presencas', { method: 'POST' });
-                  if (res.ok) {
-                    alert('Roteamento Inteligente concluído! As presenças da Turma Geral foram distribuídas para as turmas específicas corretas.');
-                    window.location.reload();
-                  }
-                } catch (e) {
-                  alert('Erro ao sincronizar.');
-                }
-              }}
-              className="flex items-center space-x-2 px-5 py-2.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-xl font-bold text-sm transition-all shadow-lg border border-emerald-500/30"
-            >
-              <span>✨ Distribuir Turma Geral</span>
-            </button>
-            <button 
               onClick={() => {
                 const cursos = Array.from(new Set(treinamentos.map(t => t.nome))).filter(Boolean);
                 if (cursos.length > 0) {
@@ -975,6 +960,32 @@ export default function Treinamentos() {
                       </div>
                     </div>
                       <div className="flex items-center gap-3">
+                        <button 
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const res = await fetch('/api/sync-presencas', { 
+                                method: 'POST', 
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ nomeCurso }) 
+                              });
+                              if (res.ok) {
+                                alert('Roteamento concluído para o curso: ' + nomeCurso);
+                                window.location.reload();
+                              } else {
+                                alert('Erro ao sincronizar.');
+                              }
+                            } catch (e) {
+                              alert('Erro ao sincronizar.');
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-indigo-500/30 flex items-center gap-1.5 shadow-sm"
+                          title="Distribuir presenças da Turma Geral para as turmas deste curso"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                          <span className="hidden sm:inline">Distribuir</span>
+                        </button>
                         <button
                           type="button"
                           onClick={async (e) => {
@@ -1686,42 +1697,23 @@ export default function Treinamentos() {
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                    <span>Sub-pasta / Área (Opcional)</span>
-                    <span className="text-[10px] font-normal text-slate-400">Agrupador visual (ex: Linha de Fibras)</span>
-                  </label>
-                  <input 
-                    type="text"
-                    value={subpastaTreinamento}
-                    onChange={e => setSubpastaTreinamento(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium placeholder:text-slate-600 shadow-inner"
-                    placeholder="Ex: Linha de Fibras"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-                    <span>Nome / Código da Turma</span>
-                  <span className="text-[10px] font-normal text-slate-400">Identificador da sessão</span>
-                </label>
-                <input 
-                  type="text"
-                  required
-                  value={turmaTreinamento}
-                  onChange={e => setTurmaTreinamento(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium placeholder:text-slate-600 shadow-inner"
-                  placeholder="Ex: Turma A - Manhã (26/07), ou Turma 01"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
                   <span>Público-Alvo (Opcional)</span>
                   <span className="text-[10px] font-normal text-slate-400">Vincular lista de convocação</span>
                 </label>
                 <div className="relative">
                   <select
                     value={createPublicoAlvoId}
-                    onChange={e => setCreatePublicoAlvoId(e.target.value)}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setCreatePublicoAlvoId(val);
+                      if (val) {
+                        const pb = publicosAlvo.find(p => p.id === val);
+                        if (pb) {
+                          const today = new Date().toLocaleDateString('pt-BR');
+                          setTurmaTreinamento(`${pb.nome} - ${today}`);
+                        }
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium appearance-none cursor-pointer pr-10 shadow-inner"
                   >
                     <option value="">Nenhum (Treinamento Aberto)</option>
@@ -1733,6 +1725,59 @@ export default function Treinamentos() {
                     <ChevronDown className="h-4 w-4" />
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>Sub-pasta / Área (Opcional)</span>
+                    <span className="text-[10px] font-bold text-sky-400 cursor-pointer hover:underline" onClick={() => {
+                      setIsNovaSubpasta(!isNovaSubpasta);
+                      setSubpastaTreinamento("");
+                    }}>
+                      {isNovaSubpasta ? "Voltar para Lista" : "+ Criar Nova"}
+                    </span>
+                  </label>
+                  {isNovaSubpasta ? (
+                    <input 
+                      type="text"
+                      autoFocus
+                      value={subpastaTreinamento}
+                      onChange={e => setSubpastaTreinamento(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium placeholder:text-slate-600 shadow-inner animate-in fade-in"
+                      placeholder="Ex: Nova Linha de Fibras"
+                    />
+                  ) : (
+                    <div className="relative animate-in fade-in">
+                      <select
+                        value={subpastaTreinamento}
+                        onChange={e => setSubpastaTreinamento(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium appearance-none cursor-pointer pr-10 shadow-inner"
+                      >
+                        <option value="">Nenhuma (Pasta Principal)</option>
+                        {Array.from(new Set(treinamentos.filter(t => t.nome === nomeTreinamento && t.subpasta).map(t => t.subpasta))).filter(Boolean).map(sp => (
+                          <option key={sp as string} value={sp as string}>{sp as string}</option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                        <ChevronDown className="h-4 w-4" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>Nome / Código da Turma</span>
+                  <span className="text-[10px] font-normal text-slate-400">Editável se necessário</span>
+                </label>
+                <input 
+                  type="text"
+                  required
+                  value={turmaTreinamento}
+                  onChange={e => setTurmaTreinamento(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium placeholder:text-slate-600 shadow-inner"
+                  placeholder="Selecione um Público-Alvo ou digite..."
+                />
               </div>
 
               <div className="space-y-2">

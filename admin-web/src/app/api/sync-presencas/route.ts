@@ -1,11 +1,14 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, updateDoc, setDoc, deleteDoc, query } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    const body = await req.json().catch(() => ({}));
+    const nomeCursoTarget = body.nomeCurso;
+
     const treinamentosSnap = await getDocs(collection(db, 'treinamentos'));
     const docs = treinamentosSnap.docs;
     
@@ -20,9 +23,10 @@ export async function POST() {
     const porCurso: Record<string, any[]> = {};
     docs.forEach(d => {
       const data = d.data();
-      if (!data.nome) return;
-      if (!porCurso[data.nome]) porCurso[data.nome] = [];
-      porCurso[data.nome].push({ id: d.id, ...data });
+      const nome = data.nome || 'Sem Nome';
+      if (nomeCursoTarget && nome !== nomeCursoTarget) return; // Ignore other courses if a specific one was requested
+      if (!porCurso[nome]) porCurso[nome] = [];
+      porCurso[nome].push({ id: d.id, ...data });
     });
 
     // 2. Look for General Turmas and distribute
@@ -88,4 +92,5 @@ export async function POST() {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
 

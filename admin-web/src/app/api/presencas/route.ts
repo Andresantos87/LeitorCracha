@@ -38,6 +38,9 @@ export async function GET(req: Request) {
       let user = usersDict[p.identificador_lido];
       if (!user) {
         const raw = String(p.identificador_lido || '').replace(/\D/g, '');
+        const rawClean = String(p.identificador_lido || '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+        const rawNoDV = String(p.identificador_lido || '').includes('-') ? String(p.identificador_lido || '').split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : rawClean;
+
         const mioloA = raw.length >= 10 ? raw.substring(2, raw.length - 2).replace(/^0+/, '') : '';
         const mioloB = raw.length >= 4 ? raw.substring(2).replace(/^0+/, '') : '';
         const usersArray = Object.values(usersDict);
@@ -46,7 +49,7 @@ export async function GET(req: Request) {
           const cracha = String(u.cod_cracha || '').replace(/\D/g, '').replace(/^0+/, '');
           const uid = String(u.identificador || '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
           if (cracha && (cracha === raw || cracha === raw.replace(/^0+/, ''))) return true;
-          if (uid && uid === raw) return true;
+          if (uid && (uid === rawClean || uid === rawNoDV)) return true;
           return false;
         });
 
@@ -106,12 +109,18 @@ export async function POST(req: Request) {
     let user = usersDict[idLimpo] || usersDict[identificador];
     if (!user) {
       const idClean = String(idLimpo).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+      const idNoDV = String(idLimpo).includes('-') ? String(idLimpo).split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : idClean;
+
       for (const [key, u] of Object.entries(usersDict)) {
         const kClean = key.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
         const matClean = u.matricula ? String(u.matricula).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : '';
         const crachaClean = u.cod_cracha ? String(u.cod_cracha).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : '';
         
-        if (kClean === idClean || (matClean && matClean === idClean) || (crachaClean && crachaClean === idClean)) {
+        if (
+          kClean === idClean || kClean === idNoDV ||
+          (matClean && (matClean === idClean || matClean === idNoDV)) ||
+          (crachaClean && (crachaClean === idClean || crachaClean === idNoDV))
+        ) {
           user = u;
           break;
         }
