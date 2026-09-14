@@ -242,6 +242,7 @@ export default function Treinamentos() {
         setSelectedPresencas([]);
         setSelectedTurmaToAssign("");
         carregarPresencas(selectedId);
+        carregarTreinamentos();
       } else {
         toast.error('Erro ao mover presenças');
       }
