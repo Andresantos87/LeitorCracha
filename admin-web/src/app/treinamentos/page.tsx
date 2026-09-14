@@ -1035,6 +1035,18 @@ export default function Treinamentos() {
                         <Plus className="h-3.5 w-3.5" />
                         <span className="hidden md:inline">Nova Turma aqui</span>
                       </button>
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/api/exportar?curso=${encodeURIComponent(nomeCurso)}`, '_blank');
+                        }}
+                        className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-emerald-500/30 flex items-center gap-1.5 shadow-sm"
+                        title="Exportar todas as turmas deste treinamento para Excel"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        <span className="hidden md:inline">Exportar Excel</span>
+                      </button>
                       {userRole === 'admin' && (
                         <button 
                           type="button"
