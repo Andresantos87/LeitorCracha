@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, updateDoc, setDoc, deleteDoc, query } from 'firebase/firestore';
+import fs from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +10,18 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const nomeCursoTarget = body.nomeCurso;
+
+    // Load colaboradores to resolve missing matriculas/crachas
+    let colaboradoresMap: Record<string, any> = {};
+    try {
+      const jsonPath = path.join(process.cwd(), 'colaboradores.json');
+      if (fs.existsSync(jsonPath)) {
+        const fileData = fs.readFileSync(jsonPath, 'utf-8');
+        colaboradoresMap = JSON.parse(fileData);
+      }
+    } catch (e) {
+      console.error('Erro ao ler colaboradores.json', e);
+    }
 
     const treinamentosSnap = await getDocs(collection(db, 'treinamentos'));
     const docs = treinamentosSnap.docs;
@@ -49,10 +63,13 @@ export async function POST(req: Request) {
           const idLidoClean = rawIdLido.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
           const idLidoNoDV = rawIdLido.includes('-') ? rawIdLido.split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : idLidoClean;
           
-          const rawMat = String(pData.matricula || '');
+          // Fallback missing matricula / cod_cracha by doing a fast lookup in colaboradoresMap using rawIdLido
+          const colab = colaboradoresMap[rawIdLido] || Object.values(colaboradoresMap).find(c => c.matricula === rawIdLido || c.cod_cracha === rawIdLido);
+          
+          const rawMat = String(pData.matricula || colab?.matricula || '');
           const pMatClean = rawMat.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
           
-          const rawCracha = String(pData.cod_cracha || '');
+          const rawCracha = String(pData.cod_cracha || colab?.cod_cracha || '');
           const pCrachaClean = rawCracha.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
           
           // Try to find a specific turma that expects this person
