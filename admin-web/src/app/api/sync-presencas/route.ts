@@ -72,14 +72,12 @@ export async function POST(req: Request) {
           const rawCracha = String(pData.cod_cracha || colab?.cod_cracha || '');
           const pCrachaClean = rawCracha.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
           
-          // Try to find a specific turma that expects this person
-          let turmaDestino = null;
-          for (const tEsp of turmasEspecificas) {
-            const publico = publicosMap[tEsp.publico_alvo_id];
-            if (!publico || !publico.matriculas) continue;
-            
-            // robust fuzzy match in matriculas array
-            const isExpected = publico.matriculas.some((m: string) => {
+          // Try to find ALL specific turmas that expect this person
+          let turmasDestino = turmasEspecificas.filter(t => {
+            const publico = publicosMap[t.publico_alvo_id];
+            if (!publico || !Array.isArray(publico.matriculas)) return false;
+
+            return publico.matriculas.some((m: string) => {
               const rawM = String(m || '');
               const mClean = rawM.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
               const mNoDV = rawM.includes('-') ? rawM.split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : mClean;
@@ -104,18 +102,17 @@ export async function POST(req: Request) {
               }
               return false;
             });
-            
-            if (isExpected) {
-              turmaDestino = tEsp;
-              break; // Found the target class!
+          });
+
+          if (turmasDestino.length > 0) {
+            // Copy presence to ALL matching turmas!
+            for (const tDestino of turmasDestino) {
+              await setDoc(doc(db, 'treinamentos', tDestino.id, 'presencas', pDoc.id), pData);
+              console.log('Copiou presenca ' + rawIdLido + ' da ' + turmaGeral.turma + ' para ' + tDestino.turma);
             }
-          }
-          
-          if (turmaDestino) {
-            // Move presence!
-            await setDoc(doc(db, 'treinamentos', turmaDestino.id, 'presencas', pDoc.id), pData);
+            // Remove from the general class
             await deleteDoc(doc(db, 'treinamentos', turmaGeral.id, 'presencas', pDoc.id));
-            console.log('Moveu presenca ' + rawIdLido + ' da ' + turmaGeral.turma + ' para ' + turmaDestino.turma);
+            countMoved++;
           }
         }
       }
