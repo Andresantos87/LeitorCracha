@@ -115,7 +115,7 @@ export async function POST(req: Request) {
             // Move presence!
             await setDoc(doc(db, 'treinamentos', turmaDestino.id, 'presencas', pDoc.id), pData);
             await deleteDoc(doc(db, 'treinamentos', turmaGeral.id, 'presencas', pDoc.id));
-            console.log('Moveu presenca ' + idLido + ' da ' + turmaGeral.turma + ' para ' + turmaDestino.turma);
+            console.log('Moveu presenca ' + rawIdLido + ' da ' + turmaGeral.turma + ' para ' + turmaDestino.turma);
           }
         }
       }
