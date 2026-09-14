@@ -43,9 +43,17 @@ export async function POST(req: Request) {
         
         for (const pDoc of presencasGeralSnap.docs) {
           const pData = pDoc.data();
+          
+          // Pre-clean all possible IDs from the presence
           const rawIdLido = String(pData.identificador_lido || '');
           const idLidoClean = rawIdLido.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
           const idLidoNoDV = rawIdLido.includes('-') ? rawIdLido.split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : idLidoClean;
+          
+          const rawMat = String(pData.matricula || '');
+          const pMatClean = rawMat.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+          
+          const rawCracha = String(pData.cod_cracha || '');
+          const pCrachaClean = rawCracha.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
           
           // Try to find a specific turma that expects this person
           let turmaDestino = null;
@@ -56,14 +64,26 @@ export async function POST(req: Request) {
             // robust fuzzy match in matriculas array
             const isExpected = publico.matriculas.some((m: string) => {
               const rawM = String(m || '');
-              const matClean = rawM.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
-              const matNoDV = rawM.includes('-') ? rawM.split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : matClean;
+              const mClean = rawM.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+              const mNoDV = rawM.includes('-') ? rawM.split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : mClean;
               
-              if (matClean === idLidoClean || matClean === idLidoNoDV || matNoDV === idLidoClean || matNoDV === idLidoNoDV) return true;
+              if (!mClean) return false;
+
+              // Check against identificador_lido
+              if (mClean === idLidoClean || mClean === idLidoNoDV || mNoDV === idLidoClean || mNoDV === idLidoNoDV) return true;
               
-              // Fallback to substring matching if they are at least somewhat substantial to avoid false positives on '1' matching '183921'
-              if (matClean.length > 3 && idLidoClean.length > 3) {
-                return matClean.includes(idLidoClean) || idLidoClean.includes(matClean);
+              // Check against pData.matricula
+              if (pMatClean && (mClean === pMatClean || mNoDV === pMatClean)) return true;
+              
+              // Check against pData.cod_cracha
+              if (pCrachaClean && (mClean === pCrachaClean || mNoDV === pCrachaClean)) return true;
+              
+              // Fallback to substring matching if they are at least somewhat substantial
+              if (mClean.length > 3 && idLidoClean.length > 3) {
+                return mClean.includes(idLidoClean) || idLidoClean.includes(mClean);
+              }
+              if (pMatClean && mClean.length > 3 && pMatClean.length > 3) {
+                return mClean.includes(pMatClean) || pMatClean.includes(mClean);
               }
               return false;
             });
