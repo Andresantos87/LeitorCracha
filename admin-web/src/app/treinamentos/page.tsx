@@ -69,6 +69,7 @@ export default function Treinamentos() {
   const [rolesDisponiveis, setRolesDisponiveis] = useState<string[]>([]);
   const [novoRol, setNovoRol] = useState("");
   const [selectedRoleToAssign, setSelectedRoleToAssign] = useState("");
+  const [selectedTurmaToAssign, setSelectedTurmaToAssign] = useState("");
   const [checklistTemplates, setChecklistTemplates] = useState<any[]>([]);
   const [createChecklistId, setCreateChecklistId] = useState("");
   const [assignChecklistId, setAssignChecklistId] = useState("");
@@ -223,6 +224,33 @@ export default function Treinamentos() {
     );
   };
 
+  const handleMoveBatch = async () => {
+    if (!selectedId || selectedPresencas.length === 0 || !selectedTurmaToAssign) return;
+    try {
+      const res = await fetch('/api/presencas/mover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          origemId: selectedId,
+          destinoId: selectedTurmaToAssign,
+          presencasIds: selectedPresencas
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(selectedPresencas.length + ' presenças movidas!');
+        setSelectedPresencas([]);
+        setSelectedTurmaToAssign("");
+        carregarPresencas(selectedId);
+      } else {
+        toast.error('Erro ao mover presenças');
+      }
+    } catch (error) {
+      console.error('Erro', error);
+      toast.error('Erro na requisição');
+    }
+  };
+
   const toggleAllPresencas = () => {
     if (selectedPresencas.length === presencas.length && presencas.length > 0) {
       setSelectedPresencas([]);
@@ -248,6 +276,7 @@ export default function Treinamentos() {
         toast.success(`${selectedPresencas.length} roles atualizados!`);
         setSelectedPresencas([]);
         setSelectedRoleToAssign("");
+        setSelectedTurmaToAssign("");
         carregarPresencas(selectedId);
       } else {
         toast.error(json.error || "Erro ao atribuir roles.");
@@ -1476,28 +1505,59 @@ export default function Treinamentos() {
             ) : (
               <div className="overflow-x-auto space-y-4">
                 
-                {selectedPresencas.length > 0 && rolesDisponiveis.length > 0 && (
-                  <div className="flex items-center gap-4 bg-indigo-950/30 border border-indigo-900/50 p-3 rounded-xl animate-in fade-in slide-in-from-top-2">
-                    <span className="text-indigo-300 font-bold text-sm px-2">
-                      {selectedPresencas.length} selecionado(s)
-                    </span>
-                    <select
-                      value={selectedRoleToAssign}
-                      onChange={(e) => setSelectedRoleToAssign(e.target.value)}
-                      className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-indigo-500"
-                    >
-                      <option value="">Selecione um Rol...</option>
-                      {rolesDisponiveis.map(rol => (
-                        <option key={rol} value={rol}>{rol}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={handleAssignRoleBatch}
-                      disabled={!selectedRoleToAssign || isSubmitting}
-                      className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition-colors"
-                    >
-                      Atribuir Rol
-                    </button>
+                {selectedPresencas.length > 0 && (
+                  <div className="space-y-3">
+                    {rolesDisponiveis.length > 0 && (
+                      <div className="flex items-center gap-4 bg-indigo-950/30 border border-indigo-900/50 p-3 rounded-xl animate-in fade-in slide-in-from-top-2">
+                        <span className="text-indigo-300 font-bold text-sm px-2">
+                          {selectedPresencas.length} selecionado(s)
+                        </span>
+                        <select
+                          value={selectedRoleToAssign}
+                          onChange={(e) => setSelectedRoleToAssign(e.target.value)}
+                          className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-indigo-500"
+                        >
+                          <option value="">Selecione um Rol...</option>
+                          {rolesDisponiveis.map(rol => (
+                            <option key={rol} value={rol}>{rol}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={handleAssignRoleBatch}
+                          disabled={!selectedRoleToAssign || isSubmitting}
+                          className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition-colors"
+                        >
+                          Atribuir Rol
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Move to another class */}
+                    <div className="flex items-center gap-4 bg-emerald-950/30 border border-emerald-900/50 p-3 rounded-xl animate-in fade-in slide-in-from-top-2">
+                      <span className="text-emerald-300 font-bold text-sm px-2 whitespace-nowrap">
+                        Mover para turma:
+                      </span>
+                      <select
+                        value={selectedTurmaToAssign}
+                        onChange={(e) => setSelectedTurmaToAssign(e.target.value)}
+                        className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-emerald-500 max-w-[200px]"
+                      >
+                        <option value="">Selecione a Turma...</option>
+                        {treinamentos.filter(t => {
+                          const curr = treinamentos.find(x => x.id === selectedId);
+                          return curr && t.nome === curr.nome && t.id !== selectedId;
+                        }).map(t => (
+                          <option key={t.id} value={t.id}>{t.turma || "Principal"}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handleMoveBatch}
+                        disabled={!selectedTurmaToAssign || isSubmitting}
+                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium text-sm rounded-lg transition-colors shadow-lg shadow-emerald-600/20"
+                      >
+                        Mover
+                      </button>
+                    </div>
                   </div>
                 )}
 
