@@ -112,7 +112,7 @@ export async function POST(req: Request) {
             }
             // Remove from the general class
             await deleteDoc(doc(db, 'treinamentos', turmaGeral.id, 'presencas', pDoc.id));
-            countMoved++;
+            
           }
         }
       }
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
       }));
     }
     return NextResponse.json({ success: true, message: 'Sincronizado e Roteado com sucesso.', data: results });
-  } catch (error: any) {
+  } catch (error: any) { console.error('SYNC ERROR:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
