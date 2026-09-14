@@ -33,7 +33,14 @@ export async function GET() {
         const snapshot = await getCountFromServer(presencasColl);
         count = snapshot.data().count;
       } catch(e) {
-        count = typeof data.presencas_count === 'number' ? data.presencas_count : 0;
+        try {
+          // Fallback para getDocs caso o getCountFromServer falhe (erro de BloomFilter conhecido)
+          const presencasColl = collection(db, 'treinamentos', d.id, 'presencas');
+          const snap = await getDocs(presencasColl);
+          count = snap.size;
+        } catch(innerE) {
+          count = typeof data.presencas_count === 'number' ? data.presencas_count : 0;
+        }
       }
       
       const isChileName = /laja|santa fe|pacifico|talca|nacimiento|cordillera|puente alto|valdivia|mininco|chile/i.test(data.nome || '') || /laja|santa fe|pacifico|talca|nacimiento|cordillera|puente alto|valdivia|mininco|chile/i.test(data.planta || '');
