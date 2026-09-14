@@ -43,7 +43,9 @@ export async function POST(req: Request) {
         
         for (const pDoc of presencasGeralSnap.docs) {
           const pData = pDoc.data();
-          const idLido = String(pData.identificador_lido || '').replace(/\D/g, '').replace(/^0+/, '');
+          const rawIdLido = String(pData.identificador_lido || '');
+          const idLidoClean = rawIdLido.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+          const idLidoNoDV = rawIdLido.includes('-') ? rawIdLido.split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : idLidoClean;
           
           // Try to find a specific turma that expects this person
           let turmaDestino = null;
@@ -51,10 +53,19 @@ export async function POST(req: Request) {
             const publico = publicosMap[tEsp.publico_alvo_id];
             if (!publico || !publico.matriculas) continue;
             
-            // fuzzy match in matriculas array
+            // robust fuzzy match in matriculas array
             const isExpected = publico.matriculas.some((m: string) => {
-              const mat = String(m || '').replace(/\D/g, '').replace(/^0+/, '');
-              return mat === idLido || idLido.includes(mat) || mat.includes(idLido);
+              const rawM = String(m || '');
+              const matClean = rawM.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+              const matNoDV = rawM.includes('-') ? rawM.split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : matClean;
+              
+              if (matClean === idLidoClean || matClean === idLidoNoDV || matNoDV === idLidoClean || matNoDV === idLidoNoDV) return true;
+              
+              // Fallback to substring matching if they are at least somewhat substantial to avoid false positives on '1' matching '183921'
+              if (matClean.length > 3 && idLidoClean.length > 3) {
+                return matClean.includes(idLidoClean) || idLidoClean.includes(matClean);
+              }
+              return false;
             });
             
             if (isExpected) {
