@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import ConfirmModal from '@/components/ConfirmModal';
 import PromptModal from '@/components/PromptModal';
 import toast from 'react-hot-toast';
-import { Users, Target, Plus, Search, Loader2, Trash2, Edit, X, Check, ChevronDown, Building2, MapPin, Briefcase, UserCircle, Save, Clock, CheckCircle2, FolderOpen } from "lucide-react";
+import { Users, Target, Plus, Search, Loader2, Trash2, Edit, X, Check, ChevronDown, ChevronRight, Building2, MapPin, Briefcase, UserCircle, Save, Clock, CheckCircle2, FolderOpen } from "lucide-react";
 
 const CustomSelect = ({ values, onChange, options, placeholder, icon: Icon, disabled = false }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -95,6 +95,8 @@ export default function PublicosAlvoPage() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const [emptyPastas, setEmptyPastas] = useState<string[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [editTreinamentoVinculado, setEditTreinamentoVinculado] = useState<any>(null);
   const [editPresencas, setEditPresencas] = useState<string[]>([]);
@@ -105,6 +107,7 @@ export default function PublicosAlvoPage() {
 
   const [nome, setNome] = useState("");
   const [pastaPublico, setPastaPublico] = useState("");
+  const [isNovaPasta, setIsNovaPasta] = useState(false);
   const [descricao, setDescricao] = useState("");
   
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void, variant: 'danger'|'warning'}>({isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger'});
@@ -484,28 +487,46 @@ export default function PublicosAlvoPage() {
     setSelectedColaboradores(prev => prev.filter(c => c.cargo !== "Não localizado no banco"));
   };
 
-  const uniquePastas = Array.from(new Set(publicos.map(p => p.pasta).filter(Boolean))).sort();
+  const uniquePastas = Array.from(new Set([...publicos.map(p => p.pasta).filter(Boolean), ...emptyPastas])).sort();
   const filtrados = publicos.filter(p => p.nome.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-500">
       
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Target className="h-8 w-8 text-blue-400" />
-            Gestão de Públicos-Alvo
-          </h1>
-          <p className="text-slate-400 mt-1">Crie listas de convocação para acompanhar o progresso das capacitações.</p>
+          <div className="flex items-center gap-3 mb-1">
+            <Target className="h-8 w-8 text-blue-500" />
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">Gestão de Públicos-Alvo</h1>
+          </div>
+          <p className="text-slate-400">Crie listas de convocação para acompanhar o progresso das capacitações.</p>
         </div>
-        
-        <button 
-          onClick={abrirCriacao}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 group"
-        >
-          <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform" />
-          Novo Público-Alvo
-        </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <button 
+            onClick={() => setPromptModal({
+              isOpen: true,
+              title: 'Criar Nova Pasta',
+              message: 'Digite o nome da nova pasta (agrupador):',
+              onConfirm: (newName) => {
+                if (newName && newName.trim()) {
+                  setEmptyPastas(prev => [...prev, newName.trim()]);
+                  toast.success("Pasta criada! Você já pode mover itens para ela.");
+                }
+              }
+            })}
+            className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-6 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 group flex-1 sm:flex-none"
+          >
+            <FolderOpen className="h-5 w-5" />
+            Nova Pasta
+          </button>
+          <button 
+            onClick={abrirCriacao}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 group flex-1 sm:flex-none"
+          >
+            <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform" />
+            Novo Público-Alvo
+          </button>
+        </div>
       </div>
 
       <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 p-4 rounded-2xl">
@@ -526,49 +547,61 @@ export default function PublicosAlvoPage() {
           <Loader2 className="h-10 w-10 animate-spin text-blue-500 mb-4" />
           <p>Carregando públicos-alvo...</p>
         </div>
-      ) : filtrados.length === 0 ? (
+      ) : filtrados.length === 0 && emptyPastas.length === 0 ? (
         <div className="text-center py-20 bg-slate-800/20 rounded-3xl border border-slate-700/30 border-dashed">
           <Target className="h-16 w-16 text-slate-600 mx-auto mb-4" />
           <p className="text-slate-400 text-lg">Nenhum público-alvo encontrado.</p>
         </div>
       ) : (
-        <div className="space-y-10">
-          {Object.entries(
-            filtrados.reduce((acc: any, curr: any) => {
-              const p = curr.pasta || "Sem Agrupamento";
-              if (!acc[p]) acc[p] = [];
-              acc[p].push(curr);
-              return acc;
-            }, {})
-          ).sort(([a], [b]) => a === "Sem Agrupamento" ? 1 : b === "Sem Agrupamento" ? -1 : a.localeCompare(b))
-          .map(([pastaNome, pubs]: any) => (
-            <div key={pastaNome} className="bg-slate-900/40 rounded-2xl p-6 border border-slate-700/40">
-              <div className="flex items-center gap-3 mb-6 border-b border-slate-700/50 pb-4 group/folder">
-                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
-                  <FolderOpen className="h-5 w-5" />
+          <div className="space-y-10">
+            {Object.entries(
+              filtrados.reduce((acc: any, curr: any) => {
+                const p = curr.pasta || "Sem Agrupamento";
+                if (!acc[p]) acc[p] = [];
+                acc[p].push(curr);
+                return acc;
+              }, emptyPastas.reduce((a: any, p: string) => { a[p] = []; return a; }, {}))
+            ).sort(([a], [b]) => a === "Sem Agrupamento" ? 1 : b === "Sem Agrupamento" ? -1 : a.localeCompare(b))
+            .map(([pastaNome, pubs]: any) => {
+              const isExpanded = expandedFolders[pastaNome];
+              return (
+              <div key={pastaNome} className="bg-slate-900/40 rounded-2xl p-6 border border-slate-700/40 transition-all">
+                <div 
+                  className={`flex items-center gap-3 border-b border-slate-700/50 pb-4 group/folder cursor-pointer hover:border-slate-600 transition-colors ${isExpanded ? 'mb-6' : ''}`}
+                  onClick={() => setExpandedFolders(prev => ({ ...prev, [pastaNome]: !prev[pastaNome] }))}
+                >
+                  <div className="p-1 text-slate-500 group-hover/folder:text-indigo-400 transition-colors">
+                    {!isExpanded ? <ChevronRight className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                  </div>
+                  <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                    <FolderOpen className="h-5 w-5" />
+                  </div>
+                  <h2 className="text-xl font-extrabold text-white tracking-wide">{pastaNome}</h2>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                    {pubs.length} {pubs.length === 1 ? 'lista' : 'listas'}
+                  </span>
+                  
+                  {pastaNome !== "Sem Agrupamento" && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPromptModal({
+                          isOpen: true,
+                          title: 'Renomear Pasta',
+                          message: `Digite o novo nome para a pasta "${pastaNome}":`,
+                          onConfirm: (newName) => handleRenamePasta(pastaNome, newName)
+                        });
+                      }}
+                      className="ml-2 p-1.5 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-all opacity-0 group-hover/folder:opacity-100"
+                      title="Renomear Pasta"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-                <h2 className="text-xl font-extrabold text-white tracking-wide">{pastaNome}</h2>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                  {pubs.length} {pubs.length === 1 ? 'lista' : 'listas'}
-                </span>
-                
-                {pastaNome !== "Sem Agrupamento" && (
-                  <button 
-                    onClick={() => setPromptModal({
-                      isOpen: true,
-                      title: 'Renomear Pasta',
-                      message: `Digite o novo nome para a pasta "${pastaNome}":`,
-                      onConfirm: (newName) => handleRenamePasta(pastaNome, newName)
-                    })}
-                    className="ml-2 p-1.5 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-all opacity-0 group-hover/folder:opacity-100"
-                    title="Renomear Pasta"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {pubs.map((pub: any) => (
+                {isExpanded && (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {pubs.map((pub: any) => (
                   <div 
                     key={pub.id} 
                     onClick={() => abrirEdicao(pub)}
@@ -636,8 +669,10 @@ export default function PublicosAlvoPage() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -655,17 +690,49 @@ export default function PublicosAlvoPage() {
                     placeholder="Digite o nome deste Público-Alvo..."
                     className="bg-slate-900/50 border border-slate-600 focus:border-blue-500 rounded-lg px-3 py-1.5 text-lg font-bold text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500/20 outline-none w-full max-w-sm transition-all"
                   />
-                  <input
-                    type="text"
-                    value={pastaPublico}
-                    onChange={(e) => setPastaPublico(e.target.value)}
-                    placeholder="Pasta / Agrupador (Opcional)"
-                    list="pastas_publicos_existentes"
-                    className="bg-slate-900/50 border border-slate-600 focus:border-indigo-500 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-300 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/20 outline-none w-full max-w-xs transition-all"
-                  />
-                  <datalist id="pastas_publicos_existentes">
-                    {uniquePastas.map((c: any) => <option key={c} value={c} />)}
-                  </datalist>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full max-w-sm">
+                    {isNovaPasta ? (
+                      <div className="flex items-center gap-2 w-full relative">
+                        <input
+                          type="text"
+                          value={pastaPublico}
+                          onChange={(e) => setPastaPublico(e.target.value)}
+                          placeholder="Digite a Nova Pasta"
+                          autoFocus
+                          className="bg-slate-900/50 border border-sky-500 rounded-lg px-3 py-1.5 text-sm font-medium text-white placeholder-slate-500 focus:ring-2 focus:ring-sky-500/50 outline-none w-full transition-all"
+                        />
+                        <button 
+                          onClick={() => { setIsNovaPasta(false); setPastaPublico(""); }}
+                          className="absolute right-2 text-slate-400 hover:text-red-400 p-1"
+                          title="Cancelar"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative w-full">
+                        <select
+                          value={pastaPublico}
+                          onChange={(e) => {
+                            if (e.target.value === "NOVA_PASTA") {
+                              setIsNovaPasta(true);
+                              setPastaPublico("");
+                            } else {
+                              setPastaPublico(e.target.value);
+                            }
+                          }}
+                          className="bg-slate-900/50 border border-slate-600 focus:border-indigo-500 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-300 appearance-none focus:ring-2 focus:ring-indigo-500/20 outline-none w-full pr-8 transition-all"
+                        >
+                          <option value="">Sem Agrupamento (Nenhuma Pasta)</option>
+                          {uniquePastas.map((c: any) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                          <option value="NOVA_PASTA" className="font-bold text-sky-400">+ Criar Novo Agrupador...</option>
+                        </select>
+                        <ChevronDown className="h-4 w-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    )}
+                  </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button 
