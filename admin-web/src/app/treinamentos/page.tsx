@@ -226,6 +226,7 @@ export default function Treinamentos() {
 
   const handleMoveBatch = async () => {
     if (!selectedId || selectedPresencas.length === 0 || !selectedTurmaToAssign) return;
+    const toastId = toast.loading(`Movendo ${selectedPresencas.length} presenças... aguarde.`);
     try {
       const res = await fetch('/api/presencas/mover', {
         method: 'POST',
@@ -238,17 +239,17 @@ export default function Treinamentos() {
       });
       const json = await res.json();
       if (json.success) {
-        toast.success(selectedPresencas.length + ' presenças movidas!');
+        toast.success(selectedPresencas.length + ' presenças movidas!', { id: toastId });
         setSelectedPresencas([]);
         setSelectedTurmaToAssign("");
         carregarPresencas(selectedId);
         carregarTreinamentos();
       } else {
-        toast.error('Erro ao mover presenças');
+        toast.error('Erro ao mover presenças', { id: toastId });
       }
     } catch (error) {
       console.error('Erro', error);
-      toast.error('Erro na requisição');
+      toast.error('Erro na requisição', { id: toastId });
     }
   };
 

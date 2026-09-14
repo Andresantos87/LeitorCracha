@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '../../../../lib/firebase';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
@@ -12,21 +12,18 @@ export async function POST(req: Request) {
 
     let count = 0;
 
-    for (const pId of presencasIds) {
+    await Promise.all(presencasIds.map(async (pId: string) => {
       const docRefOrigem = doc(db, 'treinamentos', origemId, 'presencas', pId);
       const docSnap = await getDoc(docRefOrigem);
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        
         const docRefDestino = doc(db, 'treinamentos', destinoId, 'presencas', pId);
         await setDoc(docRefDestino, data);
-        
         await deleteDoc(docRefOrigem);
-        
         count++;
       }
-    }
+    }));
 
     return NextResponse.json({ success: true, count });
   } catch (error: any) {
