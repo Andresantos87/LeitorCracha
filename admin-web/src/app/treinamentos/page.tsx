@@ -1546,7 +1546,7 @@ export default function Treinamentos() {
                           )}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell text-sm text-slate-300">
-                          {p.planta}
+                          {p.empresa || p.planta}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${

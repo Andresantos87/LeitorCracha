@@ -41,7 +41,7 @@ export async function GET(req: Request) {
         const pData = p.data();
         const dataFormatada = pData.data_registro?.toDate()?.toISOString() || new Date().toISOString();
         const nomeColab = pData.nome || "Desconhecido";
-        const empresaColab = pData.planta || pData.empresa || "Não informado";
+        const empresaColab = pData.empresa || pData.planta || "Não informado";
         const assinado = pData.assinaturaBase64 || pData.assinatura ? "SIM (Assinado)" : "NÃO";
         const facilitador = pData.facilitador_nome || treinamento.facilitador_nome || "Nenhum";
         const papel = pData.rol || "GERAL";
