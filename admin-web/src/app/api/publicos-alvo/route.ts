@@ -49,7 +49,8 @@ export async function GET() {
           nome: c ? c.nome : "Desconhecido",
           rol: membro.rol || "",
           identificador: c ? c.identificador : null,
-          cod_cracha: c ? c.cod_cracha : null
+          cod_cracha: c ? c.cod_cracha : null,
+          turno: c ? c.turno : null
         };
       });
       
@@ -63,7 +64,8 @@ export async function GET() {
             nome: c ? c.nome : "Desconhecido",
             rol: "",
             identificador: c ? c.identificador : null,
-            cod_cracha: c ? c.cod_cracha : null
+            cod_cracha: c ? c.cod_cracha : null,
+            turno: c ? c.turno : null
           });
         });
       }

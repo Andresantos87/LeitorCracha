@@ -98,3 +98,16 @@ export function validateShiftSchedule(turma: string, dateStr: string, timeStr: s
   
   return { valid: true };
 }
+
+export function extractShiftName(turnoStr: string): ShiftName | null {
+  if (!turnoStr) return null;
+  // Match "TURNO 6X4 GUAIBA - A" or "TURNO 6X4 GUAIBA  -  E"
+  const match = turnoStr.match(/TURNO.*?(?:GUAIBA|6X4).*?([A-E])/i);
+  if (match) return match[1].toUpperCase() as ShiftName;
+  
+  // Fallback for simple "Turno A"
+  const m2 = turnoStr.match(/^Turno\s+([A-E])$/i);
+  if (m2) return m2[1].toUpperCase() as ShiftName;
+  
+  return null;
+}

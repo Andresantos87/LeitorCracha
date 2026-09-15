@@ -2,9 +2,10 @@
 import React, { useState, useEffect, useRef, Fragment, useMemo } from "react";
 import ConfirmModal from '@/components/ConfirmModal';
 import toast from 'react-hot-toast';
-import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks, X, FileText, Edit } from "lucide-react";
+import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks, X, FileText, Edit, Calendar as CalendarIcon } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import SignatureCanvas from "react-signature-canvas";
+import { getShiftStatusForDate, ShiftName, extractShiftName, getNextAvailableDate } from '@/lib/shiftPredictor';
 
 export default function Treinamentos() {
   const [treinamentos, setTreinamentos] = useState<any[]>([]);
@@ -1434,12 +1435,14 @@ export default function Treinamentos() {
                 <Clock className="h-5 w-5" />
                 Matrículas Pendentes de Capacitação
               </h3>
-              <div className="flex flex-wrap gap-2">
-                {publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id)?.matriculas
-                  .filter((m: string) => {
-                     const publico = publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id);
-                     const det = publico?.matriculas_detalhes?.find((d:any) => d._id === m);
-                     const presencasMatriculas = presencas.map(p => p.identificador_lido);
+              <div className="w-full">
+                {(() => {
+                   const publico = publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id);
+                   if (!publico) return null;
+                   
+                   const presencasMatriculas = presencas.map(p => p.identificador_lido);
+                   const pendentes = publico.matriculas.filter((m: string) => {
+                     const det = publico.matriculas_detalhes?.find((d:any) => d._id === m);
                      return !presencasMatriculas.some(p => {
                        const cleanP = String(p).replace(/^0+/, '');
                        const id1 = String(m).replace(/^0+/, '');
@@ -1451,33 +1454,88 @@ export default function Treinamentos() {
                               (id2 && cleanP === id2) || 
                               (id3 && cleanP === id3);
                      });
-                  })
-                  .map((m: string) => (
-                  <span key={m} className="px-3 py-1 bg-amber-950/40 border border-amber-900/50 text-amber-300 rounded-lg text-sm font-mono">
-                    {m}
-                  </span>
-                ))}
-                {publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id)?.matriculas
-                  .filter((m: string) => {
-                     const publico = publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id);
-                     const det = publico?.matriculas_detalhes?.find((d:any) => d._id === m);
-                     const presencasMatriculas = presencas.map(p => p.identificador_lido);
-                     return !presencasMatriculas.some(p => {
-                       const cleanP = String(p).replace(/^0+/, '');
-                       const id1 = String(m).replace(/^0+/, '');
-                       const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
-                       const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
-                       return (cleanP && cleanP === id1) || 
-                              (cleanP && id1 && cleanP.endsWith(id1)) || 
-                              (id1 && cleanP && id1.endsWith(cleanP)) ||
-                              (id2 && cleanP === id2) || 
-                              (id3 && cleanP === id3);
-                     });
-                  }).length === 0 && (
-                  <span className="text-emerald-400 text-sm font-bold flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" /> Todos os convocados foram capacitados!
-                  </span>
-                )}
+                   });
+                   
+                   if (pendentes.length === 0) {
+                     return (
+                        <span className="text-emerald-400 text-sm font-bold flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" /> Todos os convocados foram capacitados!
+                        </span>
+                     );
+                   }
+                   
+                   // Enriquecer pendentes com status
+                   const today = new Date();
+                   const enriquecidos = pendentes.map((m: string) => {
+                     const det = publico.matriculas_detalhes?.find((d:any) => d._id === m) || { _id: m, nome: 'Desconhecido' };
+                     const shiftName = extractShiftName(det.turno || '');
+                     const shiftStatus = shiftName ? getShiftStatusForDate(shiftName, today) : null;
+                     const nextAdminDate = shiftName && shiftStatus !== '8' ? getNextAvailableDate(shiftName, today, '08:00') : null;
+                     
+                     return {
+                       ...det,
+                       shiftName,
+                       shiftStatus,
+                       nextAdminDate
+                     };
+                   });
+                   
+                   const prioridadeHoje = enriquecidos.filter(d => d.shiftStatus === '8');
+                   const demais = enriquecidos.filter(d => d.shiftStatus !== '8');
+                   
+                   return (
+                     <div className="space-y-6">
+                        {prioridadeHoje.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-red-400 font-bold flex items-center gap-2 text-sm uppercase tracking-wider">
+                              <Target className="h-4 w-4 animate-pulse" /> 
+                              Prioridade Hoje (Estão no Turno Administrativo 08h-16h)
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {prioridadeHoje.map(d => (
+                                <div key={d._id} className="bg-red-950/20 border border-red-900/50 p-3 rounded-lg flex flex-col gap-1 ring-1 ring-red-500/20">
+                                  <strong className="text-red-300 text-sm truncate" title={d.nome}>{d.nome}</strong>
+                                  <div className="flex justify-between items-center text-xs text-red-400/80">
+                                    <span className="font-mono">{d._id}</span>
+                                    {d.turno && <span className="truncate max-w-[120px]" title={d.turno}>{d.turno}</span>}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {demais.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-slate-400 font-bold flex items-center gap-2 text-sm uppercase tracking-wider">
+                              <ListChecks className="h-4 w-4" />
+                              Demais Pendentes
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                              {demais.map(d => (
+                                <div key={d._id} className="bg-slate-900/50 border border-slate-800 p-2 rounded-lg flex flex-col gap-1">
+                                  <strong className="text-slate-300 text-xs truncate" title={d.nome}>{d.nome}</strong>
+                                  <div className="flex justify-between items-center text-[10px] text-slate-500">
+                                    <span className="font-mono">{d._id}</span>
+                                    {d.shiftStatus === 'F' && <span className="bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-medium">Hoje: Folga</span>}
+                                    {d.shiftStatus === '16' && <span className="bg-amber-900/20 text-amber-400/80 border border-amber-900/30 px-1.5 py-0.5 rounded">Hoje: 16h-00h</span>}
+                                    {d.shiftStatus === '0' && <span className="bg-blue-900/20 text-blue-400/80 border border-blue-900/30 px-1.5 py-0.5 rounded">Hoje: 00h-08h</span>}
+                                    {!d.shiftStatus && d.turno && <span className="truncate max-w-[100px]">{d.turno}</span>}
+                                  </div>
+                                  {d.nextAdminDate && (
+                                    <div className="text-[10px] text-emerald-400/70 mt-1 flex items-center gap-1">
+                                      <CalendarIcon className="w-3 h-3" />
+                                      Volta no admin em: {d.nextAdminDate.toLocaleDateString('pt-BR')}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                     </div>
+                   );
+                })()}
               </div>
             </div>
           )}
