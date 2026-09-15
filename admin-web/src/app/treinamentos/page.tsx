@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, Fragment, useMemo } from "react";
 import ConfirmModal from '@/components/ConfirmModal';
 import toast from 'react-hot-toast';
-import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks, X, FileText, Edit, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Download, CheckCircle2, PlayCircle, Smartphone, ScanLine, QrCode, Trash2, UserPlus, PenTool, Link as LinkIcon, Folder, FolderOpen, ChevronDown, FolderPlus, Sparkles, PlusCircle, Target, Clock, ListChecks, X, FileText, Edit, Calendar as CalendarIcon, Search } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import SignatureCanvas from "react-signature-canvas";
 import { getShiftStatusForDate, ShiftName, extractShiftName, getNextAvailableDate } from '@/lib/shiftPredictor';
