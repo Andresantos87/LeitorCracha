@@ -360,10 +360,15 @@ export default function Treinamentos() {
   };
 
   const carregarTreinamentos = async () => {
-    const res = await fetch(`/api/treinamentos?t=${Date.now()}`);
-    const json = await res.json();
-    if (json.success) setTreinamentos(json.data);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/treinamentos?t=${Date.now()}`);
+      const json = await res.json();
+      if (json.success) setTreinamentos(json.data);
+    } catch (e) {
+      console.error("Erro ao carregar treinamentos", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const abrirEdicaoTreinamento = (turma: any) => {
