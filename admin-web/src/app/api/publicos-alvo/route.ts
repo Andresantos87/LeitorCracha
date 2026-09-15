@@ -15,11 +15,18 @@ export async function GET() {
     const fileContents = fs.readFileSync(filePath, 'utf8');
     const cols = JSON.parse(fileContents);
     const colsMap = new Map();
+    const setCol = (key: string, c: any) => {
+      if (!key) return;
+      const existing = colsMap.get(key);
+      if (!existing || (!existing.turno && c.turno)) {
+        colsMap.set(key, c);
+      }
+    };
     for (const key in cols) {
       const c = cols[key];
-      colsMap.set(String(c.matricula).replace(/^0+/, ''), c);
-      colsMap.set(String(c.cod_cracha).replace(/^0+/, ''), c);
-      colsMap.set(String(key), c);
+      setCol(String(c.matricula).replace(/^0+/, ''), c);
+      setCol(String(c.cod_cracha).replace(/^0+/, ''), c);
+      setCol(String(key), c);
     }
     
     // Buscar todos os treinamentos para achar os vínculos
