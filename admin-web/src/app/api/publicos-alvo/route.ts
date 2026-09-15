@@ -57,7 +57,9 @@ export async function GET() {
           rol: membro.rol || "",
           identificador: c ? c.identificador : null,
           cod_cracha: c ? c.cod_cracha : null,
-          turno: c ? c.turno : null
+          turno: c ? c.turno : null,
+          area: c ? c.area : null,
+          cargo: c ? c.cargo : null
         };
       });
       
@@ -72,7 +74,9 @@ export async function GET() {
             rol: "",
             identificador: c ? c.identificador : null,
             cod_cracha: c ? c.cod_cracha : null,
-            turno: c ? c.turno : null
+            turno: c ? c.turno : null,
+            area: c ? c.area : null,
+            cargo: c ? c.cargo : null
           });
         });
       }
