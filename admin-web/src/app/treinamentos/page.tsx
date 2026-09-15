@@ -37,6 +37,7 @@ export default function Treinamentos() {
   const [publicosAlvo, setPublicosAlvo] = useState<any[]>([]);
   const [createPublicoAlvoId, setCreatePublicoAlvoId] = useState("");
   const [showPending, setShowPending] = useState(false);
+  const [printPriorities, setPrintPriorities] = useState<any[] | null>(null);
 
   // States para assinatura manual
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -822,6 +823,80 @@ export default function Treinamentos() {
     );
   };
 
+  if (printPriorities) {
+    const grouped = printPriorities.reduce((acc: any, curr: any) => {
+      // Priorizar a área, se não tiver usa o cargo
+      const area = curr.area || curr.cargo || 'SEM ÁREA / SETOR DEFINIDO';
+      if (!acc[area]) acc[area] = [];
+      acc[area].push(curr);
+      return acc;
+    }, {});
+    
+    // Sort areas alphabetically
+    const sortedAreas = Object.keys(grouped).sort();
+
+    return (
+      <div className="fixed inset-0 z-[100] bg-white text-black overflow-auto p-8 print:p-0">
+        <style>{`
+          @media print {
+            @page { margin: 15mm; size: A4; }
+            .no-print { display: none !important; }
+            body * { visibility: hidden; }
+            .print-container, .print-container * { visibility: visible; }
+            .print-container { position: absolute; left: 0; top: 0; width: 100%; }
+          }
+        `}</style>
+        <div className="max-w-4xl mx-auto print-container print:w-full print:max-w-none">
+          <div className="flex justify-between items-center mb-8 border-b-2 border-black pb-4 no-print">
+            <h1 className="text-2xl font-bold">Relatório de Prioridades</h1>
+            <div className="space-x-4">
+              <button onClick={() => window.print()} className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700">🖨️ Imprimir PDF</button>
+              <button onClick={() => setPrintPriorities(null)} className="px-4 py-2 bg-slate-200 text-slate-800 rounded font-bold hover:bg-slate-300">Voltar</button>
+            </div>
+          </div>
+          
+          <div className="mb-8">
+            <h1 className="text-3xl font-black mb-2 uppercase">Relatório de Convocação (Turno Admin)</h1>
+            <p className="text-slate-600 font-medium text-lg">Turma: {selectedTreinamento?.nome}</p>
+            <p className="text-slate-500 mt-1">Gerado em: {new Date().toLocaleDateString('pt-BR')}</p>
+          </div>
+          
+          {sortedAreas.map((area) => (
+            <div key={area} className="mb-10 break-inside-avoid">
+              <div className="bg-slate-100 border-l-8 border-slate-800 px-4 py-2 mb-4">
+                <h2 className="text-xl font-bold uppercase">{area}</h2>
+              </div>
+              <table className="w-full text-sm text-left border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-slate-800">
+                    <th className="py-2 px-2 font-bold w-32 uppercase">Matrícula</th>
+                    <th className="py-2 px-2 font-bold uppercase">Colaborador</th>
+                    <th className="py-2 px-2 font-bold uppercase">Turno/Escala</th>
+                    <th className="py-2 px-2 font-bold uppercase text-center w-32">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grouped[area].map((p: any) => (
+                    <tr key={p._id} className="border-b border-slate-300">
+                      <td className="py-3 px-2 font-mono text-slate-600">{p._id}</td>
+                      <td className="py-3 px-2 font-bold">{p.nome}</td>
+                      <td className="py-3 px-2 text-xs">{p.turno || '-'}</td>
+                      <td className="py-3 px-2 text-center">
+                        <div className="border border-slate-400 rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider">
+                          Pendente
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1491,10 +1566,18 @@ export default function Treinamentos() {
                      
                         {prioridadeHoje.length > 0 && (
                           <div className="space-y-3">
-                            <h4 className="text-red-400 font-bold flex items-center gap-2 text-sm uppercase tracking-wider">
-                              <Target className="h-4 w-4 animate-pulse" /> 
-                              Prioridade Hoje (Estão no Turno Administrativo 08h-16h)
-                            </h4>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <h4 className="text-red-400 font-bold flex items-center gap-2 text-sm uppercase tracking-wider">
+                                <Target className="h-4 w-4 animate-pulse" /> 
+                                Prioridade Hoje (Estão no Turno Administrativo 08h-16h)
+                              </h4>
+                              <button 
+                                onClick={() => setPrintPriorities(prioridadeHoje)} 
+                                className="px-3 py-1.5 bg-red-950 text-red-300 hover:text-white hover:bg-red-900 rounded border border-red-900/50 text-xs font-bold flex items-center gap-2 transition-colors self-start sm:self-auto"
+                              >
+                                <FileText className="w-4 h-4" /> Relatório PDF (Por Área)
+                              </button>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                               {prioridadeHoje.map(d => (
                                 <div key={d._id} className="bg-red-950/20 border border-red-900/50 p-3 rounded-lg flex flex-col gap-1 ring-1 ring-red-500/20">
