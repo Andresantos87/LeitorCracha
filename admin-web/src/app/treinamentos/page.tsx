@@ -1791,7 +1791,7 @@ export default function Treinamentos() {
                     className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-sky-500 text-white font-medium appearance-none cursor-pointer pr-10 shadow-inner"
                   >
                     <option value="">Nenhum (Treinamento Aberto)</option>
-                    {publicosAlvo.filter(p => !p.treinamento_vinculado).map(p => (
+                    {publicosAlvo.filter(p => !p.treinamento_vinculado || p.id === createPublicoAlvoId).map(p => (
                       <option key={p.id} value={p.id}>{p.nome}</option>
                     ))}
                   </select>
