@@ -42,6 +42,8 @@ export default function Treinamentos() {
   // States para assinatura manual
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+  const [globalSearchTerm, setGlobalSearchTerm] = useState("");
   const [manualId, setManualId] = useState("");
   const [isManualSubmitting, setIsManualSubmitting] = useState(false);
   const [colabResults, setColabResults] = useState<any[]>([]);
@@ -420,6 +422,45 @@ export default function Treinamentos() {
     setCreateChecklistId("");
     setEditTurmaId(null);
     carregarTreinamentos();
+  };
+
+  const getGlobalSearchResults = () => {
+    if (!globalSearchTerm || globalSearchTerm.length < 3) return [];
+    const term = globalSearchTerm.toLowerCase();
+    const results: any[] = [];
+    
+    treinamentos.forEach(t => {
+       if (!t.publico_alvo_id) return;
+       const publico = publicosAlvo.find(p => p.id === t.publico_alvo_id);
+       if (!publico || !publico.matriculas_detalhes) return;
+       
+       const matches = publico.matriculas_detalhes.filter((det: any) => {
+          return (det.nome && det.nome.toLowerCase().includes(term)) || 
+                 (det._id && String(det._id).includes(term)) ||
+                 (det.identificador && String(det.identificador).includes(term)) ||
+                 (det.cod_cracha && String(det.cod_cracha).includes(term));
+       });
+       
+       matches.forEach((m: any) => {
+          results.push({
+             colaborador: m.nome,
+             matricula: m._id,
+             curso: t.nome,
+             turma: t.turma || t.nome,
+             status: t.status_encerrado ? "Encerrado" : "Aberto",
+             area: m.area || m.cargo || '-'
+          });
+       });
+    });
+    
+    // Remover duplicatas exatas caso existam
+    const unique = results.filter((value, index, self) =>
+      index === self.findIndex((t) => (
+        t.matricula === value.matricula && t.turma === value.turma && t.curso === value.curso
+      ))
+    );
+    
+    return unique;
   };
 
   const handleManualSubmit = async (e: React.FormEvent) => {
@@ -1093,7 +1134,15 @@ export default function Treinamentos() {
             </div>
             
             {/* Filtro: Curso e Facilitadores */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsGlobalSearchOpen(true)}
+                className="px-4 py-2 bg-slate-900/90 border border-slate-700 hover:bg-sky-900/50 hover:border-sky-500 text-sky-400 rounded-xl text-sm font-bold shadow-md transition-all flex items-center gap-2"
+              >
+                <Search className="h-4 w-4" />
+                <span className="hidden md:inline">Buscar Pessoa</span>
+              </button>
+
               <div className="relative">
                 <select
                   value={filterCurso}
@@ -2669,6 +2718,71 @@ export default function Treinamentos() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {isGlobalSearchOpen && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl p-6 shadow-2xl flex flex-col max-h-[85vh]">
+              <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Search className="h-6 w-6 text-sky-400" />
+                  Localizar Colaborador
+                </h2>
+                <button 
+                  onClick={() => { setIsGlobalSearchOpen(false); setGlobalSearchTerm(""); }} 
+                  className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="mb-6">
+                <input
+                  type="text"
+                  placeholder="Digite o nome, matrícula ou crachá..."
+                  value={globalSearchTerm}
+                  onChange={(e) => setGlobalSearchTerm(e.target.value)}
+                  autoFocus
+                  className="w-full px-5 py-4 bg-slate-950 border border-sky-500/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-lg shadow-inner"
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto min-h-0 pr-2 custom-scrollbar">
+                {globalSearchTerm.length > 0 && globalSearchTerm.length < 3 ? (
+                  <p className="text-center text-slate-500 py-10">Digite pelo menos 3 caracteres...</p>
+                ) : getGlobalSearchResults().length === 0 && globalSearchTerm.length >= 3 ? (
+                  <div className="text-center py-10 bg-slate-800/50 rounded-xl border border-slate-700">
+                    <p className="text-slate-400 text-lg">Nenhum colaborador encontrado com "{globalSearchTerm}".</p>
+                    <p className="text-slate-500 text-sm mt-2">Certifique-se de que ele foi adicionado a algum Público-Alvo.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {getGlobalSearchResults().map((res, i) => (
+                      <div key={i} className="bg-slate-800 p-4 rounded-xl border border-slate-700 hover:border-sky-500/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                          <h4 className="font-bold text-sky-400 text-lg uppercase">{res.colaborador}</h4>
+                          <div className="flex items-center gap-3 text-sm text-slate-400 mt-1">
+                            <span className="font-mono bg-slate-900 px-2 py-0.5 rounded border border-slate-700">{res.matricula}</span>
+                            <span>{res.area}</span>
+                          </div>
+                        </div>
+                        <div className="bg-slate-900 p-3 rounded-lg border border-slate-700/50 min-w-[250px]">
+                          <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Encontrado na turma:</div>
+                          <div className="font-bold text-slate-200">{res.turma}</div>
+                          <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
+                            <span>📁 {res.curso}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${res.status === 'Encerrado' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                              {res.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
