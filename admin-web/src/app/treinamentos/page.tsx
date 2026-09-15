@@ -1433,7 +1433,7 @@ export default function Treinamentos() {
             <div className="bg-slate-900/80 rounded-xl border border-amber-900/50 p-6 animate-in slide-in-from-top-4">
               <h3 className="font-bold text-amber-400 text-lg mb-4 flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                Matrículas Pendentes de Capacitação
+                Análise de Turnos e Capacitações (Lista Inteligente)
               </h3>
               <div className="w-full">
                 {(() => {
@@ -1441,9 +1441,11 @@ export default function Treinamentos() {
                    if (!publico) return null;
                    
                    const presencasMatriculas = presencas.map(p => p.identificador_lido);
-                   const pendentes = publico.matriculas.filter((m: string) => {
-                     const det = publico.matriculas_detalhes?.find((d:any) => d._id === m);
-                     return !presencasMatriculas.some(p => {
+                   const today = new Date();
+                   
+                   const allPeople = publico.matriculas.map((m: string) => {
+                     const det = publico.matriculas_detalhes?.find((d:any) => d._id === m) || { _id: m, nome: 'Desconhecido' };
+                     const isCapacitado = presencasMatriculas.some(p => {
                        const cleanP = String(p).replace(/^0+/, '');
                        const id1 = String(m).replace(/^0+/, '');
                        const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
@@ -1454,37 +1456,39 @@ export default function Treinamentos() {
                               (id2 && cleanP === id2) || 
                               (id3 && cleanP === id3);
                      });
-                   });
-                   
-                   if (pendentes.length === 0) {
-                     return (
-                        <span className="text-emerald-400 text-sm font-bold flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4" /> Todos os convocados foram capacitados!
-                        </span>
-                     );
-                   }
-                   
-                   // Enriquecer pendentes com status
-                   const today = new Date();
-                   const enriquecidos = pendentes.map((m: string) => {
-                     const det = publico.matriculas_detalhes?.find((d:any) => d._id === m) || { _id: m, nome: 'Desconhecido' };
+                     
                      const shiftName = extractShiftName(det.turno || '');
                      const shiftStatus = shiftName ? getShiftStatusForDate(shiftName, today) : null;
                      const nextAdminDate = shiftName && shiftStatus !== '8' ? getNextAvailableDate(shiftName, today, '08:00') : null;
                      
                      return {
                        ...det,
+                       isCapacitado,
                        shiftName,
                        shiftStatus,
                        nextAdminDate
                      };
                    });
                    
-                   const prioridadeHoje = enriquecidos.filter(d => d.shiftStatus === '8');
-                   const demais = enriquecidos.filter(d => d.shiftStatus !== '8');
+                   const pendentes = allPeople.filter(p => !p.isCapacitado);
+                   const prioridadeHoje = pendentes.filter(d => d.shiftStatus === '8');
+                   const demais = pendentes.filter(d => d.shiftStatus !== '8');
+                   const capacitadosAdminHoje = allPeople.filter(p => p.isCapacitado && p.shiftStatus === '8');
+                   
+                   if (allPeople.length === 0) {
+                     return <span className="text-slate-500">Nenhum convocado.</span>;
+                   }
                    
                    return (
                      <div className="space-y-6">
+                        {pendentes.length === 0 && (
+                          <div className="bg-emerald-950/20 border border-emerald-900/50 p-4 rounded-lg">
+                            <span className="text-emerald-400 text-sm font-bold flex items-center gap-2">
+                              <CheckCircle2 className="h-5 w-5" /> Todos os convocados foram capacitados!
+                            </span>
+                          </div>
+                        )}
+                     
                         {prioridadeHoje.length > 0 && (
                           <div className="space-y-3">
                             <h4 className="text-red-400 font-bold flex items-center gap-2 text-sm uppercase tracking-wider">
@@ -1496,6 +1500,26 @@ export default function Treinamentos() {
                                 <div key={d._id} className="bg-red-950/20 border border-red-900/50 p-3 rounded-lg flex flex-col gap-1 ring-1 ring-red-500/20">
                                   <strong className="text-red-300 text-sm truncate" title={d.nome}>{d.nome}</strong>
                                   <div className="flex justify-between items-center text-xs text-red-400/80">
+                                    <span className="font-mono">{d._id}</span>
+                                    {d.turno && <span className="truncate max-w-[120px]" title={d.turno}>{d.turno}</span>}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {capacitadosAdminHoje.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-emerald-400 font-bold flex items-center gap-2 text-sm uppercase tracking-wider opacity-80">
+                              <CheckCircle2 className="h-4 w-4" /> 
+                              Já Capacitados no Turno Admin Hoje (Sucesso!)
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {capacitadosAdminHoje.map(d => (
+                                <div key={d._id} className="bg-emerald-950/10 border border-emerald-900/30 p-3 rounded-lg flex flex-col gap-1 opacity-70 hover:opacity-100 transition-opacity">
+                                  <strong className="text-emerald-300/80 text-sm truncate" title={d.nome}>{d.nome}</strong>
+                                  <div className="flex justify-between items-center text-xs text-emerald-400/60">
                                     <span className="font-mono">{d._id}</span>
                                     {d.turno && <span className="truncate max-w-[120px]" title={d.turno}>{d.turno}</span>}
                                   </div>
