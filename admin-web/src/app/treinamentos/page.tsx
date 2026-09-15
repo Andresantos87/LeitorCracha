@@ -1274,7 +1274,7 @@ export default function Treinamentos() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          gerarPdfAdminHojeCurso(nomeCurso, turmasDoCurso);
+                          gerarPdfAdminHojeCurso(nomeCurso, turmasList);
                         }}
                         className="px-3 py-1.5 bg-red-950 hover:bg-red-900 text-red-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-red-900/50 flex items-center gap-1.5 shadow-sm"
                         title="Relatório PDF de Faltantes no Turno Administrativo de Hoje (Curso Completo)"
