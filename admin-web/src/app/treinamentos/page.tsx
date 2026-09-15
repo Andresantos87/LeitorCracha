@@ -497,7 +497,7 @@ export default function Treinamentos() {
           
           if (shiftStatus === '8') {
             if (!allPrioridades.find(x => x._id === det._id)) {
-              allPrioridades.push({ ...det, cursoNome: nomeCurso, turmaNome: t.nome });
+              allPrioridades.push({ ...det, cursoNome: nomeCurso, turmaNome: t.turma || t.nome });
             }
           }
         });
