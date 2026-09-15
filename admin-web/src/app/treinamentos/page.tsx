@@ -93,7 +93,7 @@ export default function Treinamentos() {
         });
       }
     }).catch(() => {});
-    fetch("/api/publicos-alvo").then(res => res.json()).then(json => {
+    fetch("/api/publicos-alvo?t=" + Date.now()).then(res => res.json()).then(json => {
       if (json.success) setPublicosAlvo(json.data);
     }).catch(() => {});
     fetch("/api/checklists").then(res => res.json()).then(json => {
