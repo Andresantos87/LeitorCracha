@@ -460,6 +460,107 @@ export default function Treinamentos() {
     setIsManualSubmitting(false);
   };
 
+  const gerarPdfAdminHojeCurso = async (nomeCurso: string, turmas: any[]) => {
+    const toastId = toast.loading("Calculando faltantes de todas as turmas do curso...");
+    try {
+      const today = new Date();
+      const allPrioridades = [];
+      
+      for (const t of turmas) {
+        if (!t.publico_alvo_id) continue;
+        const publico = publicosAlvo.find(p => p.id === t.publico_alvo_id);
+        if (!publico || !publico.matriculas_detalhes) continue;
+        
+        const res = await fetch(`/api/presencas?treinamentoId=${t.id}`);
+        const json = await res.json();
+        const presencasDaTurma = json.success ? json.data.map((p: any) => p.identificador_lido) : [];
+        
+        const pendentes = publico.matriculas.filter((m: string) => {
+          const det = publico.matriculas_detalhes.find((d:any) => d._id === m);
+          return !presencasDaTurma.some((p: string) => {
+            const cleanP = String(p).replace(/^0+/, '');
+            const id1 = String(m).replace(/^0+/, '');
+            const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
+            const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
+            return (cleanP && cleanP === id1) || 
+                   (cleanP && id1 && cleanP.endsWith(id1)) || 
+                   (id1 && cleanP && id1.endsWith(cleanP)) ||
+                   (id2 && cleanP === id2) || 
+                   (id3 && cleanP === id3);
+          });
+        });
+        
+        pendentes.forEach((m: string) => {
+          const det = publico.matriculas_detalhes.find((d:any) => d._id === m) || { _id: m, nome: 'Desconhecido' };
+          const shiftName = extractShiftName(det.turno || '');
+          const shiftStatus = shiftName ? getShiftStatusForDate(shiftName, today) : null;
+          
+          if (shiftStatus === '8') {
+            if (!allPrioridades.find(x => x._id === det._id)) {
+              allPrioridades.push({ ...det, cursoNome: nomeCurso, turmaNome: t.nome });
+            }
+          }
+        });
+      }
+      
+      toast.dismiss(toastId);
+      
+      if (allPrioridades.length === 0) {
+        toast.success("Não há pessoas do turno administrativo pendentes neste curso inteiro!");
+        return;
+      }
+      
+      setPrintPriorities(allPrioridades);
+    } catch(e) {
+      toast.dismiss(toastId);
+      toast.error("Erro ao gerar relatório.");
+    }
+  };
+
+  const gerarPdfAdminHoje = () => {
+    if (!selectedTreinamento || !selectedTreinamento.publico_alvo_id) {
+      toast.error("Este treinamento não tem um público-alvo vinculado.");
+      return;
+    }
+    const publico = publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id);
+    if (!publico || !publico.matriculas_detalhes) {
+      toast.error("Público-alvo não carregado.");
+      return;
+    }
+    
+    const presencasMatriculas = presencas.map(p => p.identificador_lido);
+    const today = new Date();
+    
+    const allPeople = publico.matriculas.map((m: string) => {
+      const det = publico.matriculas_detalhes?.find((d:any) => d._id === m) || { _id: m, nome: 'Desconhecido' };
+      const isCapacitado = presencasMatriculas.some(p => {
+        const cleanP = String(p).replace(/^0+/, '');
+        const id1 = String(m).replace(/^0+/, '');
+        const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
+        const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
+        return (cleanP && cleanP === id1) || 
+               (cleanP && id1 && cleanP.endsWith(id1)) || 
+               (id1 && cleanP && id1.endsWith(cleanP)) ||
+               (id2 && cleanP === id2) || 
+               (id3 && cleanP === id3);
+      });
+      
+      const shiftName = extractShiftName(det.turno || '');
+      const shiftStatus = shiftName ? getShiftStatusForDate(shiftName, today) : null;
+      return { ...det, isCapacitado, shiftName, shiftStatus };
+    });
+    
+    // Queremos apenas quem está no turno admin hoje (status '8') e ainda NÃO foi capacitado
+    const prioridades = allPeople.filter(p => !p.isCapacitado && p.shiftStatus === '8');
+    
+    if (prioridades.length === 0) {
+      toast.success("Não há pessoas do turno administrativo de hoje pendentes!");
+      return;
+    }
+    
+    setPrintPriorities(prioridades);
+  };
+
   const excluirPresenca = async (presencaId: string) => {
     if (!selectedId) return;
     setConfirmModal({
@@ -855,10 +956,23 @@ export default function Treinamentos() {
             </div>
           </div>
           
-          <div className="mb-8">
-            <h1 className="text-3xl font-black mb-2 uppercase">Relatório de Convocação (Turno Admin)</h1>
-            <p className="text-slate-600 font-medium text-lg">Turma: {selectedTreinamento?.nome}</p>
-            <p className="text-slate-500 mt-1">Gerado em: {new Date().toLocaleDateString('pt-BR')}</p>
+          <div className="mb-8 border-b-4 border-slate-900 pb-4 flex justify-between items-end">
+            <div>
+              <h1 className="text-3xl font-black mb-2 uppercase text-slate-900">
+                Relatório de Convocação <br/><span className="text-blue-700">Turno Administrativo</span>
+              </h1>
+              {printPriorities[0]?.cursoNome ? (
+                <p className="text-slate-700 font-bold text-xl">📁 Curso Completo: {printPriorities[0].cursoNome}</p>
+              ) : (
+                <p className="text-slate-700 font-bold text-xl">🎓 Turma: {selectedTreinamento?.nome}</p>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="inline-block border-4 border-red-600 text-red-600 px-4 py-2 rounded-lg transform rotate-[-3deg]">
+                <p className="text-xs font-bold uppercase tracking-wider mb-1">Válido apenas para hoje</p>
+                <p className="text-3xl font-black">{new Date().toLocaleDateString('pt-BR')}</p>
+              </div>
+            </div>
           </div>
           
           {sortedAreas.map((area) => (
@@ -872,15 +986,17 @@ export default function Treinamentos() {
                     <th className="py-2 px-2 font-bold w-32 uppercase">Matrícula</th>
                     <th className="py-2 px-2 font-bold uppercase">Colaborador</th>
                     <th className="py-2 px-2 font-bold uppercase">Turno/Escala</th>
+                    {printPriorities[0]?.cursoNome && <th className="py-2 px-2 font-bold uppercase">Sessão/Turma</th>}
                     <th className="py-2 px-2 font-bold uppercase text-center w-32">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {grouped[area].map((p: any) => (
-                    <tr key={p._id} className="border-b border-slate-300">
+                    <tr key={`${p._id}-${p.turmaNome || '1'}`} className="border-b border-slate-300">
                       <td className="py-3 px-2 font-mono text-slate-600">{p._id}</td>
                       <td className="py-3 px-2 font-bold">{p.nome}</td>
                       <td className="py-3 px-2 text-xs">{p.turno || '-'}</td>
+                      {printPriorities[0]?.cursoNome && <td className="py-3 px-2 text-xs font-semibold text-blue-800">{p.turmaNome || '-'}</td>}
                       <td className="py-3 px-2 text-center">
                         <div className="border border-slate-400 rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider">
                           Pendente
@@ -1154,16 +1270,18 @@ export default function Treinamentos() {
                         <Download className="h-3.5 w-3.5" />
                         <span className="hidden md:inline">Exportar Excel</span>
                       </button>
-                      {userRole === 'admin' && (
-                        <button 
-                          type="button"
-                          onClick={(e) => excluirPasta(nomeCurso, e)}
-                          className="p-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-lg transition-all border border-red-500/30 flex items-center justify-center shadow-sm"
-                          title={`Excluir curso completo (${nomeCurso}) e todas as turmas`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          gerarPdfAdminHojeCurso(nomeCurso, turmasDoCurso);
+                        }}
+                        className="px-3 py-1.5 bg-red-950 hover:bg-red-900 text-red-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-red-900/50 flex items-center gap-1.5 shadow-sm"
+                        title="Relatório PDF de Faltantes no Turno Administrativo de Hoje (Curso Completo)"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        <span className="hidden md:inline">Relatório PDF (Faltantes Admin)</span>
+                      </button>
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
                         {isExpanded ? "Ocultar turmas" : "Ver turmas"}
                       </span>
@@ -1473,6 +1591,15 @@ export default function Treinamentos() {
                   <span>Compartilhar / QR Code</span>
                 </button>
 
+                <button 
+                  onClick={gerarPdfAdminHoje}
+                  className="flex items-center space-x-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-red-900/20"
+                  title="Exportar faltantes que estão no turno admin hoje por Área"
+                >
+                  <FileText className="h-5 w-5" />
+                  <span>Gerar PDF Admin</span>
+                </button>
+
                 {checklist && checklist.length > 0 ? (
                   <button 
                     onClick={() => setIsChecklistModalOpen(true)}
@@ -1571,12 +1698,6 @@ export default function Treinamentos() {
                                 <Target className="h-4 w-4 animate-pulse" /> 
                                 Prioridade Hoje (Estão no Turno Administrativo 08h-16h)
                               </h4>
-                              <button 
-                                onClick={() => setPrintPriorities(prioridadeHoje)} 
-                                className="px-3 py-1.5 bg-red-950 text-red-300 hover:text-white hover:bg-red-900 rounded border border-red-900/50 text-xs font-bold flex items-center gap-2 transition-colors self-start sm:self-auto"
-                              >
-                                <FileText className="w-4 h-4" /> Relatório PDF (Por Área)
-                              </button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                               {prioridadeHoje.map(d => (
