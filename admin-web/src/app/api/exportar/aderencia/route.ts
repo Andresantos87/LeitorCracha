@@ -69,9 +69,8 @@ export async function GET(req: Request) {
         const ca = String(a).replace(/^0+/, '');
         const cb = String(b).replace(/^0+/, '');
         if (ca === cb) return true;
-        const no3100A = ca.startsWith('3100') ? ca.substring(4) : ca;
-        const no3100B = cb.startsWith('3100') ? cb.substring(4) : cb;
-        return no3100A === no3100B;
+        // Strip common prefixes or just check endsWith for robustness (like the UI does)
+        return (ca.length > 5 && cb.length > 5 && (ca.endsWith(cb) || cb.endsWith(ca)));
     };
 
     // Construir a lista de pessoas "Previstas" (Público-Alvo)

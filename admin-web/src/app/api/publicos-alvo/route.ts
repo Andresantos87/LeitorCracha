@@ -55,6 +55,8 @@ export async function GET() {
           _id: membro.matricula || membro, 
           nome: c ? c.nome : "Desconhecido",
           rol: membro.rol || "",
+          observacao: membro.observacao || "",
+          observacao_detalhe: membro.observacao_detalhe || "",
           identificador: c ? c.identificador : null,
           cod_cracha: c ? c.cod_cracha : null,
           turno: c ? c.turno : null,

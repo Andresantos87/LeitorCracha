@@ -57,7 +57,18 @@ export async function GET() {
         status_encerrado: data.status_encerrado || false,
         _count: {
           registros: count,
-          previstos: (data.publico_alvo_id && publicosMap[data.publico_alvo_id] && publicosMap[data.publico_alvo_id].matriculas) ? publicosMap[data.publico_alvo_id].matriculas.length : 0
+          previstos: (() => {
+            if (!data.publico_alvo_id || !publicosMap[data.publico_alvo_id] || !publicosMap[data.publico_alvo_id].matriculas) return 0;
+            const pub = publicosMap[data.publico_alvo_id];
+            const membros = pub.membros || pub.matriculas_detalhes || [];
+            let countExcluded = 0;
+            membros.forEach((m: any) => {
+              if ((m.observacao === 'Operador de Painel' || m.observacao === 'Treinamento Não Aplica')) {
+                countExcluded++;
+              }
+            });
+            return Math.max(0, pub.matriculas.length - countExcluded);
+          })()
         },
         publico_alvo_id: data.publico_alvo_id || null,
         facilitador_id: data.facilitador_id || null,

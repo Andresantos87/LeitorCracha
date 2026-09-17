@@ -1729,7 +1729,7 @@ export default function Treinamentos() {
                      
                      const shiftName = extractShiftName(det.turno || '');
                      const shiftStatus = shiftName ? getShiftStatusForDate(shiftName, today) : null;
-                     const nextAdminDate = shiftName && shiftStatus !== '8' ? getNextAvailableDate(shiftName, today, '08:00') : null;
+                     const nextAdminDate = shiftName ? getNextAvailableDate(shiftName, today, '08:00') : null;
                      
                      return {
                        ...det,
@@ -1750,7 +1750,7 @@ export default function Treinamentos() {
                    }
                    
                    return (
-                     <div className="space-y-6">
+                     <div className="space-y-6 mt-2 pb-4">
                         {pendentes.length === 0 && (
                           <div className="bg-emerald-950/20 border border-emerald-900/50 p-4 rounded-lg">
                             <span className="text-emerald-400 text-sm font-bold flex items-center gap-2">
@@ -1760,7 +1760,7 @@ export default function Treinamentos() {
                         )}
                      
                         {prioridadeHoje.length > 0 && (
-                          <div className="space-y-3">
+                          <div className="space-y-3 relative before:absolute before:inset-0 before:-z-10 before:bg-red-500/5 before:blur-xl before:rounded-3xl">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                               <h4 className="text-red-400 font-bold flex items-center gap-2 text-sm uppercase tracking-wider">
                                 <Target className="h-4 w-4 animate-pulse" /> 
@@ -1775,6 +1775,12 @@ export default function Treinamentos() {
                                     <span className="font-mono">{d._id}</span>
                                     {d.turno && <span className="truncate max-w-[120px]" title={d.turno}>{d.turno}</span>}
                                   </div>
+                                  {d.nextAdminDate && (
+                                    <div className="text-[10px] text-red-400/60 mt-1 flex items-center gap-1 font-medium bg-red-950/30 px-2 py-0.5 rounded w-fit">
+                                      <CalendarIcon className="w-3 h-3" />
+                                      Próximo admin: {d.nextAdminDate.toLocaleDateString('pt-BR')}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>

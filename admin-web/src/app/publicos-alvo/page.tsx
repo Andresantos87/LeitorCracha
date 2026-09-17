@@ -123,6 +123,7 @@ export default function PublicosAlvoPage() {
   const [filtroCargo, setFiltroCargo] = useState<string[]>([]);
   const [filtroGestor, setFiltroGestor] = useState<string[]>([]);
   const [filtroArea, setFiltroArea] = useState<string[]>([]);
+  const [filtroTabelaCargo, setFiltroTabelaCargo] = useState("");
   const [resultadosColab, setResultadosColab] = useState<any[]>([]);
   const [totalEncontrados, setTotalEncontrados] = useState(0);
   const [buscandoColab, setBuscandoColab] = useState(false);
@@ -261,7 +262,12 @@ export default function PublicosAlvoPage() {
     
     setIsSaving(true);
     const matriculas = selectedColaboradores.map(c => c.matricula || c._id);
-    const membros = selectedColaboradores.map(c => ({ matricula: c.matricula || c._id, rol: c.rol || "" }));
+    const membros = selectedColaboradores.map(c => ({ 
+      matricula: c.matricula || c._id, 
+      rol: c.rol || "",
+      observacao: c.observacao || "",
+      observacao_detalhe: c.observacao_detalhe || ""
+    }));
     
     try {
       const url = editId ? `/api/publicos-alvo/${editId}` : "/api/publicos-alvo";
@@ -354,6 +360,7 @@ export default function PublicosAlvoPage() {
     setDescricao(pub.descricao || "");
     setRolesDisponiveis(pub.roles_disponiveis || []);
     setCheckedColabs([]);
+    setFiltroTabelaCargo("");
     
     setIsModalOpen(true);
     setBuscandoColab(true);
@@ -369,7 +376,7 @@ export default function PublicosAlvoPage() {
         if (json.success) {
           const encontrados = json.data.map((c: any) => {
            const det = pub.matriculas_detalhes?.find((md: any) => md._id === (c.matricula || c._id));
-           return { ...c, rol: det?.rol || "" };
+           return { ...c, rol: det?.rol || "", observacao: det?.observacao || "", observacao_detalhe: det?.observacao_detalhe || "" };
         });
         
         const encontradosIds = new Set(encontrados.map((c: any) => c.matricula || c._id));
@@ -387,7 +394,9 @@ export default function PublicosAlvoPage() {
                nome: "Matrícula/ID: " + m, 
                cargo: "Não localizado no banco", 
                planta: "-",
-               rol: det?.rol || ""
+               rol: det?.rol || "",
+               observacao: det?.observacao || "",
+               observacao_detalhe: det?.observacao_detalhe || ""
              };
           });
           
@@ -457,10 +466,11 @@ export default function PublicosAlvoPage() {
   };
 
   const toggleAllColabsCheck = () => {
-    if (checkedColabs.length === selectedColaboradores.length) {
+    const visiveis = filtroTabelaCargo ? selectedColaboradores.filter(c => (c.cargo || "").replace(/^\d+\s*-\s*/, "") === filtroTabelaCargo) : selectedColaboradores;
+    if (checkedColabs.length === visiveis.length) {
       setCheckedColabs([]);
     } else {
-      setCheckedColabs(selectedColaboradores.map(c => c._id));
+      setCheckedColabs(visiveis.map(c => c._id));
     }
   };
 
@@ -643,15 +653,25 @@ export default function PublicosAlvoPage() {
                         <div className="flex justify-between items-center mb-1.5">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avanço da Turma</span>
                           <span className="text-[10px] font-bold text-blue-400">
-                            {pub.matriculas?.length > 0 
-                              ? Math.round(((pub.presencas_matriculas?.length || 0) / pub.matriculas.length) * 100) 
-                              : 0}%
+                            {(()=>{
+                              const membros = pub.membros || pub.matriculas_detalhes || [];
+                              const countExcluded = membros.filter(m => m.observacao === 'Operador de Painel' || m.observacao === 'Treinamento Não Aplica').length;
+                              const previstos = Math.max(0, (pub.matriculas?.length || 0) - countExcluded);
+                              const capacitados = pub.presencas_matriculas?.length || 0;
+                              return previstos > 0 ? Math.round((capacitados / previstos) * 100) : 0;
+                            })()}%
                           </span>
                         </div>
                         <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-700">
                           <div 
                             className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
-                            style={{ width: `${pub.matriculas?.length > 0 ? Math.round(((pub.presencas_matriculas?.length || 0) / pub.matriculas.length) * 100) : 0}%` }}
+                            style={{ width: ((()=>{
+                              const membros = pub.membros || pub.matriculas_detalhes || [];
+                              const countExcluded = membros.filter(m => m.observacao === 'Operador de Painel' || m.observacao === 'Treinamento Não Aplica').length;
+                              const previstos = Math.max(0, (pub.matriculas?.length || 0) - countExcluded);
+                              const capacitados = pub.presencas_matriculas?.length || 0;
+                              return previstos > 0 ? Math.round((capacitados / previstos) * 100) : 0;
+                            })()) + '%' }}
                           ></div>
                         </div>
                       </div>
@@ -659,11 +679,16 @@ export default function PublicosAlvoPage() {
                     
                     <div className="pt-4 border-t border-slate-700/50 flex items-center justify-between">
                       <span className="text-xs text-slate-500">
-                        Criado em: {new Date(pub.criado_em).toLocaleDateString()}
+                        Criado em:<br/>
+                        {new Date(pub.criado_em).toLocaleDateString('pt-BR')}
                       </span>
                       <span className="bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1.5">
                         <Users className="h-3 w-3" />
-                        {pub.matriculas.length} pessoas
+                        {(()=>{
+                          const membros = pub.membros || pub.matriculas_detalhes || [];
+                          const countExcluded = membros.filter(m => m.observacao === 'Operador de Painel' || m.observacao === 'Treinamento Não Aplica').length;
+                          return Math.max(0, (pub.matriculas?.length || 0) - countExcluded);
+                        })()} esperados
                       </span>
                     </div>
                   </div>
@@ -678,7 +703,7 @@ export default function PublicosAlvoPage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl max-w-6xl w-full h-[95vh] flex flex-col shadow-2xl overflow-hidden">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl w-[98vw] max-w-[1920px] h-[98vh] flex flex-col shadow-2xl overflow-hidden">
             
             <div className="px-5 py-3 border-b border-slate-700 flex flex-wrap gap-3 justify-between items-center bg-slate-900/80 shrink-0">
               <div className="flex items-center gap-3 flex-1 min-w-[300px]">
@@ -765,6 +790,19 @@ export default function PublicosAlvoPage() {
                   <div className="flex gap-2">
                     {selectedColaboradores.length > 0 && (
                       <>
+                        <div className="relative mr-4">
+                        <select
+                          value={filtroTabelaCargo}
+                          onChange={(e) => setFiltroTabelaCargo(e.target.value)}
+                          className="bg-slate-800 border border-slate-600 text-xs text-white px-3 py-1.5 rounded-md focus:outline-none focus:border-blue-500 appearance-none pr-8 cursor-pointer"
+                        >
+                          <option value="">Todos os Cargos</option>
+                          {Array.from(new Set(selectedColaboradores.map(c => (c.cargo || "").replace(/^\d+\s*-\s*/, '')).filter(Boolean))).sort().map(cargo => (
+                            <option key={cargo} value={cargo}>{cargo}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="h-3 w-3 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
                         <button 
                           onClick={copiarEmails}
                           className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-700/50 hover:bg-slate-600 rounded-md transition-colors border border-slate-600"
@@ -798,7 +836,7 @@ export default function PublicosAlvoPage() {
                             className={`px-3 py-1.5 text-xs font-medium rounded-md outline-none appearance-none pr-8 transition-colors ${checkedColabs.length > 0 ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 cursor-pointer" : "text-slate-500 bg-slate-800/50 border border-slate-700 cursor-not-allowed"}`}
                           >
                             <option value="" className="bg-slate-800 text-slate-300">
-                              {checkedColabs.length > 0 ? `Atribuir a ${checkedColabs.length} selecionado(s)...` : "Selecione pessoas para atribuir Rol..."}
+                              {checkedColabs.length > 0 ? `Atribuir Rol (${checkedColabs.length})...` : "Selecione p/ Rol..."}
                             </option>
                             {rolesDisponiveis.map(r => (
                               <option key={r} value={r} className="bg-slate-800 text-slate-200">{r}</option>
@@ -806,6 +844,38 @@ export default function PublicosAlvoPage() {
                           </select>
                           <ChevronDown className={`h-3 w-3 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${checkedColabs.length > 0 ? "text-emerald-400" : "text-slate-500"}`} />
                         </div>
+                        <div className="relative group">
+                          <select
+                            value=""
+                            onChange={(e) => {
+                              const obs = e.target.value;
+                              if (obs && checkedColabs.length > 0) {
+                                if (obs === "Remover Observação") {
+                                  setSelectedColaboradores(prev => prev.map(c => checkedColabs.includes(c._id) ? { ...c, observacao: "", observacao_detalhe: "" } : c));
+                                  toast.success(`Status removido de ${checkedColabs.length} pessoa(s)!`);
+                                } else {
+                                  setSelectedColaboradores(prev => prev.map(c => checkedColabs.includes(c._id) ? { ...c, observacao: obs, observacao_detalhe: obs === "Outros" ? c.observacao_detalhe : "" } : c));
+                                  toast.success(`Status '${obs}' aplicado a ${checkedColabs.length} pessoa(s)!`);
+                                }
+                                setCheckedColabs([]);
+                                e.target.value = "";
+                              }
+                            }}
+                            disabled={checkedColabs.length === 0}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md outline-none appearance-none pr-8 transition-colors ${checkedColabs.length > 0 ? "text-amber-400 bg-amber-500/10 border border-amber-500/20 cursor-pointer" : "text-slate-500 bg-slate-800/50 border border-slate-700 cursor-not-allowed"}`}
+                          >
+                            <option value="" className="bg-slate-800 text-slate-300">
+                              {checkedColabs.length > 0 ? `Atribuir Status (${checkedColabs.length})...` : "Atribuir Status..."}
+                            </option>
+                            <option value="Treinamento Não Aplica" className="bg-slate-800 text-slate-200">Treinamento Não Aplica</option>
+                            <option value="Operador de Painel" className="bg-slate-800 text-slate-200">Operador de Painel</option>
+                            <option value="Férias" className="bg-slate-800 text-slate-200">Férias</option>
+                            <option value="Afastamento" className="bg-slate-800 text-slate-200">Afastamento</option>
+                            <option value="Remover Observação" className="bg-slate-800 text-red-300">Remover Status</option>
+                          </select>
+                          <ChevronDown className={`h-3 w-3 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${checkedColabs.length > 0 ? "text-amber-400" : "text-slate-500"}`} />
+                        </div>
+
 
                         {selectedColaboradores.some(c => c.cargo === "Não localizado no banco") && (
                           <button 
@@ -850,7 +920,7 @@ export default function PublicosAlvoPage() {
                              <input 
                                type="checkbox" 
                                className="rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500/20 cursor-pointer"
-                               checked={selectedColaboradores.length > 0 && checkedColabs.length === selectedColaboradores.length}
+                               checked={selectedColaboradores.length > 0 && checkedColabs.length === (filtroTabelaCargo ? selectedColaboradores.filter(c => (c.cargo || "").replace(/^\d+\s*-\s*/, "") === filtroTabelaCargo).length : selectedColaboradores.length)}
                                onChange={toggleAllColabsCheck}
                              />
                            </th>
@@ -862,12 +932,13 @@ export default function PublicosAlvoPage() {
                            <th className="px-2 py-2 whitespace-nowrap">E-mail</th>
                            <th className="px-2 py-2 whitespace-nowrap">Planta / Empresa</th>
                            <th className="px-2 py-2 whitespace-nowrap w-24">Papel / Rol</th>
+                           <th className="px-2 py-2 whitespace-nowrap w-32">Status (Exceção)</th>
                            {editTreinamentoVinculado && <th className="px-2 py-2 text-center whitespace-nowrap w-20">Presença</th>}
                            <th className="px-2 py-2 text-center whitespace-nowrap w-12">Remover</th>
                          </tr>
                        </thead>
                        <tbody className="divide-y divide-slate-700/50">
-                         {selectedColaboradores.map(colab => {
+                         {(filtroTabelaCargo ? selectedColaboradores.filter(c => (c.cargo || "").replace(/^\d+\s*-\s*/, "") === filtroTabelaCargo) : selectedColaboradores).map(colab => {
                            const isPresente = editPresencas.some(p => {
                              const cleanP = String(p).replace(/^0+/, '');
                              const id1 = String(colab._id || '').replace(/^0+/, '');
@@ -919,6 +990,21 @@ export default function PublicosAlvoPage() {
                                    <ChevronDown className="h-3 w-3 text-slate-400 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
                                  </div>
                                </td>
+                               <td className="px-2 py-1 text-center">
+                                 {colab.observacao ? (
+                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                                      colab.observacao === "Treinamento Não Aplica" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" :
+                                      colab.observacao === "Férias" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
+                                      colab.observacao === "Afastamento" ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                                      "bg-slate-700 text-slate-300"
+                                    }`}>
+                                      {colab.observacao}
+                                    </span>
+                                 ) : (
+                                    <span className="text-[10px] text-slate-600">-</span>
+                                 )}
+                               </td>
+
                                {editTreinamentoVinculado && (
                                  <td className="px-2 py-1 text-center">
                                    {isPresente ? (

@@ -14,6 +14,7 @@ export function Sidebar({ role, userName }: { role?: string; userName?: string }
 
   const allItems = [
     { name: t.dashboard, path: "/", roles: ["admin", "gestor"] },
+    { name: "Visão Geral (OnePage)", path: "/onepage", roles: ["admin", "gestor"] },
     { name: t.treinamentos, path: "/treinamentos", roles: ["admin", "gestor"] },
     { name: t.checklists, path: "/checklists", roles: ["admin", "gestor"] },
     { name: "Calendário", path: "/calendario", roles: ["admin", "gestor", "leitor"] },
