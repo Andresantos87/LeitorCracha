@@ -1,13 +1,168 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { PieChart, Activity, Users, Target, CheckCircle, Wrench, Settings } from "lucide-react";
+import { PieChart, Activity, Users, Target, CheckCircle, Wrench, Settings, UploadCloud, Download } from "lucide-react";
+import PTChart from "./components/PTChart";
+import PTBaselineChart from "./components/PTBaselineChart";
+import PTMonthlyChart from "./components/PTMonthlyChart";
+import * as XLSX from "xlsx";
 
 export default function OnePageDashboard() {
   const [loading, setLoading] = useState(true);
   const [treinamentos, setTreinamentos] = useState<any[]>([]);
   const [filterPais, setFilterPais] = useState("");
   const [filterCurso, setFilterCurso] = useState("");
+  const [ptMonthlyData, setPtMonthlyData] = useState<any[]>([]);
+  const [ptRawData, setPtRawData] = useState<any[]>([]);
+  const [filtroPlantaPt, setFiltroPlantaPt] = useState<"Todas" | "Guaíba" | "Santa Fe">("Todas");
+  const [filtroAreaPt, setFiltroAreaPt] = useState<string>("Todas");
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      if (typeof bstr !== "string" && !(bstr instanceof ArrayBuffer)) return;
+      const wb = XLSX.read(bstr, { type: "binary" });
+      let data: any[] = [];
+        // Acha a aba que tem os dados de verdade (procura por "Estado" ou "Solicitante")
+        for (const sheetName of wb.SheetNames) {
+            const sheetData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+            if (sheetData.length > 0 && Object.keys(sheetData[0]).length > 10) {
+                data = sheetData;
+                break;
+            }
+        }
+        if (data.length === 0) {
+            data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        }
+        const blacklist = ["boxboard", "andre.santos", "ansantos", "regis", "mariele", "nidio", "maldonado", "escobar"];
+        const validStatuses = ["Fechado", "Liberado para Execução"];
+        
+        const cleanedData = data.filter((row: any) => {
+            const solicitante = (row['Solicitante'] || "").toLowerCase();
+            const isBlacklisted = blacklist.some(bad => solicitante.includes(bad));
+            const isValidStatus = validStatuses.includes(row['Estado']);
+            
+            return !isBlacklisted && isValidStatus;
+        });
+        
+        setPtRawData(cleanedData);
+      setLastSyncTime(new Date().toLocaleTimeString());
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  
+  
+  // Mapeamento inteligente de áreas
+    const normalizeArea = (rawArea: string) => {
+        if (!rawArea) return 'Outros';
+        const a = rawArea.toUpperCase();
+        
+        // Pátio de Madeiras
+        if (a.includes('PATIO') || a.includes('PÁTIO') || a.includes('CAVACO') || a.includes('MADEIRA') || a.includes('ASTIL') || a.includes('MADERAS') || a.includes('ROLLIZOS')) {
+            return 'Pátio';
+        }
+        // Caustificação
+        if (a.includes('CAUST')) {
+            return 'Caustif.';
+        }
+        // Caldeira de Recuperação
+        if (a.includes('RECUP') || a.includes('CR3')) {
+            return 'CR';
+        }
+        // Linha de Fibras
+        if (a.includes('FIBRA') || a.includes('BRANQ') || a.includes('BLANQ') || a.includes('LAVADO') || a.includes('DIG.CONT') || a.includes('PULPA') || a.includes('CELULOSE')) {
+            return 'L. Fibras';
+        }
+        // Águas / Efluentes (ETA, ETE)
+        if (a.includes('ETA') || a.includes('ETE') || a.includes('ÁGUA') || a.includes('AGUA') || a.includes('EFLUENTE') || a.includes('DESMINERALIZA')) {
+            return 'Águas';
+        }
+        // Energia
+        if (a.includes('ENERGIA') || a.includes('BIOMAS') || a.includes('UTILIDADES')) {
+            return 'Energia';
+        }
+        // Secagem
+        if (a.includes('SECAGEM') || a.includes('SECADO')) {
+            return 'Secagem';
+        }
+        // Planta Química
+        if (a.includes('QUIM') || a.includes('QUÍM') || a.includes('CLORO') || a.includes('SODA')) {
+            return 'Pl. Quím.';
+        }
+        // Defapa
+        if (a.includes('DEFAPA')) {
+            return 'Defapa';
+        }
+        
+        // Se não for nenhuma das principais, retorna o nome limpo e resumido
+        let clean = rawArea.trim();
+        if (clean.length > 15) clean = clean.substring(0, 15) + '...';
+        return clean;
+    };
+
+  const filteredPtMonthlyData = useMemo(() => {
+    if (ptRawData.length === 0) return [];
+    
+    let filteredData = ptRawData;
+    if (filtroPlantaPt !== "Todas") {
+       filteredData = filteredData.filter(r => r["Planta"] === filtroPlantaPt || r["Planta"] === (filtroPlantaPt === "Guaíba" ? "Guaiba" : "Santa Fe"));
+    }
+    if (filtroAreaPt !== "Todas") {
+       filteredData = filteredData.filter(r => normalizeArea(r['Área de operación']) === filtroAreaPt);
+    }
+
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    let countsByMonth: Record<string, number> = {};
+    monthNames.forEach(m => countsByMonth[m] = 0);
+
+    filteredData.forEach((row: any) => {
+        const d = row['Fecha de inicio'] || row['Fecha de creación'] || row['Data de Início'];
+        if (d) {
+            const parts = d.split('/');
+            if (parts.length >= 2) {
+                const m = parseInt(parts[1], 10) - 1;
+                if(m >= 0 && m < 12) {
+                    countsByMonth[monthNames[m]]++;
+                }
+            }
+        }
+    });
+
+    return monthNames.map(mes => ({ mes, pt: countsByMonth[mes] }))
+        .filter(d => d.pt > 0 || monthNames.indexOf(d.mes) <= new Date().getMonth());
+  }, [ptRawData, filtroPlantaPt, filtroAreaPt]);
+
+  const filteredPtAreaChartData = useMemo(() => {
+    if (ptRawData.length === 0) return [];
+    
+    let filteredData = ptRawData;
+    if (filtroPlantaPt !== "Todas") {
+       filteredData = ptRawData.filter(r => r["Planta"] === filtroPlantaPt || r["Planta"] === (filtroPlantaPt === "Guaíba" ? "Guaiba" : "Santa Fe"));
+    }
+
+    
+
+    const areas: Record<string, number> = {
+        "L. Fibras": 0, "Pátio": 0, "Caustif.": 0, "CR": 0, "Secagem": 0, "Águas": 0, "Defapa": 0, "Pl. Quím.": 0, "Energia": 0
+    };
+    filteredData.forEach((r: any) => {
+        let a = r['Área de operación'];
+        const normalized = normalizeArea(a);
+        areas[normalized] = (areas[normalized] || 0) + 1;
+    });
+
+    return Object.keys(areas)
+        .map(area => ({ area, pt: areas[area] }))
+        // Não filtramos mais com slice(0, 9) pra garantir que mostre as 9 + Outros + Não informada se tiverem
+        .sort((a,b) => b.pt - a.pt);
+  }, [ptRawData, filtroPlantaPt]);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -54,7 +209,7 @@ export default function OnePageDashboard() {
       const previstos = t._count?.previstos || 0;
       const registros = t._count?.registros || 0;
       
-      totalEsperado += previstos;
+      if (t.esperado_manual !== undefined && t.esperado_manual !== null) { totalEsperado += t.esperado_manual; } else { totalEsperado += previstos; }
       totalCapacitados += registros;
       
       if (!t.status_encerrado) {
@@ -119,6 +274,47 @@ export default function OnePageDashboard() {
     );
   }
 
+  
+  const gerarPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const { toJpeg } = await import('html-to-image');
+      
+      const doc = new jsPDF('p', 'mm', 'a4');
+      doc.setFontSize(18);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Relatório de Adoção: ${filterCurso || 'Geral'}`, 14, 20);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`País: ${filterPais || 'Todos'} | Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 26);
+      
+      let currentY = 35;
+      
+      const captureAndAdd = async (id) => {
+         const el = document.getElementById(id);
+         if (!el) return;
+         if (currentY > 200) { doc.addPage(); currentY = 20; }
+         
+         const imgData = await toJpeg(el, { quality: 0.9, backgroundColor: '#020617', pixelRatio: 2 });
+         const imgProps = doc.getImageProperties(imgData);
+         const pdfWidth = 190;
+         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+         doc.addImage(imgData, 'JPEG', 10, currentY, pdfWidth, pdfHeight);
+         currentY += pdfHeight + 10;
+      };
+      
+      await captureAndAdd('chart-monthly');
+      await captureAndAdd('chart-baseline-1');
+      await captureAndAdd('chart-baseline-2');
+      
+      doc.save(`Relatorio_Visao_Geral.pdf`);
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao gerar PDF com gráficos.');
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       {/* Header */}
@@ -135,6 +331,14 @@ export default function OnePageDashboard() {
         
         {/* Filtros */}
         <div className="flex items-center gap-2 flex-wrap">
+            <button 
+              onClick={gerarPDF}
+              className="bg-sky-600/20 hover:bg-sky-500 text-sky-400 hover:text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 text-xs border border-sky-500/30 shadow-lg transition-all"
+            >
+              <Download className="h-4 w-4" />
+              Gerar PDF (Resumo)
+            </button>
+
           <select 
             value={filterCurso} 
             onChange={(e) => setFilterCurso(e.target.value)} 
@@ -207,7 +411,78 @@ export default function OnePageDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            {/* Upload Excel Section */}
+      <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mt-8">
+        <div>
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <UploadCloud className="h-5 w-5 text-emerald-400" /> Upload de Planilha PT
+          </h3>
+          <p className="text-sm text-slate-400">Faça o upload da planilha Excel (PT_Digital...) para gerar os gráficos.</p>
+        </div>
+        <div className="flex items-center gap-4">
+          {lastSyncTime && (
+            <span className="text-slate-400 text-sm">
+              Última atualização: <strong className="text-white">{lastSyncTime}</strong>
+            </span>
+          )}
+          <div className="relative">
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleFileUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+            <button className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-6 rounded-xl transition-colors shadow-lg shadow-emerald-900/20 flex items-center gap-2">
+              <UploadCloud className="h-4 w-4" />
+              Subir Planilha
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start mt-8">
+          <PTBaselineChart planta="Guaíba" />
+          <PTBaselineChart planta="Santa Fe" />
+        </div>
+            <div className="grid grid-cols-1 gap-8 items-start mt-8">
+        
+        {ptRawData.length > 0 ? (
+          <div className="flex flex-col h-full">
+            <div className="flex gap-2 mb-4 justify-end">
+              <button 
+                onClick={() => setFiltroPlantaPt("Todas")}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors ${filtroPlantaPt === "Todas" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}
+              >
+                Todas
+              </button>
+              <button 
+                onClick={() => setFiltroPlantaPt("Guaíba")}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors ${filtroPlantaPt === "Guaíba" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}
+              >
+                Planta Guaíba
+              </button>
+              <button 
+                onClick={() => setFiltroPlantaPt("Santa Fe")}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors ${filtroPlantaPt === "Santa Fe" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}
+              >
+                Planta Santa Fe
+              </button>
+            </div>
+            <PTMonthlyChart 
+              monthlyData={filteredPtMonthlyData} 
+              filtroPlantaPt={filtroPlantaPt}
+              filtroAreaPt={filtroAreaPt}
+              setFiltroAreaPt={setFiltroAreaPt}
+              areasDisponiveis={filteredPtAreaChartData.map((d: any) => d.area)}
+            />
+          </div>
+        ) : (
+          <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col items-center justify-center w-full h-full min-h-[300px] max-w-4xl mx-auto">
+             <UploadCloud className="h-12 w-12 text-slate-700 mb-4" />
+             <p className="text-slate-500 font-medium text-center">Faça o upload da planilha<br/>para visualizar os dados.</p>
+          </div>
+        )}
+      </div>
+      <div className="grid grid-cols-1 gap-8 items-start mt-8">
         {/* Avanço por Área */}
         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl flex flex-col">
           <div className="p-6 border-b border-slate-800 sticky top-0 bg-slate-900/90 backdrop-blur z-10 rounded-t-2xl">
@@ -303,38 +578,8 @@ export default function OnePageDashboard() {
           </div>
         </div>
 
-        {/* Desempenho das Turmas */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl flex flex-col">
-          <div className="p-6 border-b border-slate-800 sticky top-0 bg-slate-900/90 backdrop-blur z-10 rounded-t-2xl">
-            <h3 className="text-lg font-bold text-white">Desempenho das Turmas (Recentes)</h3>
-            <p className="text-sm text-slate-400">Aderência por turma individual</p>
-          </div>
-          <div className="p-6 space-y-4">
-            {stats.turmasArray.map((turma, idx) => (
-              <div key={idx} className="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl flex items-center justify-between">
-                <div>
-                  <h4 className="font-bold text-sky-400 text-sm">{turma.nome}</h4>
-                  <p className="text-[10px] text-slate-500 mb-1 tracking-wider uppercase">{turma.curso}</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {turma.isEncerrado ? (
-                      <span className="text-emerald-400 font-bold">Turma Encerrada</span>
-                    ) : (
-                      <><span className="text-rose-400 font-bold">{turma.faltantes}</span> faltantes</>
-                    )}
-                  </p>
-                </div>
-                <div className="text-right flex flex-col items-end">
-                  <span className={`text-xl font-black ${
-                    turma.avanco >= 80 ? 'text-emerald-400' : 
-                    turma.avanco >= 50 ? 'text-sky-400' : 'text-rose-400'
-                  }`}>{turma.avanco}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
 
+      </div>
     </div>
   );
 }

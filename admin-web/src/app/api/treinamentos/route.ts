@@ -55,6 +55,7 @@ export async function GET() {
         data: data.data?.toDate()?.toISOString() || new Date().toISOString(),
         instrutor_email: data.instrutor_email,
         status_encerrado: data.status_encerrado || false,
+          esperado_manual: data.esperado_manual !== undefined ? data.esperado_manual : null,
         _count: {
           registros: count,
           previstos: (() => {
@@ -93,7 +94,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nome, instrutor_email, turma, pais = 'BRASIL', planta = '', publico_alvo_id, checklistTemplateId, facilitador_id, facilitador_nome, data_agendada, horario_agendado, carga_horaria, status_agenda } = body;
+    const { nome, instrutor_email, turma, pais = 'BRASIL', planta = '', publico_alvo_id, esperado_manual, checklistTemplateId, facilitador_id, facilitador_nome, data_agendada, horario_agendado, carga_horaria, status_agenda } = body;
     
     if (!nome) return NextResponse.json({ success: false, error: "Nome é obrigatório" }, { status: 400 });
 
@@ -126,6 +127,7 @@ export async function POST(req: Request) {
       checklist_dinamico
     };
     if (publico_alvo_id) docData.publico_alvo_id = publico_alvo_id;
+    if (esperado_manual) docData.esperado_manual = esperado_manual;
     if (facilitador_id) docData.facilitador_id = facilitador_id;
     if (facilitador_nome) docData.facilitador_nome = facilitador_nome;
     if (data_agendada) docData.data_agendada = data_agendada;

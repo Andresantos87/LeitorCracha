@@ -76,6 +76,10 @@ export default function Treinamentos() {
   const [selectedTurmaToAssign, setSelectedTurmaToAssign] = useState("");
   const [checklistTemplates, setChecklistTemplates] = useState<any[]>([]);
   const [createChecklistId, setCreateChecklistId] = useState("");
+  const [createEsperadoManual, setCreateEsperadoManual] = useState("");
+  const [editCursoNome, setEditCursoNome] = useState("");
+  const [cursoEsperadoManual, setCursoEsperadoManual] = useState("");
+  const [isCursoModalOpen, setIsCursoModalOpen] = useState(false);
   const [assignChecklistId, setAssignChecklistId] = useState("");
 
   useEffect(() => {
@@ -380,7 +384,37 @@ export default function Treinamentos() {
     setCreatePais(turma.pais || "BRASIL");
     setCreatePlanta(turma.planta || "GUAÍBA (RAINBOW)");
     setCreatePublicoAlvoId(turma.publico_alvo_id || "");
+      setCreateEsperadoManual(turma.esperado_manual ? String(turma.esperado_manual) : "");
     setIsModalOpen(true);
+  };
+
+  const handleCursoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+        const turmasDoCurso = treinamentos.filter(t => t.nome === editCursoNome);
+        if (turmasDoCurso.length === 0) return;
+        
+        const valorTotal = cursoEsperadoManual ? parseInt(cursoEsperadoManual) : null;
+        
+        // Aplica o valor na primeira turma e 0 nas demais para não somar duplicado no painel
+        for (let i = 0; i < turmasDoCurso.length; i++) {
+             const val = i === 0 ? valorTotal : (valorTotal !== null ? 0 : null);
+             await fetch('/api/treinamentos/' + turmasDoCurso[i].id, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ esperado_manual: val })
+             });
+        }
+        
+        toast.success("Meta do curso atualizada com sucesso!");
+        setIsCursoModalOpen(false);
+        setTimeout(() => window.location.reload(), 1000);
+    } catch(err) {
+        toast.error("Erro ao atualizar curso.");
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -398,7 +432,8 @@ export default function Treinamentos() {
           turma: turmaTreinamento, 
           pais: createPais, 
           planta: createPlanta, 
-          publico_alvo_id: createPublicoAlvoId || null
+          publico_alvo_id: createPublicoAlvoId || null,
+            esperado_manual: createEsperadoManual ? parseInt(createEsperadoManual) : null
         })
       });
     } else {
@@ -413,6 +448,7 @@ export default function Treinamentos() {
           planta: createPlanta, 
           instrutor_email: "Admin Local",
           publico_alvo_id: createPublicoAlvoId || undefined,
+            esperado_manual: createEsperadoManual ? parseInt(createEsperadoManual) : null,
           checklistTemplateId: createChecklistId || undefined
         })
       });
@@ -908,9 +944,17 @@ export default function Treinamentos() {
       });
     };
 
-    const pendentes = publico.matriculas.filter((m: string) => !checkIsPresente(m));
-    const capacitados = publico.matriculas.filter((m: string) => checkIsPresente(m));
-    const total = publico.matriculas.length;
+    const checkIsNaoAplica = (m: string) => {
+      const det = publico.matriculas_detalhes?.find((d:any) => d._id === m);
+      return det?.observacao === "Não se aplica";
+    };
+
+    // Filtra apenas as matrículas que SE APLICAM para entrar no cálculo
+    const matriculasValidas = publico.matriculas.filter((m: string) => !checkIsNaoAplica(m));
+
+    const pendentes = matriculasValidas.filter((m: string) => !checkIsPresente(m));
+    const capacitados = matriculasValidas.filter((m: string) => checkIsPresente(m));
+    const total = matriculasValidas.length;
     const progresso = total > 0 ? Math.round((capacitados.length / total) * 100) : 0;
     
     return (
@@ -947,7 +991,9 @@ export default function Treinamentos() {
 
         {showPending && publico.matriculas_detalhes && (
           <div className="mt-4 max-h-60 overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-700">
-            {publico.matriculas_detalhes.map((detalhe: any) => {
+            {publico.matriculas_detalhes
+              .filter((detalhe: any) => detalhe.observacao !== "Não se aplica")
+              .map((detalhe: any) => {
               const isCapacitado = checkIsPresente(detalhe._id);
               return (
                 <div key={detalhe._id} className="flex justify-between items-center p-2 bg-slate-900 rounded-lg border border-slate-800">
@@ -1310,6 +1356,25 @@ export default function Treinamentos() {
                         >
                           <QrCode className="h-4 w-4" />
                           <span className="hidden sm:inline">QR Code Geral</span>
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditCursoNome(nomeCurso);
+                            const tCurso = treinamentos.filter(t => t.nome === nomeCurso);
+                            if (tCurso.length > 0 && tCurso[0].esperado_manual !== undefined && tCurso[0].esperado_manual !== null) {
+                                setCursoEsperadoManual(String(tCurso[0].esperado_manual));
+                            } else {
+                                setCursoEsperadoManual("");
+                            }
+                            setIsCursoModalOpen(true);
+                          }}
+                          className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-amber-500/30 flex items-center gap-1.5 shadow-sm"
+                          title="Configurar Meta Global do Curso"
+                        >
+                          <Target className="h-3.5 w-3.5" />
+                          <span className="hidden md:inline">Meta do Curso</span>
                         </button>
                         <button 
                           type="button"
@@ -1905,11 +1970,10 @@ export default function Treinamentos() {
                         className="bg-slate-900 border border-slate-700 text-white rounded-lg px-3 py-1.5 text-sm outline-none focus:border-emerald-500 max-w-[200px]"
                       >
                         <option value="">Selecione a Turma...</option>
-                        {treinamentos.filter(t => {
-                          const curr = treinamentos.find(x => x.id === selectedId);
-                          return curr && t.nome === curr.nome && t.id !== selectedId;
-                        }).map(t => (
-                          <option key={t.id} value={t.id}>{t.turma || "Principal"}</option>
+                        {treinamentos.filter(t => t.id !== selectedId).map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.nome} {t.turma ? `- ${t.turma}` : ""}
+                          </option>
                         ))}
                       </select>
                       <button
@@ -2798,7 +2862,57 @@ export default function Treinamentos() {
           </div>
         )}
 
-        <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
+        
+      {isCursoModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setIsCursoModalOpen(false)}></div>
+          <div className="relative bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900 z-10 rounded-t-2xl">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Target className="h-6 w-6 text-amber-400" />
+                  Meta Global do Curso
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Defina o esperado para <strong className="text-white">{editCursoNome}</strong></p>
+              </div>
+              <button onClick={() => setIsCursoModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleCursoSubmit} className="p-6 space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Total Esperado Global
+                </label>
+                <input 
+                  type="number"
+                  required
+                  value={cursoEsperadoManual}
+                  onChange={e => setCursoEsperadoManual(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 text-white font-medium"
+                  placeholder="Ex: 500"
+                />
+                <p className="text-[11px] text-slate-400 leading-relaxed mt-2">
+                  O sistema aplicará esse número global ao curso todo, substituindo as contagens individuais de todas as turmas desta pasta no painel Dashboard.
+                </p>
+              </div>
+              
+              <div className="pt-4 flex justify-end gap-3">
+                <button type="button" onClick={() => setIsCursoModalOpen(false)} className="px-4 py-2 text-slate-300 hover:text-white font-medium transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold shadow-lg transition-colors flex items-center gap-2 disabled:opacity-50">
+                  {isSubmitting ? <Clock className="h-4 w-4 animate-spin" /> : <Target className="h-4 w-4" />}
+                  Salvar Meta
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
     </div>
   );
 }

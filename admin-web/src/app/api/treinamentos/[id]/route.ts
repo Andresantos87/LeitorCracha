@@ -20,6 +20,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (body.pais !== undefined) updates.pais = body.pais;
     if (body.planta !== undefined) updates.planta = body.planta;
     if (body.publico_alvo_id !== undefined) updates.publico_alvo_id = body.publico_alvo_id;
+    if (body.esperado_manual !== undefined) updates.esperado_manual = body.esperado_manual;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: "Nenhum campo para atualizar" }, { status: 400 });
