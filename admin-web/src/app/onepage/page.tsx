@@ -378,8 +378,16 @@ export default function OnePageDashboard() {
           b.setAttribute('fill', '#cbd5e1'); // light slate for the PDF background
       });
       
-      // Wait a tiny bit for styles to apply
-      await new Promise(r => setTimeout(r, 100));
+      // Expandir textareas para caber todo o conteudo no PDF
+        const textareas = Array.from(el.querySelectorAll('textarea'));
+        const originalTaHeights = textareas.map(ta => ta.style.height);
+        textareas.forEach(ta => {
+            ta.style.height = 'auto'; // reseta
+            ta.style.height = ta.scrollHeight + 'px'; // estica pra caber o conteudo real
+        });
+        
+        // Wait a tiny bit for styles to apply
+        await new Promise(r => setTimeout(r, 100));
       
       const imgData = await toJpeg(el, { 
           quality: 0.95, 
@@ -390,6 +398,11 @@ export default function OnePageDashboard() {
       
       
       el.classList.remove('pdf-mode');
+        
+        // Restaurar textareas
+        textareas.forEach((ta, i) => {
+            ta.style.height = originalTaHeights[i];
+        });
       
       // Restore SVGs
       svgTexts.forEach((t, i) => {
