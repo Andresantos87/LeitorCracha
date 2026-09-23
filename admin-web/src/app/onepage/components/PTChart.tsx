@@ -15,44 +15,17 @@ import {
   Cell
 } from 'recharts';
 
-interface PTBaselineChartProps {
-  planta: "Guaíba" | "Santa Fe";
+interface PTChartProps {
+  chartData: { area: string; pt: number }[];
+  title: string;
 }
 
-const baselineGuaibaData = [
-  { area: "L. Fibras", pt: 210 },
-  { area: "Pátio", pt: 188 },
-  { area: "Caustif.", pt: 174 },
-  { area: "CR", pt: 137 },
-  { area: "Secagem", pt: 91 },
-  { area: "Águas", pt: 72 },
-  { area: "Defapa", pt: 57 },
-  { area: "Pl. Quím.", pt: 47 },
-  { area: "Energia", pt: 38 },
-];
-
-const baselineSantaFeData = [
-  { area: "Pl. Quím.", pt: 60 },
-  { area: "Pátio", pt: 60 },
-  { area: "CR", pt: 55 },
-  { area: "Secagem", pt: 50 },
-  { area: "L. Fibras", pt: 50 },
-  { area: "Energia", pt: 45 },
-];
-
-export default function PTBaselineChart({ planta }: PTBaselineChartProps) {
-  const isGuaiba = planta === "Guaíba";
-  const rawData = isGuaiba ? baselineGuaibaData : baselineSantaFeData;
-  const meta = isGuaiba ? 506 : 160;
-
+export default function PTChart({ chartData, title }: PTChartProps) {
   const data = useMemo(() => {
     let cumulative = 0;
-    // Sort array by PT descending just to be safe
-    const sorted = [...rawData].sort((a, b) => b.pt - a.pt);
-    
-    return sorted.map((item, index) => {
+    return chartData.map((item, index) => {
       cumulative += item.pt;
-      // Define colors dynamically based on thirds/sections
+      /* First 3 (orange), next 2 (dark green), last 4 (light green) */
       let color = "#f25c32"; // Laranja
       if (index >= 3 && index <= 4) color = "#1a362d"; // Verde escuro
       if (index > 4) color = "#7da559"; // Verde claro
@@ -63,14 +36,23 @@ export default function PTBaselineChart({ planta }: PTBaselineChartProps) {
         color
       };
     });
-  }, [rawData]);
+  }, [chartData]);
+
+  // If no data, render empty state
+  if (data.length === 0) {
+     return (
+        <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col w-full h-full min-h-[400px] mx-auto items-center justify-center">
+            <p className="text-slate-500 font-medium">Sem dados para exibir.</p>
+        </div>
+     );
+  }
 
   return (
-    <div id={`chart-baseline-${planta !== "Santa Fe" ? "1" : "2"}`} className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col w-full h-full mx-auto">
+    <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col w-full mx-auto">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h3 className="text-lg font-bold text-white">Linha Base Semanal - {planta}</h3>
-          <p className="text-sm text-slate-400">Distribuição Esperada vs Meta (50%)</p>
+          <h3 className="text-lg font-bold text-white">{title}</h3>
+          <p className="text-sm text-slate-400">Principais áreas vs Acumulado</p>
         </div>
       </div>
       
@@ -94,9 +76,9 @@ export default function PTBaselineChart({ planta }: PTBaselineChartProps) {
               axisLine={false}
               dy={10}
               interval={0}
-              angle={-30}
+              angle={-45}
               textAnchor="end"
-              height={50}
+              height={60}
             />
             <YAxis 
               yAxisId="left"
@@ -105,7 +87,6 @@ export default function PTBaselineChart({ planta }: PTBaselineChartProps) {
               tickLine={false}
               axisLine={false}
               dx={-10}
-              domain={[0, dataMax => Math.ceil(Math.max(dataMax, meta) * 1.15)]}
             />
             <YAxis 
               yAxisId="right" 
@@ -116,7 +97,7 @@ export default function PTBaselineChart({ planta }: PTBaselineChartProps) {
               axisLine={false}
               dx={10}
               domain={[0, 'dataMax']}
-              hide 
+              hide
             />
             <Tooltip 
               contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', color: '#f8fafc' }}
@@ -124,19 +105,11 @@ export default function PTBaselineChart({ planta }: PTBaselineChartProps) {
               formatter={(value, name) => [value, name === 'pt' ? 'PTs' : 'Acumulado']}
             />
             
-            <ReferenceLine 
-              yAxisId="left" 
-              y={meta} 
-              stroke="#10b981" 
-              strokeDasharray="5 5" 
-              label={{ position: 'insideTopRight', value: `Meta ${meta} PT/sem`, fill: '#10b981', fontSize: 11 }} 
-            />
-            
-            <Bar yAxisId="left" dataKey="pt" radius={[4, 4, 0, 0]} maxBarSize={80}>
+            <Bar yAxisId="left" dataKey="pt" radius={[4, 4, 0, 0]} maxBarSize={60}>
               {data.map((entry, index) => (
                 <Cell key={"cell-" + index} fill={entry.color} />
               ))}
-              <LabelList dataKey="pt" position="top" fill="#ffffff" style={{ textShadow: "0px 2px 4px rgba(0,0,0,0.8)" }} fontSize={14} fontWeight="bold" dy={-8} />
+              <LabelList dataKey="pt" position="top" fill="#cbd5e1" fontSize={12} dy={-5} />
             </Bar>
             
             <Line 
@@ -145,8 +118,8 @@ export default function PTBaselineChart({ planta }: PTBaselineChartProps) {
               dataKey="cumulative" 
               stroke="#d97706" 
               strokeWidth={3}
-              dot={{ r: 4, fill: '#d97706', strokeWidth: 0 }}
-              activeDot={{ r: 6, fill: '#f59e0b', strokeWidth: 0 }}
+              dot={{ r: 6, fill: '#d97706', strokeWidth: 0 }}
+              activeDot={{ r: 8, fill: '#f59e0b', strokeWidth: 0 }}
             />
           </ComposedChart>
         </ResponsiveContainer>

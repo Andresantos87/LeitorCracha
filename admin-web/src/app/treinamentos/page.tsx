@@ -610,22 +610,28 @@ export default function Treinamentos() {
       return;
     }
     
-    const presencasMatriculas = presencas.map(p => p.identificador_lido);
     const today = new Date();
-    
-    const allPeople = publico.matriculas.map((m: string) => {
-      const det = publico.matriculas_detalhes?.find((d:any) => d._id === m) || { _id: m, nome: 'Desconhecido' };
-      const isCapacitado = presencasMatriculas.some(p => {
-        const cleanP = String(p).replace(/^0+/, '');
-        const id1 = String(m).replace(/^0+/, '');
-        const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
-        const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
-        return (cleanP && cleanP === id1) || 
-               (cleanP && id1 && cleanP.endsWith(id1)) || 
-               (id1 && cleanP && id1.endsWith(cleanP)) ||
-               (id2 && cleanP === id2) || 
-               (id3 && cleanP === id3);
-      });
+                     
+                     const allPeople = publico.matriculas.map((m: string) => {
+                       const det = publico.matriculas_detalhes?.find((d:any) => d._id === m) || { _id: m, nome: 'Desconhecido' };
+                       const isCapacitado = presencas.some(p => {
+                         const ident = p.identificador_lido || '';
+                         const cleanP = String(ident).replace(/^0+/, '');
+                         const id1 = String(m).replace(/^0+/, '');
+                         const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
+                         const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
+                         const email = det ? String(det.email || '').trim().toLowerCase() : '';
+                         const cleanPLower = String(ident).trim().toLowerCase();
+                         const matchName = det && p.nome_colaborador && String(p.nome_colaborador).trim().toUpperCase() === String(det.nome).trim().toUpperCase();
+                         
+                         return (cleanP && cleanP === id1) || 
+                                (cleanP && id1 && cleanP.endsWith(id1)) || 
+                                (id1 && cleanP && id1.endsWith(cleanP)) ||
+                                (id2 && cleanP === id2) || 
+                                (id3 && cleanP === id3) ||
+                                (email && cleanPLower === email) ||
+                                matchName;
+                       });
       
       const shiftName = extractShiftName(det.turno || '');
       const shiftStatus = shiftName ? getShiftStatusForDate(shiftName, today) : null;
@@ -927,22 +933,27 @@ export default function Treinamentos() {
     const publico = publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id);
     if (!publico || !publico.matriculas) return null;
     
-    const presencasMatriculas = presencas.map(p => p.identificador_lido);
-    
     const checkIsPresente = (m: string) => {
-      const det = publico.matriculas_detalhes?.find((d:any) => d._id === m);
-      return presencasMatriculas.some(p => {
-        const cleanP = String(p).replace(/^0+/, '');
-        const id1 = String(m).replace(/^0+/, '');
-        const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
-        const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
-        return (cleanP && cleanP === id1) || 
-               (cleanP && id1 && cleanP.endsWith(id1)) || 
-               (id1 && cleanP && id1.endsWith(cleanP)) ||
-               (id2 && cleanP === id2) || 
-               (id3 && cleanP === id3);
-      });
-    };
+        const det = publico.matriculas_detalhes?.find((d:any) => d._id === m);
+        return presencas.some(p => {
+          const ident = p.identificador_lido || '';
+          const cleanP = String(ident).replace(/^0+/, '');
+          const id1 = String(m).replace(/^0+/, '');
+          const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
+          const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
+          const email = det ? String(det.email || '').trim().toLowerCase() : '';
+          const cleanPLower = String(ident).trim().toLowerCase();
+          const matchName = det && p.nome_colaborador && String(p.nome_colaborador).trim().toUpperCase() === String(det.nome).trim().toUpperCase();
+
+          return (cleanP && cleanP === id1) || 
+                 (cleanP && id1 && cleanP.endsWith(id1)) || 
+                 (id1 && cleanP && id1.endsWith(cleanP)) ||
+                 (id2 && cleanP === id2) || 
+                 (id3 && cleanP === id3) ||
+                 (email && cleanPLower === email) ||
+                 matchName;
+        });
+      };
 
     const checkIsNaoAplica = (m: string) => {
       const det = publico.matriculas_detalhes?.find((d:any) => d._id === m);
@@ -1775,22 +1786,28 @@ export default function Treinamentos() {
                    const publico = publicosAlvo.find(p => p.id === selectedTreinamento.publico_alvo_id);
                    if (!publico) return null;
                    
-                   const presencasMatriculas = presencas.map(p => p.identificador_lido);
                    const today = new Date();
-                   
-                   const allPeople = publico.matriculas.map((m: string) => {
-                     const det = publico.matriculas_detalhes?.find((d:any) => d._id === m) || { _id: m, nome: 'Desconhecido' };
-                     const isCapacitado = presencasMatriculas.some(p => {
-                       const cleanP = String(p).replace(/^0+/, '');
-                       const id1 = String(m).replace(/^0+/, '');
-                       const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
-                       const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
-                       return (cleanP && cleanP === id1) || 
-                              (cleanP && id1 && cleanP.endsWith(id1)) || 
-                              (id1 && cleanP && id1.endsWith(cleanP)) ||
-                              (id2 && cleanP === id2) || 
-                              (id3 && cleanP === id3);
-                     });
+                     
+                     const allPeople = publico.matriculas.map((m: string) => {
+                       const det = publico.matriculas_detalhes?.find((d:any) => d._id === m) || { _id: m, nome: 'Desconhecido' };
+                       const isCapacitado = presencas.some(p => {
+                         const ident = p.identificador_lido || '';
+                         const cleanP = String(ident).replace(/^0+/, '');
+                         const id1 = String(m).replace(/^0+/, '');
+                         const id2 = det ? String(det.identificador || '').replace(/^0+/, '') : '';
+                         const id3 = det ? String(det.cod_cracha || '').replace(/^0+/, '') : '';
+                         const email = det ? String(det.email || '').trim().toLowerCase() : '';
+                         const cleanPLower = String(ident).trim().toLowerCase();
+                         const matchName = det && p.nome_colaborador && String(p.nome_colaborador).trim().toUpperCase() === String(det.nome).trim().toUpperCase();
+                         
+                         return (cleanP && cleanP === id1) || 
+                                (cleanP && id1 && cleanP.endsWith(id1)) || 
+                                (id1 && cleanP && id1.endsWith(cleanP)) ||
+                                (id2 && cleanP === id2) || 
+                                (id3 && cleanP === id3) ||
+                                (email && cleanPLower === email) ||
+                                matchName;
+                       });
                      
                      const shiftName = extractShiftName(det.turno || '');
                      const shiftStatus = shiftName ? getShiftStatusForDate(shiftName, today) : null;

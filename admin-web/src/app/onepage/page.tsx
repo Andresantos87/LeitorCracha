@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { PieChart, Activity, Users, Target, CheckCircle, Wrench, Settings, UploadCloud, Download } from "lucide-react";
+import { PieChart, Activity, Users, Target, CheckCircle, Wrench, Settings, UploadCloud, Download, MessageSquare, QrCode } from "lucide-react";
 import PTChart from "./components/PTChart";
 import PTBaselineChart from "./components/PTBaselineChart";
 import PTMonthlyChart from "./components/PTMonthlyChart";
+import PTAreaAdocaoChart from "./components/PTAreaAdocaoChart";
 import * as XLSX from "xlsx";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function OnePageDashboard() {
   const [loading, setLoading] = useState(true);
@@ -17,6 +19,23 @@ export default function OnePageDashboard() {
   const [filtroPlantaPt, setFiltroPlantaPt] = useState<"Todas" | "Guaíba" | "Santa Fe">("Todas");
   const [filtroAreaPt, setFiltroAreaPt] = useState<string>("Todas");
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+    const [comentarios, setComentarios] = useState("");
+
+    // Carregar dos cookies/local storage no lado do cliente
+    useEffect(() => {
+        const salvo = localStorage.getItem("pt_dashboard_comentarios");
+        if (salvo) {
+            setComentarios(salvo);
+        } else {
+            setComentarios("Status do Projeto:\n\n- Plataforma Lignia em fase de adoção.\n- RCs para compra de tablets emitidas e aguardando aprovação.\n- Treinamentos operacionais em andamento.");
+        }
+    }, []);
+
+    // Salvar sempre que editar
+    const handleComentarioChange = (e: any) => {
+        setComentarios(e.target.value);
+        localStorage.setItem("pt_dashboard_comentarios", e.target.value);
+    };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -280,43 +299,134 @@ export default function OnePageDashboard() {
       const { jsPDF } = await import('jspdf');
       const { toJpeg } = await import('html-to-image');
       
-      const doc = new jsPDF('p', 'mm', 'a4');
-      doc.setFontSize(18);
-      doc.setTextColor(15, 23, 42);
-      doc.text(`Relatório de Adoção: ${filterCurso || 'Geral'}`, 14, 20);
+      const el = document.getElementById('pdf-dashboard-wrapper');
+      if (!el) return;
       
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`País: ${filterPais || 'Todos'} | Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 26);
+      // Inject Light Mode CSS temporarily
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .pdf-mode { background-color: #ffffff !important; }
+        .pdf-mode [class*="bg-slate-950"], 
+        .pdf-mode [class*="bg-slate-900"] { 
+            background-color: #ffffff !important; 
+        }
+        .pdf-mode [class*="bg-slate-800"] { 
+            background-color: #f1f5f9 !important; 
+        }
+        .pdf-mode [class*="border-slate-800"],
+        .pdf-mode [class*="border-slate-700"] {
+            border-color: #cbd5e1 !important;
+        }
+        .pdf-mode [class*="text-white"], 
+        .pdf-mode [class*="text-slate-200"] { 
+            color: #0f172a !important; 
+        }
+        .pdf-mode [class*="text-slate-400"],
+        .pdf-mode [class*="text-slate-500"] {
+            color: #475569 !important;
+        }
+        /* Fix chart axis text */
+        .pdf-mode text {
+            fill: #475569 !important;
+        }
+        .pdf-mode .recharts-cartesian-grid-horizontal line, 
+        .pdf-mode .recharts-cartesian-grid-vertical line {
+            stroke: #e2e8f0 !important;
+        }
+        /* Fix specific chart colors for light mode */
+        .pdf-mode path.recharts-rectangle[name="Meta"] {
+            fill: #e2e8f0 !important;
+        }
+        .pdf-mode text[fill="#ffffff"] { fill: #0f172a !important; text-shadow: none !important; }
+        .pdf-mode .pdf-textarea { resize: none !important; border-color: transparent !important; background: transparent !important; color: #0f172a !important; padding: 0 !important; }
+        /* Esconder o botao de PDF no PDF */
+        .pdf-mode-hide {
+            display: none !important;
+        }
+      `;
+      document.head.appendChild(style);
       
-      let currentY = 35;
+      // Hide the PDF button during capture
+      const btn = el.querySelector("#btn-gerar-pdf");
+      if (btn) btn.classList.add('pdf-mode-hide');
       
-      const captureAndAdd = async (id) => {
-         const el = document.getElementById(id);
-         if (!el) return;
-         if (currentY > 200) { doc.addPage(); currentY = 20; }
-         
-         const imgData = await toJpeg(el, { quality: 0.9, backgroundColor: '#020617', pixelRatio: 2 });
-         const imgProps = doc.getImageProperties(imgData);
-         const pdfWidth = 190;
-         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-         doc.addImage(imgData, 'JPEG', 10, currentY, pdfWidth, pdfHeight);
-         currentY += pdfHeight + 10;
-      };
+      const uploadSec = el.querySelector('#upload-section');
+      if (uploadSec) uploadSec.classList.add('pdf-mode-hide');
       
-      await captureAndAdd('chart-monthly');
-      await captureAndAdd('chart-baseline-1');
-      await captureAndAdd('chart-baseline-2');
+      el.classList.add('pdf-mode');
       
-      doc.save(`Relatorio_Visao_Geral.pdf`);
+      
+      // SVGs inline manipulation for PDF (html-to-image doesn't always override SVG attributes well)
+      const svgTexts = el.querySelectorAll('text');
+      const originalFills = [];
+      const originalShadows = [];
+      svgTexts.forEach(t => {
+          const f = t.getAttribute('fill');
+          originalFills.push(f);
+          originalShadows.push(t.style.textShadow);
+          
+          if (f === '#ffffff' || f === '#f8fafc' || f === '#f1f5f9') {
+              t.setAttribute('fill', '#0f172a');
+          }
+          t.style.textShadow = 'none';
+      });
+
+      const metaBars = el.querySelectorAll('path[name="Meta"]');
+      const originalMetaFills = [];
+      metaBars.forEach(b => {
+          originalMetaFills.push(b.getAttribute('fill'));
+          b.setAttribute('fill', '#cbd5e1'); // light slate for the PDF background
+      });
+      
+      // Wait a tiny bit for styles to apply
+      await new Promise(r => setTimeout(r, 100));
+      
+      const imgData = await toJpeg(el, { 
+          quality: 0.95, 
+          backgroundColor: '#ffffff', 
+          pixelRatio: 2,
+          style: { padding: '20px' } // Add padding so it's not glued to the edge
+      });
+      
+      
+      el.classList.remove('pdf-mode');
+      
+      // Restore SVGs
+      svgTexts.forEach((t, i) => {
+          if (originalFills[i]) t.setAttribute('fill', originalFills[i]);
+          t.style.textShadow = originalShadows[i];
+      });
+      metaBars.forEach((b, i) => {
+          if (originalMetaFills[i]) b.setAttribute('fill', originalMetaFills[i]);
+      });
+      
+      if (btn) btn.classList.remove('pdf-mode-hide');
+      if (uploadSec) uploadSec.classList.remove('pdf-mode-hide');
+      style.remove();
+      
+      const tempDoc = new jsPDF('p', 'mm', 'a4');
+      const imgProps = tempDoc.getImageProperties(imgData);
+      
+      // Criar um PDF com tamanho customizado exatamente igual à imagem (relatório contínuo digital)
+      const doc = new jsPDF({
+        orientation: imgProps.width > imgProps.height ? 'l' : 'p',
+        unit: 'px',
+        format: [imgProps.width, imgProps.height]
+      });
+      
+      doc.addImage(imgData, 'JPEG', 0, 0, imgProps.width, imgProps.height);
+      doc.save(`Dashboard_${filterCurso || 'Geral'}.pdf`);
+      
     } catch (e) {
       console.error(e);
       alert('Erro ao gerar PDF com gráficos.');
+      // ensure cleanup
+      document.getElementById('pdf-dashboard-wrapper')?.classList.remove('pdf-mode');
     }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+    <div id="pdf-dashboard-wrapper" className="space-y-8 animate-in fade-in duration-500 pb-20 p-4">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -331,8 +441,7 @@ export default function OnePageDashboard() {
         
         {/* Filtros */}
         <div className="flex items-center gap-2 flex-wrap">
-            <button 
-              onClick={gerarPDF}
+            <button id="btn-gerar-pdf" onClick={gerarPDF}
               className="bg-sky-600/20 hover:bg-sky-500 text-sky-400 hover:text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 text-xs border border-sky-500/30 shadow-lg transition-all"
             >
               <Download className="h-4 w-4" />
@@ -412,7 +521,7 @@ export default function OnePageDashboard() {
       </div>
 
             {/* Upload Excel Section */}
-      <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mt-8">
+        <div id="upload-section" className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mt-8">
         <div>
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <UploadCloud className="h-5 w-5 text-emerald-400" /> Upload de Planilha PT
@@ -467,26 +576,75 @@ export default function OnePageDashboard() {
                 Planta Santa Fe
               </button>
             </div>
-            <PTMonthlyChart 
-              monthlyData={filteredPtMonthlyData} 
-              filtroPlantaPt={filtroPlantaPt}
-              filtroAreaPt={filtroAreaPt}
-              setFiltroAreaPt={setFiltroAreaPt}
-              areasDisponiveis={filteredPtAreaChartData.map((d: any) => d.area)}
-            />
-          </div>
-        ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 w-full">
+                <div className="xl:col-span-2 flex flex-col">
+                  <PTMonthlyChart 
+                    monthlyData={filteredPtMonthlyData} 
+                    filtroPlantaPt={filtroPlantaPt}
+                    filtroAreaPt={filtroAreaPt}
+                    setFiltroAreaPt={setFiltroAreaPt}
+                    areasDisponiveis={filteredPtAreaChartData.map((d: any) => d.area)}
+                  />
+                </div>
+                <div className="xl:col-span-1 flex flex-col">
+                  <PTAreaAdocaoChart 
+                    ptRawData={ptRawData} 
+                    filtroPlantaPt={filtroPlantaPt} 
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col items-center justify-center w-full h-full min-h-[300px] max-w-4xl mx-auto">
              <UploadCloud className="h-12 w-12 text-slate-700 mb-4" />
              <p className="text-slate-500 font-medium text-center">Faça o upload da planilha<br/>para visualizar os dados.</p>
           </div>
         )}
       </div>
-      <div className="grid grid-cols-1 gap-8 items-start mt-8">
-        {/* Avanço por Área */}
+      
+        {/* Informações Gerais e QR Code */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mt-8">
+            <div className="xl:col-span-2 bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-sky-400" />
+                    Status e Comentários Gerais
+                </h3>
+                <textarea 
+                    className="w-full bg-slate-800/80 hover:bg-slate-800 border-2 border-slate-700 hover:border-slate-600 rounded-xl p-4 text-slate-300 text-sm resize-none outline-none focus:border-sky-500 focus:bg-slate-900 transition-all flex-1 min-h-[120px] pdf-textarea cursor-text shadow-inner" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                    value={comentarios}
+                    onChange={handleComentarioChange}
+                    placeholder="Digite aqui as informações gerais, status de RCs, etc..."
+                />
+            </div>
+            <div className="xl:col-span-1 bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex items-center justify-center gap-6">
+                <div className="bg-white p-2 rounded-xl shadow-lg shrink-0">
+                    <QRCodeSVG value="https://competitividad.cmpc-innovation.com/pt_digital" size={96} level="L" includeMargin={false} />
+                </div>
+                <div className="flex flex-col gap-2">
+                    <h3 className="text-white font-bold flex items-center gap-2">
+                        <QrCode className="h-4 w-4 text-emerald-400" /> Acesso Lignia
+                    </h3>
+                    <p className="text-xs text-slate-400 leading-relaxed">Escaneie o QR Code com a câmera do seu celular ou clique no link abaixo para acessar a Plataforma Digital de PT.</p>
+                    <a href="https://competitividad.cmpc-innovation.com/pt_digital" target="_blank" className="text-sky-400 text-xs font-bold hover:underline break-all mt-1">
+                        competitividad.cmpc-innovation.com/pt_digital
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-8 items-start mt-8">
+          {/* Avanço por Área */}
         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl flex flex-col">
           <div className="p-6 border-b border-slate-800 sticky top-0 bg-slate-900/90 backdrop-blur z-10 rounded-t-2xl">
-            <h3 className="text-lg font-bold text-white">Avanço por Área</h3>
+            {filterCurso && (
+                 <div className="mb-4 pb-4 border-b border-slate-700/50">
+                    <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-500 uppercase tracking-tight">
+                        {filterCurso}
+                    </h2>
+                    <p className="text-xs text-sky-500 uppercase tracking-widest mt-1 font-bold">Curso Filtrado</p>
+                 </div>
+              )}
+              <h3 className="text-lg font-bold text-white">Avanço de Treinamentos por Área</h3>
             <p className="text-sm text-slate-400">Progresso separado por Operação e Manutenção</p>
           </div>
           <div className="p-6 space-y-8">
@@ -499,21 +657,19 @@ export default function OnePageDashboard() {
                 </h4>
                 <div className="space-y-4">
                   {stats.areasOperacao.map((area, idx) => (
-                    <div key={idx} className="space-y-1.5">
-                      <div className="flex justify-between items-end">
-                        <span className="font-bold text-slate-200 text-xs tracking-wide">{area.nome}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{area.feitos} / {area.total} ({area.avanco}%)</span>
+                    <div key={idx} className="flex items-center gap-3">
+                        <span className="font-bold text-slate-200 text-xs tracking-wide w-1/3 line-clamp-2 leading-tight" title={area.nome}>{area.nome}</span>
+                        <div className="flex-1 bg-slate-800/80 rounded-full h-5 overflow-hidden flex border border-slate-700/50">
+                          <div 
+                            className={`h-5 rounded-full transition-all duration-1000 ${
+                              area.avanco >= 80 ? 'bg-emerald-500' : 
+                              area.avanco >= 50 ? 'bg-amber-400' : 'bg-rose-500'
+                            }`}
+                            style={{ width: `${area.avanco}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-slate-400 font-medium shrink-0 w-24 text-right">{area.feitos} / {area.total} ({area.avanco}%)</span>
                       </div>
-                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden flex">
-                        <div 
-                          className={`h-1.5 rounded-full transition-all duration-1000 ${
-                            area.avanco >= 80 ? 'bg-emerald-500' : 
-                            area.avanco >= 50 ? 'bg-sky-500' : 'bg-rose-500'
-                          }`}
-                          style={{ width: `${area.avanco}%` }}
-                        ></div>
-                      </div>
-                    </div>
                   ))}
                 </div>
               </div>
@@ -527,21 +683,19 @@ export default function OnePageDashboard() {
                 </h4>
                 <div className="space-y-4">
                   {stats.areasManutencao.map((area, idx) => (
-                    <div key={idx} className="space-y-1.5">
-                      <div className="flex justify-between items-end">
-                        <span className="font-bold text-slate-200 text-xs tracking-wide">{area.nome}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{area.feitos} / {area.total} ({area.avanco}%)</span>
+                    <div key={idx} className="flex items-center gap-3">
+                        <span className="font-bold text-slate-200 text-xs tracking-wide w-1/3 line-clamp-2 leading-tight" title={area.nome}>{area.nome}</span>
+                        <div className="flex-1 bg-slate-800/80 rounded-full h-5 overflow-hidden flex border border-slate-700/50">
+                          <div 
+                            className={`h-5 rounded-full transition-all duration-1000 ${
+                              area.avanco >= 80 ? 'bg-emerald-500' : 
+                              area.avanco >= 50 ? 'bg-amber-400' : 'bg-rose-500'
+                            }`}
+                            style={{ width: `${area.avanco}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-slate-400 font-medium shrink-0 w-24 text-right">{area.feitos} / {area.total} ({area.avanco}%)</span>
                       </div>
-                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden flex">
-                        <div 
-                          className={`h-1.5 rounded-full transition-all duration-1000 ${
-                            area.avanco >= 80 ? 'bg-emerald-500' : 
-                            area.avanco >= 50 ? 'bg-sky-500' : 'bg-rose-500'
-                          }`}
-                          style={{ width: `${area.avanco}%` }}
-                        ></div>
-                      </div>
-                    </div>
                   ))}
                 </div>
               </div>
@@ -555,21 +709,19 @@ export default function OnePageDashboard() {
                 </h4>
                 <div className="space-y-4">
                   {stats.areasOutros.map((area, idx) => (
-                    <div key={idx} className="space-y-1.5">
-                      <div className="flex justify-between items-end">
-                        <span className="font-bold text-slate-200 text-xs tracking-wide">{area.nome}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{area.feitos} / {area.total} ({area.avanco}%)</span>
+                    <div key={idx} className="flex items-center gap-3">
+                        <span className="font-bold text-slate-200 text-xs tracking-wide w-1/3 line-clamp-2 leading-tight" title={area.nome}>{area.nome}</span>
+                        <div className="flex-1 bg-slate-800/80 rounded-full h-5 overflow-hidden flex border border-slate-700/50">
+                          <div 
+                            className={`h-5 rounded-full transition-all duration-1000 ${
+                              area.avanco >= 80 ? 'bg-emerald-500' : 
+                              area.avanco >= 50 ? 'bg-amber-400' : 'bg-rose-500'
+                            }`}
+                            style={{ width: `${area.avanco}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-slate-400 font-medium shrink-0 w-24 text-right">{area.feitos} / {area.total} ({area.avanco}%)</span>
                       </div>
-                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden flex">
-                        <div 
-                          className={`h-1.5 rounded-full transition-all duration-1000 ${
-                            area.avanco >= 80 ? 'bg-emerald-500' : 
-                            area.avanco >= 50 ? 'bg-sky-500' : 'bg-rose-500'
-                          }`}
-                          style={{ width: `${area.avanco}%` }}
-                        ></div>
-                      </div>
-                    </div>
                   ))}
                 </div>
               </div>

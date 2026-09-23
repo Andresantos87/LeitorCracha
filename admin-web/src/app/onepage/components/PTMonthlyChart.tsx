@@ -97,7 +97,7 @@ export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtr
      if (metaInfo === 0 || data.length === 0) return null;
      let ultimo = [...data].reverse().find(d => d.pt > 0);
      if (!ultimo) return null;
-     return { perc: ultimo.adocaoMes, atual: ultimo.pt, meta: metaInfo };
+     return { perc: ultimo.adocaoMes, atual: ultimo.realPt, meta: metaInfo };
   }, [data, metaInfo]);
 
   const renderCustomBarLabel = (props: any) => {
@@ -108,22 +108,22 @@ export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtr
 
     return (
       <g>
-        <text x={x + width / 2} y={y - 26} fill="#f8fafc" textAnchor="middle" fontSize={13} fontWeight="bold">
+        <text x={x + width / 2} y={y - 32} fill="#ffffff" style={{ textShadow: "0px 2px 4px rgba(0,0,0,0.8)" }} textAnchor="middle" fontSize={16} fontWeight="bold">
           {value}
         </text>
         {metaInfo > 0 && (
           <>
             <rect 
-              x={x + width / 2 - 20} 
-              y={y - 19} 
-              width={40} 
-              height={16} 
-              rx={6} 
+              x={x + width / 2 - 25} 
+              y={y - 24} 
+              width={50} 
+              height={20} 
+              rx={8} 
               fill="#064e3b" 
               stroke="#10b981"
               strokeWidth={1}
             />
-            <text x={x + width / 2} y={y - 7} fill="#6ee7b7" textAnchor="middle" fontSize={10} fontWeight="bold">
+            <text x={x + width / 2} y={y - 10} fill="#6ee7b7" textAnchor="middle" fontSize={12} fontWeight="bold">
               {realAdocao}%
             </text>
           </>
@@ -226,9 +226,9 @@ export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtr
             
             <Tooltip content={<CustomTooltip />} cursor={{ fill: '#334155', opacity: 0.4 }} />
             
-            <Bar yAxisId="left" dataKey="metaMensalVal" name="Meta" fill="#1e293b" radius={[4, 4, 0, 0]} maxBarSize={40} />
+            <Bar yAxisId="left" dataKey="metaMensalVal" name="Meta" fill="#1e293b" radius={[4, 4, 0, 0]} maxBarSize={65} />
             
-            <Bar yAxisId="left" dataKey="pt" name="Realizado" radius={[4, 4, 0, 0]} maxBarSize={40} >
+            <Bar yAxisId="left" dataKey="pt" name="Realizado" radius={[4, 4, 0, 0]} maxBarSize={65} >
               {data.map((entry, index) => (
                 <Cell key={"cell-" + index} fill={entry.color} />
               ))}
