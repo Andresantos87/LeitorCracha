@@ -2134,29 +2134,43 @@ export default function Treinamentos() {
             </div>
 
             {/* Seletor de Tipo (Curso Existente vs Novo Curso) */}
-            <div className="flex bg-slate-950 p-1 rounded-xl mb-6 border border-slate-800">
-              <button 
-                type="button"
-                onClick={() => {
-                  setCreateMode('EXISTING');
-                  const cursos = Array.from(new Set(treinamentos.filter(t => t.pais === createPais).map(t => t.nome))).filter(Boolean);
-                  if (cursos.length > 0) setNomeTreinamento(cursos[0] as string);
-                }}
-                className={`flex-1 py-2.5 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all ${createMode === 'EXISTING' ? 'bg-sky-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-              >
-                <Folder className="h-3.5 w-3.5" /> Pasta Existente
-              </button>
-              <button 
-                type="button"
-                onClick={() => {
-                  setCreateMode('NEW');
-                  setNomeTreinamento("");
-                }}
-                className={`flex-1 py-2.5 flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-all ${createMode === 'NEW' ? 'bg-sky-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
-              >
-                <Sparkles className="h-3.5 w-3.5" /> + Criar Novo Curso
-              </button>
-            </div>
+              <div className="space-y-3 mb-8 bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50 shadow-inner">
+                <label className="text-sm font-black text-sky-400 uppercase tracking-wider flex items-center gap-2">
+                  <span className="bg-sky-500/20 text-sky-400 h-6 w-6 rounded-full flex items-center justify-center text-xs">2</span>
+                  Onde esta turma será salva?
+                </label>
+                
+                <div className="flex bg-slate-950 p-1.5 rounded-xl border border-slate-800 relative">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setCreateMode('EXISTING');
+                      const cursos = Array.from(new Set(treinamentos.filter(t => t.pais === createPais).map(t => t.nome))).filter(Boolean);
+                      if (cursos.length > 0) setNomeTreinamento(cursos[0] as string);
+                    }}
+                    className={`flex-1 py-3 flex flex-col items-center justify-center gap-1.5 rounded-lg text-sm font-bold transition-all ${createMode === 'EXISTING' ? 'bg-sky-600 text-white shadow-lg scale-[1.02]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900/50'}`}
+                  >
+                    <div className="flex items-center gap-2"><Folder className="h-4 w-4" /> Na Pasta Existente</div>
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setCreateMode('NEW');
+                      setNomeTreinamento("");
+                    }}
+                    className={`flex-1 py-3 flex flex-col items-center justify-center gap-1.5 rounded-lg text-sm font-bold transition-all ${createMode === 'NEW' ? 'bg-emerald-600 text-white shadow-lg scale-[1.02]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900/50'}`}
+                  >
+                    <div className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Criar Pasta Nova</div>
+                  </button>
+                </div>
+                
+                <p className="text-xs text-slate-400 text-center font-medium">
+                  {createMode === 'EXISTING' 
+                    ? "👉 A turma será organizada dentro de uma gaveta que já existe." 
+                    : "👉 Uma pasta totalmente nova será criada do zero para este treinamento."}
+                </p>
+              </div>
 
             <form onSubmit={handleCreateSubmit} className="space-y-5">
               {createMode === 'EXISTING' ? (
