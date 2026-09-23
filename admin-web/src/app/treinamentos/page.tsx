@@ -78,6 +78,7 @@ export default function Treinamentos() {
   const [createChecklistId, setCreateChecklistId] = useState("");
   const [createEsperadoManual, setCreateEsperadoManual] = useState("");
   const [editCursoNome, setEditCursoNome] = useState("");
+  const [novoCursoNome, setNovoCursoNome] = useState("");
   const [cursoEsperadoManual, setCursoEsperadoManual] = useState("");
   const [isCursoModalOpen, setIsCursoModalOpen] = useState(false);
   const [assignChecklistId, setAssignChecklistId] = useState("");
@@ -396,18 +397,25 @@ export default function Treinamentos() {
         if (turmasDoCurso.length === 0) return;
         
         const valorTotal = cursoEsperadoManual ? parseInt(cursoEsperadoManual) : null;
+        const willRename = novoCursoNome.trim() !== "" && novoCursoNome !== editCursoNome;
         
-        // Aplica o valor na primeira turma e 0 nas demais para não somar duplicado no painel
+        // Aplica o valor na primeira turma e 0 nas demais para nǜo somar duplicado no painel
         for (let i = 0; i < turmasDoCurso.length; i++) {
              const val = i === 0 ? valorTotal : (valorTotal !== null ? 0 : null);
+             const bodyData: any = { esperado_manual: val };
+             
+             if (willRename) {
+                 bodyData.nome = novoCursoNome.trim();
+             }
+             
              await fetch('/api/treinamentos/' + turmasDoCurso[i].id, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ esperado_manual: val })
+                body: JSON.stringify(bodyData)
              });
         }
         
-        toast.success("Meta do curso atualizada com sucesso!");
+        toast.success(willRename ? "Curso renomeado e meta atualizada!" : "Meta do curso atualizada com sucesso!");
         setIsCursoModalOpen(false);
         setTimeout(() => window.location.reload(), 1000);
     } catch(err) {
@@ -1373,6 +1381,7 @@ export default function Treinamentos() {
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditCursoNome(nomeCurso);
+                              setNovoCursoNome(nomeCurso);
                             const tCurso = treinamentos.filter(t => t.nome === nomeCurso);
                             if (tCurso.length > 0 && tCurso[0].esperado_manual !== undefined && tCurso[0].esperado_manual !== null) {
                                 setCursoEsperadoManual(String(tCurso[0].esperado_manual));
@@ -1382,10 +1391,10 @@ export default function Treinamentos() {
                             setIsCursoModalOpen(true);
                           }}
                           className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-amber-500/30 flex items-center gap-1.5 shadow-sm"
-                          title="Configurar Meta Global do Curso"
+                          title="Renomear Pasta ou Configurar Meta Global do Curso"
                         >
                           <Target className="h-3.5 w-3.5" />
-                          <span className="hidden md:inline">Meta do Curso</span>
+                          <span className="hidden md:inline">Configurar Curso</span>
                         </button>
                         <button 
                           type="button"
@@ -2896,9 +2905,9 @@ export default function Treinamentos() {
               <div>
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
                   <Target className="h-6 w-6 text-amber-400" />
-                  Meta Global do Curso
+                  Configurar Pasta / Curso
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">Defina o esperado para <strong className="text-white">{editCursoNome}</strong></p>
+                <p className="text-xs text-slate-400 mt-1">Renomeie a pasta ou defina a meta global</p>
               </div>
               <button onClick={() => setIsCursoModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
                 <X className="h-5 w-5" />
@@ -2906,6 +2915,26 @@ export default function Treinamentos() {
             </div>
             
             <form onSubmit={handleCursoSubmit} className="p-6 space-y-5">
+              
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Nome da Pasta / Curso
+                </label>
+                <input 
+                  type="text"
+                  required
+                  value={novoCursoNome}
+                  onChange={e => setNovoCursoNome(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 text-white font-medium"
+                  placeholder="Nome do Curso"
+                />
+                <p className="text-[11px] text-slate-400 leading-relaxed mt-2">
+                  Ao alterar este nome, todas as turmas serão movidas juntas para a nova pasta.
+                </p>
+              </div>
+
+              <hr className="border-slate-800" />
+
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Total Esperado Global
