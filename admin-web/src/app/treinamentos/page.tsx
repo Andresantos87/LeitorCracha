@@ -2093,7 +2093,7 @@ export default function Treinamentos() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 sm:p-8 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 sm:p-8 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200 max-h-[95vh] overflow-y-auto hide-scrollbar">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
@@ -2134,7 +2134,7 @@ export default function Treinamentos() {
             </div>
 
             {/* Seletor de Tipo (Curso Existente vs Novo Curso) */}
-              <div className="space-y-3 mb-8 bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50 shadow-inner">
+              <div className="space-y-3 mb-6 bg-slate-900/50 p-4 rounded-2xl border border-slate-700/50 shadow-inner">
                 <label className="text-sm font-black text-sky-400 uppercase tracking-wider flex items-center gap-2">
                   <span className="bg-sky-500/20 text-sky-400 h-6 w-6 rounded-full flex items-center justify-center text-xs">2</span>
                   Onde esta turma será salva?
@@ -2172,7 +2172,7 @@ export default function Treinamentos() {
                 </p>
               </div>
 
-            <form onSubmit={handleCreateSubmit} className="space-y-5">
+            <form onSubmit={handleCreateSubmit} className="space-y-4">
               {createMode === 'EXISTING' ? (
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
