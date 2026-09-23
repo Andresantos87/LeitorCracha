@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { PieChart, Activity, Users, Target, CheckCircle, Wrench, Settings, UploadCloud, Download, MessageSquare, QrCode } from "lucide-react";
 import PTChart from "./components/PTChart";
 import PTBaselineChart from "./components/PTBaselineChart";
@@ -19,7 +19,17 @@ export default function OnePageDashboard() {
   const [filtroPlantaPt, setFiltroPlantaPt] = useState<"Todas" | "Guaíba" | "Santa Fe">("Todas");
   const [filtroAreaPt, setFiltroAreaPt] = useState<string>("Todas");
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-    const [comentarios, setComentarios] = useState("");
+    
+  const [comentarios, setComentarios] = useState("");
+  const comentariosRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (comentariosRef.current) {
+        comentariosRef.current.style.height = 'auto';
+        comentariosRef.current.style.height = comentariosRef.current.scrollHeight + 'px';
+    }
+  }, [comentarios]);
+
 
     // Carregar dos cookies/local storage no lado do cliente
     useEffect(() => {
@@ -622,8 +632,8 @@ export default function OnePageDashboard() {
                     <MessageSquare className="h-5 w-5 text-sky-400" />
                     Status e Comentários Gerais
                 </h3>
-                <textarea 
-                    className="w-full bg-slate-800/80 hover:bg-slate-800 border-2 border-slate-700 hover:border-slate-600 rounded-xl p-4 text-slate-300 text-sm resize-none outline-none focus:border-sky-500 focus:bg-slate-900 transition-all flex-1 min-h-[120px] pdf-textarea cursor-text shadow-inner" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                <textarea ref={comentariosRef} 
+                    className="w-full bg-slate-800/80 hover:bg-slate-800 border-2 border-slate-700 hover:border-slate-600 rounded-xl p-4 text-slate-300 text-sm resize-none outline-none focus:border-sky-500 focus:bg-slate-900 transition-all min-h-[120px] pdf-textarea cursor-text shadow-inner overflow-hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                     value={comentarios}
                     onChange={handleComentarioChange}
                     placeholder="Digite aqui as informações gerais, status de RCs, etc..."
