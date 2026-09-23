@@ -83,7 +83,7 @@ export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtr
 
       return {
           ...item,
-          pt: item.pt === 0 ? null : Math.max(item.pt, metaInfo * 0.05),
+          pt: item.pt === 0 ? null : item.pt,
           realPt: item.pt,
           cumulative,
           adocaoMes,
@@ -228,7 +228,7 @@ export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtr
             
             <Bar yAxisId="left" dataKey="metaMensalVal" name="Meta" fill="#1e293b" radius={[4, 4, 0, 0]} maxBarSize={65} />
             
-            <Bar yAxisId="left" dataKey="pt" name="Realizado" radius={[4, 4, 0, 0]} maxBarSize={65} >
+            <Bar yAxisId="left" dataKey="pt" name="Realizado" radius={[4, 4, 0, 0]} maxBarSize={65} minPointSize={4}>
               {data.map((entry, index) => (
                 <Cell key={"cell-" + index} fill={entry.color} />
               ))}
