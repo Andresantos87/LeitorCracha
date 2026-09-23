@@ -1288,7 +1288,7 @@ export default function Treinamentos() {
                         setExpandedPastas([...expandedPastas, nomeCurso]);
                       }
                     }}
-                    className="p-5 bg-slate-800/90 hover:bg-slate-800 cursor-pointer flex items-center justify-between transition-colors select-none border-b border-transparent hover:border-slate-700"
+                    className="p-5 bg-slate-800/90 hover:bg-slate-800 cursor-pointer flex flex-wrap items-center justify-between gap-4 transition-colors select-none border-b border-transparent hover:border-slate-700"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shadow-inner">
@@ -1307,13 +1307,13 @@ export default function Treinamentos() {
                         </p>
                       </div>
                     </div>
-                      <div className="flex items-center gap-3">
-                        <button 
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            try {
-                              const res = await fetch('/api/sync-presencas', { 
+                      <div className="flex flex-wrap items-center justify-end gap-2 md:gap-3">
+                          <button 
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const res = await fetch('/api/sync-presencas', { 
                                 method: 'POST', 
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ nomeCurso }) 
