@@ -26,21 +26,27 @@ export async function GET() {
       const chunkResults = await Promise.all(chunk.map(async (d) => {
       const data = d.data();
       
-      // Faz a contagem em tempo real para refletir escritas diretas do app Kotlin
+      // Otimizaǜo agressiva: Cache em memria para as contagens para acabar com a lentidǜo do N+1
       let count = 0;
-      try {
-        const presencasColl = collection(db, 'treinamentos', d.id, 'presencas');
-        const snapshot = await getCountFromServer(presencasColl);
-        count = snapshot.data().count;
-      } catch(e) {
-        try {
-          // Fallback para getDocs caso o getCountFromServer falhe (erro de BloomFilter conhecido)
-          const presencasColl = collection(db, 'treinamentos', d.id, 'presencas');
-          const snap = await getDocs(presencasColl);
-          count = snap.size;
-        } catch(innerE) {
-          count = typeof data.presencas_count === 'number' ? data.presencas_count : 0;
-        }
+      const now = Date.now();
+      
+      // Global cache object attached to globalThis to persist across hot reloads in Next.js dev
+      const globalAny = global as any;
+      if (!globalAny.presencasCountCache) globalAny.presencasCountCache = new Map();
+      const cache = globalAny.presencasCountCache;
+
+      const cachedData = cache.get(d.id);
+      if (cachedData && (now - cachedData.timestamp < 120000)) {
+         count = cachedData.count; // Usa o cache se for menor que 2 minutos
+      } else {
+         try {
+           const presencasColl = collection(db, 'treinamentos', d.id, 'presencas');
+           const snapshot = await getCountFromServer(presencasColl);
+           count = snapshot.data().count;
+           cache.set(d.id, { count, timestamp: now });
+         } catch(e) {
+           count = typeof data.presencas_count === 'number' ? data.presencas_count : 0;
+         }
       }
       
       const isChileName = /laja|santa fe|pacifico|talca|nacimiento|cordillera|puente alto|valdivia|mininco|chile/i.test(data.nome || '') || /laja|santa fe|pacifico|talca|nacimiento|cordillera|puente alto|valdivia|mininco|chile/i.test(data.planta || '');
