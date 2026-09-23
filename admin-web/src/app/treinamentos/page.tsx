@@ -1727,13 +1727,7 @@ export default function Treinamentos() {
               </div>
 
               <div className="pt-4 flex flex-wrap items-center gap-4">
-                <button 
-                  onClick={() => setIsShareModalOpen(true)}
-                  className="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-blue-900/20"
-                >
-                  <UserPlus className="h-5 w-5" />
-                  <span>Compartilhar / QR Code</span>
-                </button>
+                
 
                 <button 
                   onClick={gerarPdfAdminHoje}
