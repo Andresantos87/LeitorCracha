@@ -182,7 +182,7 @@ export default function PTAreaAdocaoChart({ ptRawData, filtroPlantaPt }: PTAreaA
         <p className="text-sm text-slate-400">Desempenho no mês vs Meta Mensal da Área</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 space-y-4 hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {data.length === 0 ? (
             <p className="text-slate-500 text-sm text-center mt-10">Sem dados suficientes.</p>
         ) : (
