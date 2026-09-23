@@ -156,10 +156,23 @@ export default function PTAreaAdocaoChart({ ptRawData, filtroPlantaPt }: PTAreaA
   return (
     <div id="chart-area-adocao" className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col w-full h-full mx-auto mt-8 xl:mt-0 relative">
       
-      {/* Dropdown de Meses */}
-      <div className="absolute top-6 right-6">
+      {/* Cabeçalho Flexível para evitar sobreposição */}
+      <div className="flex justify-between items-start mb-6 gap-4">
+        <div>
+          <h3 className="text-lg font-bold text-white flex flex-wrap items-center gap-2">
+              Ranking de Adoção por Área
+              {mesAtual !== null && (
+                  <span className="bg-sky-500/20 text-sky-400 text-xs px-2.5 py-0.5 rounded-full border border-sky-500/30 uppercase tracking-wider whitespace-nowrap">
+                      {monthNames[mesAtual]}
+                  </span>
+              )}
+          </h3>
+          <p className="text-sm text-slate-400 mt-1">Desempenho no mês vs Meta Mensal da Área</p>
+        </div>
+
+        <div className="shrink-0 z-10 pt-0.5">
           <select 
-              className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-bold text-slate-300 outline-none focus:border-sky-500 transition-colors cursor-pointer"
+              className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-bold text-slate-300 outline-none focus:border-sky-500 transition-colors cursor-pointer pdf-mode-hide shadow-lg"
               value={selectedMonth === null ? "" : selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value === "" ? null : parseInt(e.target.value, 10))}
           >
@@ -168,18 +181,7 @@ export default function PTAreaAdocaoChart({ ptRawData, filtroPlantaPt }: PTAreaA
                   <option key={m} value={m}>{monthNames[m]}</option>
               ))}
           </select>
-      </div>
-
-      <div className="mb-6 pr-32">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            Ranking de Adoção por Área
-            {mesAtual !== null && (
-                <span className="bg-sky-500/20 text-sky-400 text-xs px-2.5 py-0.5 rounded-full border border-sky-500/30 uppercase tracking-wider">
-                    {monthNames[mesAtual]}
-                </span>
-            )}
-        </h3>
-        <p className="text-sm text-slate-400">Desempenho no mês vs Meta Mensal da Área</p>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 space-y-4 hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
