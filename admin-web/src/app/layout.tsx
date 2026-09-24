@@ -23,13 +23,13 @@ export default async function RootLayout({
   return (
     <html lang="pt-BR">
       <body
-        className={`${inter.className} antialiased flex bg-[#0f172a] text-slate-100 min-h-screen`}
+        className={`${inter.className} antialiased flex flex-col md:flex-row bg-[#0f172a] text-slate-100 min-h-screen`}
       >
         <Navigation role={role} userName={session?.nome} />
 
         {/* Main Content */}
         <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
-          <div className="flex-1 overflow-auto p-6 md:p-8">
+          <div className="flex-1 overflow-auto p-4 md:p-8">
             {children}
           </div>
         </main>
