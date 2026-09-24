@@ -1435,8 +1435,8 @@ export default function Treinamentos() {
 
                   {/* Tabela Interna das Turmas daquela Pasta */}
                   {isExpanded && (
-                    <div className="bg-slate-950/50 p-2 sm:p-4 border-t border-slate-700/60 animate-in slide-in-from-top-2 duration-200 overflow-x-auto">
-                      <table className="w-full text-left text-sm min-w-[700px]">
+                    <div className="bg-slate-950/50 p-2 sm:p-4 border-t border-slate-700/60 animate-in slide-in-from-top-2 duration-200">
+                      <table className="w-full text-left text-sm">
                         <thead className="text-xs uppercase text-slate-400 border-b border-slate-800">
                           <tr>
                             <th className="px-4 py-3 font-semibold">Turma / Identificador</th>
@@ -1982,8 +1982,7 @@ export default function Treinamentos() {
                   </div>
                 )}
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm min-w-[600px]">
+                <table className="w-full text-left text-sm">
                   <thead className="text-slate-400 border-b border-slate-700/50">
                     <tr>
                       {userRole === 'admin' && (
@@ -2069,8 +2068,7 @@ export default function Treinamentos() {
                       </tr>
                     ))}
                   </tbody>
-                  </table>
-                </div>
+                </table>
                 </div>
               </div>
             )}
