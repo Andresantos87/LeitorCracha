@@ -978,7 +978,7 @@ export default function Treinamentos() {
     
     return (
       <div className="w-full md:w-96 bg-slate-950/50 rounded-xl border border-slate-700 p-5 flex flex-col">
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
           <div>
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
               <Target className="h-4 w-4 text-blue-400" />
@@ -1015,7 +1015,7 @@ export default function Treinamentos() {
               .map((detalhe: any) => {
               const isCapacitado = checkIsPresente(detalhe._id);
               return (
-                <div key={detalhe._id} className="flex justify-between items-center p-2 bg-slate-900 rounded-lg border border-slate-800">
+                <div key={detalhe._id} className="flex flex-wrap justify-between items-center gap-4 p-2 bg-slate-900 rounded-lg border border-slate-800">
                   <div className="flex flex-col overflow-hidden pr-2">
                     <span className="text-[11px] font-bold text-white truncate">{detalhe.nome}</span>
                     {detalhe.rol && <span className="text-[9px] text-emerald-400 font-bold truncate uppercase">{detalhe.rol}</span>}
@@ -1072,7 +1072,7 @@ export default function Treinamentos() {
           }
         `}</style>
         <div className="max-w-4xl mx-auto print-container print:w-full print:max-w-none">
-          <div className="flex justify-between items-center mb-8 border-b-2 border-black pb-4 no-print">
+          <div className="flex flex-wrap justify-between items-center gap-4 mb-8 border-b-2 border-black pb-4 no-print">
             <h1 className="text-2xl font-bold">Relatório de Prioridades</h1>
             <div className="space-x-4">
               <button onClick={() => window.print()} className="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700">🖨️ Imprimir PDF</button>
@@ -1298,7 +1298,7 @@ export default function Treinamentos() {
                     }}
                     className="p-5 bg-slate-800/90 hover:bg-slate-800 cursor-pointer flex flex-wrap items-center justify-between gap-4 transition-colors select-none border-b border-transparent hover:border-slate-700"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-4">
                       <div className="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shadow-inner">
                         {isExpanded ? <FolderOpen className="h-6 w-6" /> : <Folder className="h-6 w-6" />}
                       </div>
@@ -1856,7 +1856,7 @@ export default function Treinamentos() {
                               {prioridadeHoje.map(d => (
                                 <div key={d._id} className="bg-red-950/20 border border-red-900/50 p-3 rounded-lg flex flex-col gap-1 ring-1 ring-red-500/20">
                                   <strong className="text-red-300 text-sm truncate" title={d.nome}>{d.nome}</strong>
-                                  <div className="flex justify-between items-center text-xs text-red-400/80">
+                                  <div className="flex flex-wrap justify-between items-center gap-4 text-xs text-red-400/80">
                                     <span className="font-mono">{d._id}</span>
                                     {d.turno && <span className="truncate max-w-[120px]" title={d.turno}>{d.turno}</span>}
                                   </div>
@@ -1882,7 +1882,7 @@ export default function Treinamentos() {
                               {capacitadosAdminHoje.map(d => (
                                 <div key={d._id} className="bg-emerald-950/10 border border-emerald-900/30 p-3 rounded-lg flex flex-col gap-1 opacity-70 hover:opacity-100 transition-opacity">
                                   <strong className="text-emerald-300/80 text-sm truncate" title={d.nome}>{d.nome}</strong>
-                                  <div className="flex justify-between items-center text-xs text-emerald-400/60">
+                                  <div className="flex flex-wrap justify-between items-center gap-4 text-xs text-emerald-400/60">
                                     <span className="font-mono">{d._id}</span>
                                     {d.turno && <span className="truncate max-w-[120px]" title={d.turno}>{d.turno}</span>}
                                   </div>
@@ -1902,7 +1902,7 @@ export default function Treinamentos() {
                               {demais.map(d => (
                                 <div key={d._id} className="bg-slate-900/50 border border-slate-800 p-2 rounded-lg flex flex-col gap-1">
                                   <strong className="text-slate-300 text-xs truncate" title={d.nome}>{d.nome}</strong>
-                                  <div className="flex justify-between items-center text-[10px] text-slate-500">
+                                  <div className="flex flex-wrap justify-between items-center gap-4 text-[10px] text-slate-500">
                                     <span className="font-mono">{d._id}</span>
                                     {d.shiftStatus === 'F' && <span className="bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-medium">Hoje: Folga</span>}
                                     {d.shiftStatus === '16' && <span className="bg-amber-900/20 text-amber-400/80 border border-amber-900/30 px-1.5 py-0.5 rounded">Hoje: 16h-00h</span>}
@@ -1929,8 +1929,8 @@ export default function Treinamentos() {
 
 
             <div className="bg-slate-900/80 rounded-xl border border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div className="flex flex-wrap items-center gap-3">
                 <h3 className="font-bold text-white text-lg">Lista de Presenças ({presencas.length})</h3>
                 <span className="flex items-center gap-1 text-[10px] bg-emerald-950 text-emerald-400 font-bold px-2.5 py-0.5 rounded-full border border-emerald-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-ping"></span> Ao vivo
@@ -2103,8 +2103,8 @@ export default function Treinamentos() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 sm:p-8 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200 max-h-[95vh] overflow-y-auto hide-scrollbar">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800 mb-6">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
                   <FolderPlus className="h-5 w-5" />
                 </div>
@@ -2383,7 +2383,7 @@ export default function Treinamentos() {
                 {/* Se há uma pessoa já selecionada, mostra em destaque */}
                 {selectedColab && (
                   <div className="mt-3 p-3 bg-emerald-900/20 border border-emerald-900/50 rounded-lg animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-wrap justify-between items-start gap-4">
                       <div>
                         <h4 className="font-bold text-emerald-400 text-sm">{selectedColab.nome}</h4>
                         <p className="text-xs text-emerald-500 mt-1 font-mono">ID: {selectedColab.identificador}</p>
@@ -2405,7 +2405,7 @@ export default function Treinamentos() {
                         onClick={() => { setSelectedColab(colab); setManualId(colab.identificador); }}
                         className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg cursor-pointer transition-colors"
                       >
-                        <div className="flex justify-between items-start">
+                        <div className="flex flex-wrap justify-between items-start gap-4">
                           <div>
                             <h4 className="font-bold text-white text-sm">{colab.nome}</h4>
                             <p className="text-xs text-slate-400 mt-0.5"><span className="font-mono">{colab.identificador}</span></p>
@@ -2834,7 +2834,7 @@ export default function Treinamentos() {
         {isGlobalSearchOpen && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
             <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl p-6 shadow-2xl flex flex-col max-h-[85vh]">
-              <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+              <div className="flex flex-wrap justify-between items-center gap-4 mb-6 border-b border-slate-700 pb-4">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <Search className="h-6 w-6 text-sky-400" />
                   Localizar Colaborador

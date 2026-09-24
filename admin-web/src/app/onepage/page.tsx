@@ -451,7 +451,7 @@ export default function OnePageDashboard() {
   return (
     <div id="pdf-dashboard-wrapper" className="space-y-8 animate-in fade-in duration-500 pb-20 p-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-wrap flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
             <PieChart className="h-8 w-8 text-sky-400" />
@@ -497,7 +497,7 @@ export default function OnePageDashboard() {
       {/* KPIs Principais */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
             <h3 className="text-slate-400 font-medium text-sm">Total Esperado</h3>
             <div className="p-2 bg-slate-800 rounded-lg"><Users className="h-4 w-4 text-slate-300" /></div>
           </div>
@@ -508,7 +508,7 @@ export default function OnePageDashboard() {
         </div>
 
         <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
             <h3 className="text-slate-400 font-medium text-sm">Total Capacitados</h3>
             <div className="p-2 bg-emerald-900/30 rounded-lg"><CheckCircle className="h-4 w-4 text-emerald-400" /></div>
           </div>
@@ -519,7 +519,7 @@ export default function OnePageDashboard() {
         </div>
 
         <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
             <h3 className="text-slate-400 font-medium text-sm">Avanço Global</h3>
             <div className="p-2 bg-sky-900/30 rounded-lg"><Target className="h-4 w-4 text-sky-400" /></div>
           </div>
@@ -532,7 +532,7 @@ export default function OnePageDashboard() {
         </div>
 
         <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
             <h3 className="text-slate-400 font-medium text-sm">Turmas Ativas</h3>
             <div className="p-2 bg-amber-900/30 rounded-lg"><Activity className="h-4 w-4 text-amber-400" /></div>
           </div>
@@ -579,7 +579,7 @@ export default function OnePageDashboard() {
         
         {ptRawData.length > 0 ? (
           <div className="flex flex-col h-full">
-            <div className="flex gap-2 mb-4 justify-end">
+            <div className="flex flex-wrap gap-2 mb-4 justify-end">
               <button 
                 onClick={() => setFiltroPlantaPt("Todas")}
                 className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors ${filtroPlantaPt === "Todas" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}
@@ -639,7 +639,7 @@ export default function OnePageDashboard() {
                     placeholder="Digite aqui as informações gerais, status de RCs, etc..."
                 />
             </div>
-            <div className="xl:col-span-1 bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex items-center justify-center gap-6">
+            <div className="xl:col-span-1 bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col sm:flex-row items-center justify-center gap-6 text-center sm:text-left">
                 <div className="bg-white p-2 rounded-xl shadow-lg shrink-0">
                     <QRCodeSVG value="https://competitividad.cmpc-innovation.com/pt_digital" size={96} level="L" includeMargin={false} />
                 </div>
