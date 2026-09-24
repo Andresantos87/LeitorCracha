@@ -1436,13 +1436,13 @@ export default function Treinamentos() {
                   {/* Tabela Interna das Turmas daquela Pasta */}
                   {isExpanded && (
                     <div className="bg-slate-950/50 p-2 sm:p-4 border-t border-slate-700/60 animate-in slide-in-from-top-2 duration-200 overflow-x-auto">
-                      <table className="w-full text-left text-sm min-w-[700px]">
+                      <table className="w-full text-left text-sm w-full">
                         <thead className="text-xs uppercase text-slate-400 border-b border-slate-800">
                           <tr>
                             <th className="px-4 py-3 font-semibold">Turma / Identificador</th>
-                            <th className="px-4 py-3 font-semibold">ID da Sessão</th>
+                            <th className="px-4 py-3 font-semibold hidden md:table-cell">ID da Sessão</th>
                             <th className="px-4 py-3 font-semibold">Status</th>
-                            <th className="px-4 py-3 font-semibold">Checklist</th>
+                            <th className="px-4 py-3 font-semibold hidden md:table-cell">Checklist</th>
                             <th className="px-4 py-3 font-semibold">Presenças</th>
                             <th className="px-4 py-3 font-semibold text-right">Ações</th>
                           </tr>
@@ -1526,7 +1526,7 @@ export default function Treinamentos() {
                                   </span>
                                 </div>
                               </td>
-                              <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">{t.id}</td>
+                              <td className="px-4 py-3.5 text-slate-400 font-mono text-xs hidden md:table-cell">{t.id}</td>
                               <td className="px-4 py-3.5" onClick={(e) => toggleStatusAgenda(t.id, t.status_agenda, e)}>
                                   {t.status_agenda === 'CONCLUIDO' ? (
                                     <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800 cursor-pointer hover:bg-emerald-900/50 transition-colors" title="Turma Concluída. Clique para desmarcar.">
@@ -1538,7 +1538,7 @@ export default function Treinamentos() {
                                     </span>
                                   )}
                                 </td>
-                              <td className="px-4 py-3.5">
+                              <td className="px-4 py-3.5 hidden md:table-cell">
                                 {t.checklist_dinamico && t.checklist_dinamico.length > 0 ? (
                                   t.checklist_dinamico.every((item: any) => item.checado) ? (
                                     <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-800" title="Checklist concluído">
@@ -1667,7 +1667,7 @@ export default function Treinamentos() {
                   <tr>
                     <th className="px-4 py-3">Colaborador</th>
                     <th className="px-4 py-3">CPF</th>
-                    <th className="px-4 py-3">Empresa</th>
+                    <th className="px-4 py-3 hidden md:table-cell">Empresa</th>
                     <th className="px-4 py-3">Turma Origem</th>
                   </tr>
                 </thead>
@@ -1983,7 +1983,7 @@ export default function Treinamentos() {
                 )}
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm min-w-[600px]">
+                  <table className="w-full text-left text-sm w-full">
                     <thead className="text-slate-400 border-b border-slate-700/50">
                     <tr>
                       {userRole === 'admin' && (
@@ -2000,7 +2000,7 @@ export default function Treinamentos() {
                       <th className="px-4 pb-3 font-medium">Colaborador</th>
                       <th className="px-4 pb-3 font-medium hidden md:table-cell">Empresa</th>
                       <th className="px-4 pb-3 font-medium hidden md:table-cell">Modo</th>
-                      <th className="px-4 pb-3 font-medium text-center">Assinatura</th>
+                      <th className="px-4 pb-3 font-medium text-center hidden md:table-cell">Assinatura</th>
                       <th className="px-4 pb-3 font-medium text-right">Data / Hora</th>
                       {userRole === 'admin' && <th className="px-4 pb-3 font-medium text-right">Ações</th>}
                     </tr>
