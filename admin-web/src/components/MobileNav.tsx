@@ -17,9 +17,13 @@ export function MobileNav({ role }: { role?: string }) {
 
   const allItems = [
     { name: t.dashboard, path: "/", roles: ["admin", "gestor"] },
+    { name: "Visão Geral (OnePage)", path: "/onepage", roles: ["admin", "gestor"] },
     { name: t.treinamentos, path: "/treinamentos", roles: ["admin", "gestor"] },
-    { name: t.colaboradores, path: "/colaboradores", roles: ["admin", "gestor", "leitor"] },
-    { name: t.relatorios, path: "/relatorios", roles: ["admin", "gestor", "leitor"] },
+    { name: t.checklists, path: "/checklists", roles: ["admin", "gestor"] },
+    { name: "Calendário", path: "/calendario", roles: ["admin", "gestor", "leitor"] },
+    { name: t.publicosAlvo, path: "/publicos-alvo", roles: ["admin", "gestor"] },
+    { name: t.agenda, path: "/agenda", roles: ["admin", "gestor", "leitor"] },
+    { name: t.facilitadores, path: "/facilitadores", roles: ["admin", "gestor"] },
     { name: t.usuarios, path: "/usuarios", roles: ["admin"] },
   ];
 
