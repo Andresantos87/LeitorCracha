@@ -1411,18 +1411,7 @@ export default function Treinamentos() {
                         <Plus className="h-3.5 w-3.5" />
                         <span className="hidden md:inline">Nova Turma aqui</span>
                       </button>
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(`/api/exportar?curso=${encodeURIComponent(nomeCurso)}`, '_blank');
-                        }}
-                        className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-emerald-500/30 flex items-center gap-1.5 shadow-sm"
-                        title="Exportar todas as turmas deste treinamento para Excel"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        <span className="hidden md:inline">Exportar Excel</span>
-                      </button>
+
                       <button 
                         type="button"
                         onClick={(e) => {
@@ -1569,14 +1558,7 @@ export default function Treinamentos() {
 
                                 {t.publico_alvo_id && (
                                   <>
-                                    <button 
-                                      onClick={(e) => exportarAderenciaCSV(t.id, e)}
-                                      className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-amber-300 hover:text-white bg-amber-900/30 hover:bg-amber-800/50 rounded-lg transition-colors border border-amber-800/50"
-                                      title="Relatório de Aderência (Excel)"
-                                    >
-                                      <Target className="h-3.5 w-3.5" />
-                                      <span className="hidden sm:inline">Aderência CSV</span>
-                                    </button>
+
                                     <button 
                                       onClick={(e) => exportarAderenciaPDF(t.id, t.nome, e)}
                                       className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-rose-300 hover:text-white bg-rose-900/30 hover:bg-rose-800/50 rounded-lg transition-colors border border-rose-800/50"
