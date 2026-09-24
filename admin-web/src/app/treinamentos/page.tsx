@@ -1566,14 +1566,7 @@ export default function Treinamentos() {
                               </td>
                               <td className="px-4 py-3.5 font-bold text-sky-400">{t._count.registros} pessoas</td>
                               <td className="px-4 py-3.5 text-right flex items-center justify-end space-x-2" onClick={e => e.stopPropagation()}>
-                                <button 
-                                  onClick={(e) => exportarCSV(t.id, e)}
-                                  className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:text-white bg-emerald-900/30 hover:bg-emerald-800/50 rounded-lg transition-colors border border-emerald-800/50"
-                                  title="Exportar para Excel (CSV)"
-                                >
-                                  <Download className="h-3.5 w-3.5" />
-                                  <span>Excel</span>
-                                </button>
+
                                 {t.publico_alvo_id && (
                                   <>
                                     <button 
