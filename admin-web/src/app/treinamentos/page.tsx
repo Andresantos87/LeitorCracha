@@ -2069,7 +2069,6 @@ export default function Treinamentos() {
                     ))}
                   </tbody>
                 </table>
-                </div>
               </div>
             )}
           </div>
