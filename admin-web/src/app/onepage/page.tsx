@@ -39,11 +39,7 @@ export default function OnePageDashboard() {
         if (salvo) {
             setComentarios(salvo);
         } else {
-            setComentarios("Status do Projeto:
-
-- Plataforma Lignia em fase de adoção.
-- RCs para compra de tablets emitidas e aguardando aprovação.
-- Treinamentos operacionais em andamento.");
+            setComentarios(`Status do Projeto:\n\n- Plataforma Lignia em fase de adoção.\n- RCs para compra de tablets emitidas e aguardando aprovação.\n- Treinamentos operacionais em andamento.`);
         }
     }, []);
 
