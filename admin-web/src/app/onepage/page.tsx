@@ -651,7 +651,7 @@ export default function OnePageDashboard() {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 w-full">
                 <div className="xl:col-span-2 flex flex-col">
                   <PTMonthlyChart 
-                    monthlyData={filteredPtMonthlyData} 
+                    monthlyData={filteredPtMonthlyData} ptRawData={ptRawData} 
                     filtroPlantaPt={filtroPlantaPt}
                     filtroAreaPt={filtroAreaPt}
                     setFiltroAreaPt={setFiltroAreaPt}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useTranslation } from "@/lib/useTranslation";
 import {
   ComposedChart,
@@ -18,6 +18,7 @@ import {
 
 interface PTMonthlyChartProps {
   monthlyData: any[];
+  ptRawData?: any[];
   filtroPlantaPt: string;
   filtroAreaPt: string;
   setFiltroAreaPt: (area: string) => void;
@@ -45,9 +46,71 @@ const baselineSantaFe: Record<string, number> = {
   "Pátio": 60
 };
 
-export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtroAreaPt, setFiltroAreaPt, areasDisponiveis = [] }: PTMonthlyChartProps) {
+export default function PTMonthlyChart({ monthlyData = [], ptRawData = [], filtroPlantaPt, filtroAreaPt, setFiltroAreaPt, areasDisponiveis = [] }: PTMonthlyChartProps) {
   const { t } = useTranslation();
   
+  
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+
+  const dailyData = useMemo(() => {
+    if (!selectedMonth || !ptRawData || ptRawData.length === 0) return [];
+    
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    
+    let filteredData = ptRawData;
+    if (filtroPlantaPt !== "Todas") {
+       filteredData = ptRawData.filter(r => r["Planta"] === filtroPlantaPt || r["Planta"] === (filtroPlantaPt === "Guaíba" || filtroPlantaPt === "Guaba" ? "Guaiba" : "Santa Fe"));
+    }
+
+    const normalizeArea = (rawArea: string) => {
+        if (!rawArea) return 'Outros';
+        const a = rawArea.toUpperCase();
+        if (a.includes('PATIO') || a.includes('PÁTIO') || a.includes('PTIO') || a.includes('CAVACO') || a.includes('MADEIRA') || a.includes('ASTIL') || a.includes('MADERAS') || a.includes('ROLLIZOS')) return 'Pátio';
+        if (a.includes('CAUST')) return 'Caustif.';
+        if (a.includes('RECUP') || a.includes('CR3')) return 'CR';
+        if (a.includes('SECAGEM')) return 'Secagem';
+        if (a.includes('AGUA') || a.includes('ÁGUA') || a.includes('GUA')) return 'Águas';
+        if (a.includes('ENERGIA') || a.includes('CALDEIRA')) return 'Energia';
+        if (a.includes('FIBRAS') || a.includes('BRANQUEAMENTO') || a.includes('DEPURAÇÃO') || a.includes('COZIMENTO')) return 'L. Fibras';
+        if (a.includes('QUIM') || a.includes('QUÍM') || a.includes('QUM') || a.includes('CLORO') || a.includes('SODA')) return 'Pl. Quím.';
+        if (a.includes('DEFAPA')) return 'Defapa';
+        let clean = rawArea.trim();
+        if (clean.length > 15) clean = clean.substring(0, 15) + '...';
+        return clean;
+    };
+
+    if (filtroAreaPt !== "Todas") {
+       filteredData = filteredData.filter(r => normalizeArea(r['Área de operación'] || r['?rea de operacin'] || r['Area de operacion'] || '') === filtroAreaPt);
+    }
+
+    let dailyCounts: Record<string, number> = {};
+
+    filteredData.forEach((row: any) => {
+        const d = row['Fecha de inicio'] || row['Fecha de creación'] || row['Data de Início'] || row['Fecha de creacin'] || row['Data de Incio'];
+        if (d) {
+            const parts = d.split('/');
+            if (parts.length >= 2) {
+                const day = parts[0];
+                const m = parseInt(parts[1], 10) - 1;
+                if (m >= 0 && m < 12 && monthNames[m] === selectedMonth) {
+                    dailyCounts[day] = (dailyCounts[day] || 0) + 1;
+                }
+            }
+        }
+    });
+
+    return Object.keys(dailyCounts)
+        .sort((a,b) => parseInt(a) - parseInt(b))
+        .map(day => ({
+            mes: `Dia ${day}`,
+            pt: dailyCounts[day],
+            realPt: dailyCounts[day],
+            metaMensalVal: 0,
+            adocaoMes: 0,
+            color: "#0ea5e9"
+        }));
+  }, [selectedMonth, ptRawData, filtroPlantaPt, filtroAreaPt]);
+
   const metaInfo = useMemo(() => {
     let metaSemanal = 0;
     
@@ -172,8 +235,24 @@ export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtr
     <div id="chart-monthly" className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col w-full mx-auto mt-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h3 className="text-lg font-bold text-white">{t.monthlyEvol}</h3>
-          <p className="text-sm text-slate-400">{t.perfVsGoal}</p>
+          
+          {selectedMonth ? (
+             <div className="flex items-center gap-3">
+                <button onClick={() => setSelectedMonth(null)} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors">
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                </button>
+                <div>
+                   <h3 className="text-lg font-bold text-white">Detalhamento Diário - {selectedMonth}</h3>
+                   <p className="text-sm text-slate-400">Quantidade de PTs abertas por dia</p>
+                </div>
+             </div>
+          ) : (
+             <>
+                <h3 className="text-lg font-bold text-white">{t.monthlyEvol}</h3>
+                <p className="text-sm text-slate-400">{t.perfVsGoal}</p>
+             </>
+          )}
+
           {currentAdocao && (
              <div className="mt-2 inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/20">
                 Adoção Atual (Último Mês): {currentAdocao.perc}% ({currentAdocao.atual} / {currentAdocao.meta})
@@ -198,7 +277,7 @@ export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtr
       <div className="h-[400px] w-full mt-2">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
-            data={data}
+            data={selectedMonth ? dailyData : data}
             margin={{
               top: 45,
               right: 20,
@@ -230,8 +309,21 @@ export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtr
             
             <Bar yAxisId="left" dataKey="metaMensalVal" name="Meta" fill="#1e293b" radius={[4, 4, 0, 0]} maxBarSize={65} />
             
-            <Bar yAxisId="left" dataKey="pt" name="Realizado" radius={[4, 4, 0, 0]} maxBarSize={65} minPointSize={4}>
-              {data.map((entry, index) => (
+            <Bar 
+  yAxisId="left" 
+  dataKey="pt" 
+  name="Realizado" 
+  radius={[4, 4, 0, 0]} 
+  maxBarSize={65} 
+  minPointSize={4}
+  onClick={(data: any) => {
+    if (!selectedMonth && data.mes && !data.mes.includes('Dia')) {
+        setSelectedMonth(data.mes);
+    }
+  }}
+  style={{ cursor: selectedMonth ? 'default' : 'pointer' }}
+>
+              {(selectedMonth ? dailyData : data).map((entry, index) => (
                 <Cell key={"cell-" + index} fill={entry.color} />
               ))}
               <LabelList dataKey="realPt" content={renderCustomBarLabel} />
