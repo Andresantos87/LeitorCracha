@@ -36,6 +36,22 @@ export interface Translations {
   scanQrCode: string;
   statusAndComments: string;
 
+  // PT Charts
+  perfMonthVsGoal: string;
+  noData: string;
+  weeklyBaseline: string;
+  expectedVsGoal: string;
+  noDataDisplay: string;
+  areasVsAcc: string;
+  monthlyEvol: string;
+  perfVsGoal: string;
+  ptsDone: string;
+  monthlyGoal: string;
+  monthAdhesion: string;
+  allAreas: string;
+  monthFilter: string;
+  allMonths: string;
+
   // Dashboard Page
   dashSubtitle: string;
   activeTrainings: string;
@@ -114,6 +130,20 @@ export const translations: Record<Language, Translations> = {
     progressSep: "Progresso separado por Operação e Manutenção",
     scanQrCode: "Escaneie o QR Code com a câmera do celular ou clique no link abaixo para acessar a Plataforma.",
     statusAndComments: "Status e Comentários Gerais",
+    perfMonthVsGoal: "Desempenho no mês vs Meta Mensal da área",
+    noData: "Sem dados suficientes.",
+    weeklyBaseline: "Linha Base Semanal",
+    expectedVsGoal: "Distribuição Esperada vs Meta (50%)",
+    noDataDisplay: "Sem dados para exibir.",
+    areasVsAcc: "Principais áreas vs Acumulado",
+    monthlyEvol: "Evolução Mensal & Adoção",
+    perfVsGoal: "Desempenho Realizado vs Meta Mensal",
+    ptsDone: "PTs Realizadas",
+    monthlyGoal: "Meta Mensal",
+    monthAdhesion: "Adoção do Mês",
+    allAreas: "Todas as Áreas",
+    monthFilter: "Mês",
+    allMonths: "Todos os Meses",
     dashSubtitle: "Visão geral do sistema de treinamentos CMPC.",
     activeTrainings: "Treinamentos Ativos",
     roomsCreated: "Salas criadas no sistema",
@@ -188,6 +218,20 @@ export const translations: Record<Language, Translations> = {
     progressSep: "Progreso separado por Operación y Mantenimiento",
     scanQrCode: "Escanee el código QR con la cámara de su celular o haga clic en el enlace para acceder a la Plataforma.",
     statusAndComments: "Estado y Comentarios Generales",
+    perfMonthVsGoal: "Desempeño en el mes vs Meta Mensual del área",
+    noData: "Sin datos suficientes.",
+    weeklyBaseline: "Línea Base Semanal",
+    expectedVsGoal: "Distribución Esperada vs Meta (50%)",
+    noDataDisplay: "Sin datos para mostrar.",
+    areasVsAcc: "Áreas Principales vs Acumulado",
+    monthlyEvol: "Evolución Mensual y Adhesión",
+    perfVsGoal: "Desempeño Realizado vs Meta Mensual",
+    ptsDone: "PTs Realizadas",
+    monthlyGoal: "Meta Mensual",
+    monthAdhesion: "Adhesión del Mes",
+    allAreas: "Todas las Áreas",
+    monthFilter: "Mes",
+    allMonths: "Todos los Meses",
     dashSubtitle: "Visión general del sistema de capacitaciones CMPC.",
     activeTrainings: "Capacitaciones Activas",
     roomsCreated: "Salas creadas en el sistema",

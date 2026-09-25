@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from "react";
+import { useTranslation } from "@/lib/useTranslation";
+//, { useMemo, useState, useEffect } from 'react';
 
 interface PTAreaAdocaoChartProps {
   ptRawData: any[];
@@ -59,6 +61,7 @@ function normalizeArea(rawArea: string) {
 }
 
 export default function PTAreaAdocaoChart({ ptRawData, filtroPlantaPt }: PTAreaAdocaoChartProps) {
+  const { t } = useTranslation();
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
 
   const { data, mesesDisponiveis, mesAtual } = useMemo(() => {
@@ -167,7 +170,7 @@ export default function PTAreaAdocaoChart({ ptRawData, filtroPlantaPt }: PTAreaA
                   </span>
               )}
           </h3>
-          <p className="text-sm text-slate-400 mt-1">Desempenho no mês vs Meta Mensal da Área</p>
+          <p className="text-sm text-slate-400 mt-1">{t.perfMonthVsGoal}</p>
         </div>
 
         <div className="shrink-0 z-10 pt-0.5">
@@ -186,7 +189,7 @@ export default function PTAreaAdocaoChart({ ptRawData, filtroPlantaPt }: PTAreaA
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 space-y-4 hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {data.length === 0 ? (
-            <p className="text-slate-500 text-sm text-center mt-10">Sem dados suficientes.</p>
+            <p className="text-slate-500 text-sm text-center mt-10">{t.noData}</p>
         ) : (
             data.map((item, idx) => (
                 <div key={idx} className="flex flex-col gap-1.5">

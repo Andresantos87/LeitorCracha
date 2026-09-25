@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
+import { useTranslation } from "@/lib/useTranslation";
+//, { useMemo } from 'react';
 import {
   ComposedChart,
   Bar,
@@ -41,6 +43,7 @@ const baselineSantaFeData = [
 ];
 
 export default function PTBaselineChart({ planta }: PTBaselineChartProps) {
+  const { t } = useTranslation();
   const isGuaiba = planta === "Guaíba";
   const rawData = isGuaiba ? baselineGuaibaData : baselineSantaFeData;
   const meta = isGuaiba ? 506 : 160;
@@ -69,8 +72,8 @@ export default function PTBaselineChart({ planta }: PTBaselineChartProps) {
     <div id={`chart-baseline-${planta !== "Santa Fe" ? "1" : "2"}`} className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col w-full h-full mx-auto">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h3 className="text-lg font-bold text-white">Linha Base Semanal - {planta}</h3>
-          <p className="text-sm text-slate-400">Distribuição Esperada vs Meta (50%)</p>
+          <h3 className="text-lg font-bold text-white">{t.weeklyBaseline} - {planta}</h3>
+          <p className="text-sm text-slate-400">{t.expectedVsGoal}</p>
         </div>
       </div>
       

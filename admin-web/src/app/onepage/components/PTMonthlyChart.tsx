@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
+import { useTranslation } from "@/lib/useTranslation";
+//, { useMemo } from 'react';
 import {
   ComposedChart,
   Bar,
@@ -45,6 +47,7 @@ const baselineSantaFe: Record<string, number> = {
 };
 
 export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtroAreaPt, setFiltroAreaPt, areasDisponiveis = [] }: PTMonthlyChartProps) {
+  const { t } = useTranslation();
   
   const metaInfo = useMemo(() => {
     let metaSemanal = 0;
@@ -151,13 +154,13 @@ export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtr
       return (
         <div className="bg-slate-900 border border-slate-700 p-3 rounded-xl shadow-xl z-50 relative">
           <p className="text-white font-bold mb-2">{label}</p>
-          <p className="text-blue-400 text-sm">PTs Realizadas: <strong className="text-white">{barData.realPt || 0}</strong></p>
+          <p className="text-blue-400 text-sm">{t.ptsDone}: <strong className="text-white">{barData.realPt || 0}</strong></p>
           
           {metaInfo > 0 && (
              <>
                <div className="h-px w-full bg-slate-700 my-2" />
-               <p className="text-slate-400 text-sm">Meta Mensal: <strong className="text-white">{metaInfo}</strong></p>
-               <p className="text-emerald-400 text-sm">Adoção do Mês: <strong className="text-white">{metaInfo > 0 ? Math.min(100, Math.round(((barData.realPt || 0) / metaInfo) * 100)) : 0}%</strong></p>
+               <p className="text-slate-400 text-sm">{t.monthlyGoal}: <strong className="text-white">{metaInfo}</strong></p>
+               <p className="text-emerald-400 text-sm">{t.monthAdhesion}: <strong className="text-white">{metaInfo > 0 ? Math.min(100, Math.round(((barData.realPt || 0) / metaInfo) * 100)) : 0}%</strong></p>
              </>
           )}
         </div>
@@ -170,8 +173,8 @@ export default function PTMonthlyChart({ monthlyData = [], filtroPlantaPt, filtr
     <div id="chart-monthly" className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col w-full mx-auto mt-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h3 className="text-lg font-bold text-white">Evolução Mensal & Adoção</h3>
-          <p className="text-sm text-slate-400">Desempenho Realizado vs Meta Mensal</p>
+          <h3 className="text-lg font-bold text-white">{t.monthlyEvol}</h3>
+          <p className="text-sm text-slate-400">{t.perfVsGoal}</p>
           {currentAdocao && (
              <div className="mt-2 inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold border border-emerald-500/20">
                 Adoção Atual (Último Mês): {currentAdocao.perc}% ({currentAdocao.atual} / {currentAdocao.meta})

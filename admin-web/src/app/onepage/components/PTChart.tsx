@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
+import { useTranslation } from "@/lib/useTranslation";
+//, { useMemo } from 'react';
 import {
   ComposedChart,
   Bar,
@@ -21,6 +23,7 @@ interface PTChartProps {
 }
 
 export default function PTChart({ chartData, title }: PTChartProps) {
+  const { t } = useTranslation();
   const data = useMemo(() => {
     let cumulative = 0;
     return chartData.map((item, index) => {
@@ -42,7 +45,7 @@ export default function PTChart({ chartData, title }: PTChartProps) {
   if (data.length === 0) {
      return (
         <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col w-full h-full min-h-[400px] mx-auto items-center justify-center">
-            <p className="text-slate-500 font-medium">Sem dados para exibir.</p>
+            <p className="text-slate-500 font-medium">{t.noDataDisplay}</p>
         </div>
      );
   }
@@ -52,7 +55,7 @@ export default function PTChart({ chartData, title }: PTChartProps) {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h3 className="text-lg font-bold text-white">{title}</h3>
-          <p className="text-sm text-slate-400">Principais áreas vs Acumulado</p>
+          <p className="text-sm text-slate-400">{t.areasVsAcc}</p>
         </div>
       </div>
       
