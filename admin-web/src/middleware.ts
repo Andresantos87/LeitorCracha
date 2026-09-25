@@ -35,9 +35,10 @@ export async function middleware(request: NextRequest) {
     }
     
     // Leitor não pode acessar Treinamentos (apenas exportar planilhas / relatorios)
-    if (path.startsWith('/treinamentos') && role === 'leitor') {
-      return NextResponse.redirect(new URL('/colaboradores', request.url));
-    }
+    // Acesso a /treinamentos agora é filtrado via DB (todos entram e veem só o permitido)
+    // if (path.startsWith('/treinamentos') && role === 'leitor') {
+    //   return NextResponse.redirect(new URL('/colaboradores', request.url));
+    // }
 
     return NextResponse.next();
   } catch (error) {
