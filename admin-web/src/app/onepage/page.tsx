@@ -88,7 +88,7 @@ export default function OnePageDashboard() {
             data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
         }
         const blacklist = ["boxboard", "andre.santos", "ansantos", "regis", "mariele", "nidio", "maldonado", "escobar"];
-        const validStatuses = ["Fechado", "Liberado para Execução"];
+        const validStatuses = ["Fechado", "Liberado para Execução", "Encerrado"];
         
         const cleanedData = data.filter((row: any) => {
             const solicitante = (row['Solicitante'] || "").toLowerCase();
