@@ -486,7 +486,7 @@ export default function OnePageDashboard() {
               className="bg-sky-600/20 hover:bg-sky-500 text-sky-400 hover:text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 text-xs border border-sky-500/30 shadow-lg transition-all"
             >
               <Download className="h-4 w-4" />
-              Gerar PDF (Resumo)
+              {t.genPdf}
             </button>
 
           <select 
@@ -648,13 +648,13 @@ export default function OnePageDashboard() {
             <div className="xl:col-span-2 bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col">
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                     <MessageSquare className="h-5 w-5 text-sky-400" />
-                    Status e Comentários Gerais
+                    {t.statusAndComments}
                 </h3>
                 <textarea ref={comentariosRef} 
                     className="w-full bg-slate-800/80 hover:bg-slate-800 border-2 border-slate-700 hover:border-slate-600 rounded-xl p-4 text-slate-300 text-sm resize-none outline-none focus:border-sky-500 focus:bg-slate-900 transition-all min-h-[120px] pdf-textarea cursor-text shadow-inner overflow-hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                     value={comentarios}
                     onChange={handleComentarioChange} onBlur={handleComentarioBlur}
-                    placeholder="Digite aqui as informações gerais, status de RCs, etc..."
+                    placeholder="{t.placeholderComments}"
                 />
             </div>
             <div className="xl:col-span-1 bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col sm:flex-row items-center justify-center gap-6 text-center sm:text-left">
@@ -663,7 +663,7 @@ export default function OnePageDashboard() {
                 </div>
                 <div className="flex flex-col gap-2">
                     <h3 className="text-white font-bold flex items-center gap-2">
-                        <QrCode className="h-4 w-4 text-emerald-400" /> Acesso Lignia
+                        <QrCode className="h-4 w-4 text-emerald-400" /> {t.accessLignia}
                     </h3>
                     <p className="text-xs text-slate-400 leading-relaxed">{t.scanQrCode}</p>
                     <a href="https://competitividad.cmpc-innovation.com/pt_digital" target="_blank" className="text-sky-400 text-xs font-bold hover:underline break-all mt-1">

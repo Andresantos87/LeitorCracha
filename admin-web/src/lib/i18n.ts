@@ -36,7 +36,7 @@ export interface Translations {
   scanQrCode: string;
   statusAndComments: string;
 
-  // PT Charts
+  // Extras\n  genPdf: string;\n  accessLignia: string;\n  placeholderComments: string;\n\n  // PT Charts
   perfMonthVsGoal: string;
   noData: string;
   weeklyBaseline: string;
@@ -144,7 +144,7 @@ export const translations: Record<Language, Translations> = {
     allAreas: "Todas as Áreas",
     monthFilter: "Mês",
     allMonths: "Todos os Meses",
-    dashSubtitle: "Visão geral do sistema de treinamentos CMPC.",
+    genPdf: "Gerar PDF (Resumo)",\n    accessLignia: "Acesso Lignia",\n    placeholderComments: "Digite aqui as informações gerais, status de RCs, etc...",\n    dashSubtitle: "Visão geral do sistema de treinamentos CMPC.",
     activeTrainings: "Treinamentos Ativos",
     roomsCreated: "Salas criadas no sistema",
     totalColabs: "Total Colaboradores",
@@ -232,7 +232,7 @@ export const translations: Record<Language, Translations> = {
     allAreas: "Todas las Áreas",
     monthFilter: "Mes",
     allMonths: "Todos los Meses",
-    dashSubtitle: "Visión general del sistema de capacitaciones CMPC.",
+    genPdf: "Generar PDF (Resumen)",\n    accessLignia: "Acceso Lignia",\n    placeholderComments: "Escriba aquí la información general, estado de las RCs, etc...",\n    dashSubtitle: "Visión general del sistema de capacitaciones CMPC.",
     activeTrainings: "Capacitaciones Activas",
     roomsCreated: "Salas creadas en el sistema",
     totalColabs: "Total Colaboradores",
