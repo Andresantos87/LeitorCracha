@@ -319,8 +319,7 @@ export default function PTMonthlyChart({ monthlyData = [], ptRawData = [], filtr
             <Tooltip content={<CustomTooltip />} cursor={{ fill: '#334155', opacity: 0.4 }} />
 
             {selectedMonth && metaDiariaInfo > 0 && (
-               <ReferenceLine 
-                  y={metaDiariaInfo} 
+               <ReferenceLine yAxisId="left" y={metaDiariaInfo} 
                   stroke="#10b981" 
                   strokeDasharray="4 4" 
                   label={{ position: 'insideTopLeft', value: `Média Esperada: ${metaDiariaInfo}/dia`, fill: '#10b981', fontSize: 12, fontWeight: 'bold' }} 
