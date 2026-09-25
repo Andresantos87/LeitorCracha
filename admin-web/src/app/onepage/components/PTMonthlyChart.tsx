@@ -158,6 +158,17 @@ export default function PTMonthlyChart({ monthlyData = [], ptRawData = [], filtr
       });
   }, [monthlyData, metaInfo]);
 
+  
+  const metaDiariaInfo = useMemo(() => {
+     if (!selectedMonth || metaInfo <= 0) return 0;
+     const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+     const mIndex = monthNames.indexOf(selectedMonth);
+     if (mIndex === -1) return 0;
+     const year = new Date().getFullYear();
+     const daysInMonth = new Date(year, mIndex + 1, 0).getDate();
+     return Math.round(metaInfo / daysInMonth);
+  }, [selectedMonth, metaInfo]);
+
   const currentAdocao = useMemo(() => {
      if (metaInfo === 0 || data.length === 0) return null;
      let ultimo = [...data].reverse().find(d => d.pt > 0);
@@ -301,11 +312,21 @@ export default function PTMonthlyChart({ monthlyData = [], ptRawData = [], filtr
               tickLine={false}
               axisLine={false}
               dx={-10}
-              domain={[0, dataMax => selectedMonth ? Math.max(10, Math.ceil(dataMax * 1.25)) : Math.ceil(Math.max(dataMax, metaInfo) * 1.25)]}
+              domain={[0, dataMax => selectedMonth ? Math.max(10, Math.ceil(Math.max(dataMax, metaDiariaInfo) * 1.25)) : Math.ceil(Math.max(dataMax, metaInfo) * 1.25)]}
             />
               
             
             <Tooltip content={<CustomTooltip />} cursor={{ fill: '#334155', opacity: 0.4 }} />
+
+            {selectedMonth && metaDiariaInfo > 0 && (
+               <ReferenceLine 
+                  y={metaDiariaInfo} 
+                  stroke="#10b981" 
+                  strokeDasharray="4 4" 
+                  label={{ position: 'insideTopLeft', value: `Média Esperada: ${metaDiariaInfo}/dia`, fill: '#10b981', fontSize: 12, fontWeight: 'bold' }} 
+               />
+            )}
+
             
             {!selectedMonth && <Bar yAxisId="left" dataKey="metaMensalVal" name="Meta" fill="#1e293b" radius={[4, 4, 0, 0]} maxBarSize={65} />}
             
