@@ -3,6 +3,8 @@ export type Language = 'pt' | 'es';
 export interface Translations {
   // Navigation & General
   dashboard: string;
+  onepage: string;
+  calendario: string;
   treinamentos: string;
   checklists: string;
   publicosAlvo: string;
@@ -61,6 +63,8 @@ export interface Translations {
 export const translations: Record<Language, Translations> = {
   pt: {
     dashboard: "Dashboard",
+    onepage: "Visão Geral (OnePage)",
+    calendario: "Calendário",
     treinamentos: "Treinamentos",
     checklists: "Modelos de Checklist",
     publicosAlvo: "Públicos-Alvo",
@@ -115,6 +119,8 @@ export const translations: Record<Language, Translations> = {
   },
   es: {
     dashboard: "Panel",
+    onepage: "Resumen (OnePage)",
+    calendario: "Calendario",
     treinamentos: "Capacitaciones",
     checklists: "Modelos de Checklist",
     publicosAlvo: "Públicos Objetivo",

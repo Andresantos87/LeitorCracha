@@ -17,10 +17,10 @@ export function MobileNav({ role, allowedTabs }: { role?: string, allowedTabs?: 
 
   const allItems = [
     { name: t.dashboard, path: "/", roles: ["admin", "gestor"] },
-    { name: "Visão Geral (OnePage)", path: "/onepage", roles: ["admin", "gestor"] },
+    { name: t.onepage, path: "/onepage", roles: ["admin", "gestor"] },
     { name: t.treinamentos, path: "/treinamentos", roles: ["admin", "gestor"] },
     { name: t.checklists, path: "/checklists", roles: ["admin", "gestor"] },
-    { name: "Calendário", path: "/calendario", roles: ["admin", "gestor", "leitor"] },
+    { name: t.calendario, path: "/calendario", roles: ["admin", "gestor", "leitor"] },
     { name: t.publicosAlvo, path: "/publicos-alvo", roles: ["admin", "gestor"] },
     { name: t.agenda, path: "/agenda", roles: ["admin", "gestor", "leitor"] },
     { name: t.facilitadores, path: "/facilitadores", roles: ["admin", "gestor"] },
