@@ -15,7 +15,19 @@ export default function OnePageDashboard() {
   const [loading, setLoading] = useState(true);
   const [treinamentos, setTreinamentos] = useState<any[]>([]);
   const [filterPais, setFilterPais] = useState("");
-  const [filterCurso, setFilterCurso] = useState("");
+  const [filterCursos, setFilterCursos] = useState<string[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   const [ptMonthlyData, setPtMonthlyData] = useState<any[]>([]);
   const [ptRawData, setPtRawData] = useState<any[]>([]);
   const [filtroPlantaPt, setFiltroPlantaPt] = useState<"Todas" | "Guaíba" | "Santa Fe">("Todas");
@@ -183,7 +195,7 @@ export default function OnePageDashboard() {
         .filter(d => d.pt > 0 || monthNames.indexOf(d.mes) <= new Date().getMonth());
   }, [ptRawData, filtroPlantaPt, filtroAreaPt]);
 
-  const isPTSelected = !filterCurso || filterCurso.toUpperCase().includes('PT') || filterCurso.toUpperCase().includes('TRABALHO') || filterCurso.toUpperCase().includes('PERMISS');
+  const isPTSelected = filterCursos.length === 0 || filterCursos.some(c => c.toUpperCase().includes('PT') || c.toUpperCase().includes('TRABALHO') || c.toUpperCase().includes('PERMISS'));
 
   const filteredPtAreaChartData = useMemo(() => {
     if (ptRawData.length === 0) return [];
@@ -248,8 +260,8 @@ export default function OnePageDashboard() {
     if (filterPais) {
       filtrados = filtrados.filter(t => t.pais === filterPais);
     }
-    if (filterCurso) {
-      filtrados = filtrados.filter(t => t.nome?.trim() === filterCurso);
+    if (filterCursos.length > 0) {
+      filtrados = filtrados.filter(t => t.nome && filterCursos.includes(t.nome.trim()));
     }
 
     filtrados.forEach(t => {
@@ -311,7 +323,7 @@ export default function OnePageDashboard() {
       areasOutros,
       turmasArray: turmasArray.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).slice(0, 50) // Ultimas 50
     };
-  }, [treinamentos, filterPais, filterCurso]);
+  }, [treinamentos, filterPais, filterCursos]);
 
   if (loading) {
     return (
@@ -456,7 +468,7 @@ export default function OnePageDashboard() {
       });
       
       doc.addImage(imgData, 'JPEG', 0, 0, imgProps.width, imgProps.height);
-      doc.save(`Dashboard_${filterCurso || 'Geral'}.pdf`);
+      doc.save(`Dashboard_${filterCursos.length > 0 ? filterCursos.length + '_Cursos' : 'Geral'}.pdf`);
       
     } catch (e) {
       console.error(e);
@@ -489,16 +501,35 @@ export default function OnePageDashboard() {
               {t.genPdf}
             </button>
 
-          <select 
-            value={filterCurso} 
-            onChange={(e) => setFilterCurso(e.target.value)} 
-            className="px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm font-bold text-slate-300 outline-none focus:border-sky-500 transition-colors cursor-pointer max-w-xs"
-          >
-            <option value="">📚 {t.allCourses}</option>
-            {cursosUnicos.map((c, i) => (
-              <option key={i} value={c}>{c}</option>
-            ))}
-          </select>
+          <div className="relative" ref={dropdownRef}>
+            <button 
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm font-bold text-slate-300 outline-none focus:border-sky-500 transition-colors cursor-pointer flex items-center justify-between gap-2 min-w-[200px] max-w-xs pdf-mode-hide"
+            >
+              <span className="truncate">
+                {filterCursos.length === 0 ? `📚 ${t.allCourses}` : `📚 ${filterCursos.length} selecionado(s)`}
+              </span>
+              <svg className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            
+            {isDropdownOpen && (
+              <div className="absolute top-full mt-2 w-full min-w-[250px] max-w-md bg-slate-800 border border-slate-700 rounded-xl p-2 z-50 max-h-60 overflow-y-auto shadow-2xl pdf-mode-hide">
+                <label className="flex items-center gap-2 p-2 hover:bg-slate-700 rounded cursor-pointer text-sm text-slate-200 border-b border-slate-700 pb-2 mb-2">
+                   <input type="checkbox" className="accent-sky-500 w-4 h-4" checked={filterCursos.length === 0} onChange={() => setFilterCursos([])} />
+                   <span className="font-bold text-sky-400">{t.allCourses}</span>
+                </label>
+                {cursosUnicos.map((c, i) => (
+                   <label key={i} className="flex items-center gap-2 p-2 hover:bg-slate-700 rounded cursor-pointer text-xs font-medium text-slate-200">
+                      <input type="checkbox" className="accent-sky-500 w-4 h-4 shrink-0" checked={filterCursos.includes(c)} onChange={(e) => {
+                         if(e.target.checked) setFilterCursos([...filterCursos, c]);
+                         else setFilterCursos(filterCursos.filter(x => x !== c));
+                      }} />
+                      <span className="truncate">{c}</span>
+                   </label>
+                ))}
+              </div>
+            )}
+          </div>
 
           <select 
             value={filterPais} 
@@ -677,10 +708,10 @@ export default function OnePageDashboard() {
           {/* Avanço por Área */}
         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl flex flex-col">
           <div className="p-6 border-b border-slate-800 sticky top-0 bg-slate-900/90 backdrop-blur z-10 rounded-t-2xl">
-            {filterCurso && (
+            {filterCursos.length > 0 && (
                  <div className="mb-4 pb-4 border-b border-slate-700/50">
-                    <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-500 uppercase tracking-tight">
-                        {filterCurso}
+                    <h2 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-500 uppercase tracking-tight leading-snug">
+                        {filterCursos.join(" • ")}
                     </h2>
                     <p className="text-xs text-sky-500 uppercase tracking-widest mt-1 font-bold">{t.filteredCourse}</p>
                  </div>
