@@ -8,8 +8,10 @@ import PTMonthlyChart from "./components/PTMonthlyChart";
 import PTAreaAdocaoChart from "./components/PTAreaAdocaoChart";
 import * as XLSX from "xlsx";
 import { QRCodeSVG } from "qrcode.react";
+import { useTranslation } from "@/lib/useTranslation";
 
 export default function OnePageDashboard() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [treinamentos, setTreinamentos] = useState<any[]>([]);
   const [filterPais, setFilterPais] = useState("");
@@ -37,7 +39,11 @@ export default function OnePageDashboard() {
         if (salvo) {
             setComentarios(salvo);
         } else {
-            setComentarios("Status do Projeto:\n\n- Plataforma Lignia em fase de adoção.\n- RCs para compra de tablets emitidas e aguardando aprovação.\n- Treinamentos operacionais em andamento.");
+            setComentarios("Status do Projeto:
+
+- Plataforma Lignia em fase de adoção.
+- RCs para compra de tablets emitidas e aguardando aprovação.
+- Treinamentos operacionais em andamento.");
         }
     }, []);
 
@@ -492,7 +498,7 @@ export default function OnePageDashboard() {
             onChange={(e) => setFilterCurso(e.target.value)} 
             className="px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm font-bold text-slate-300 outline-none focus:border-sky-500 transition-colors cursor-pointer max-w-xs"
           >
-            <option value="">📚 Todos os Cursos</option>
+            <option value="">📚 {t.allCourses}</option>
             {cursosUnicos.map((c, i) => (
               <option key={i} value={c}>{c}</option>
             ))}
@@ -503,9 +509,9 @@ export default function OnePageDashboard() {
             onChange={(e) => setFilterPais(e.target.value)} 
             className="px-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm font-bold text-slate-300 outline-none focus:border-sky-500 transition-colors cursor-pointer"
           >
-            <option value="">🌎 Todos os Países</option>
-            <option value="BRASIL">Brasil</option>
-            <option value="CHILE">Chile</option>
+            <option value="">🌎 {t.allCountries}</option>
+            <option value="BRASIL">{t.brazil}</option>
+            <option value="CHILE">{t.chile}</option>
           </select>
         </div>
       </div>
@@ -514,29 +520,29 @@ export default function OnePageDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
           <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-            <h3 className="text-slate-400 font-medium text-sm">Total Esperado</h3>
+            <h3 className="text-slate-400 font-medium text-sm">{t.totalExpected}</h3>
             <div className="p-2 bg-slate-800 rounded-lg"><Users className="h-4 w-4 text-slate-300" /></div>
           </div>
           <div>
             <div className="text-3xl font-black text-white">{stats.totalEsperado}</div>
-            <p className="text-xs text-slate-500 mt-1">Colaboradores em públicos-alvo</p>
+            <p className="text-xs text-slate-500 mt-1">{t.colabsInTarget}</p>
           </div>
         </div>
 
         <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
           <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-            <h3 className="text-slate-400 font-medium text-sm">Total Capacitados</h3>
+            <h3 className="text-slate-400 font-medium text-sm">{t.totalTrained}</h3>
             <div className="p-2 bg-emerald-900/30 rounded-lg"><CheckCircle className="h-4 w-4 text-emerald-400" /></div>
           </div>
           <div>
             <div className="text-3xl font-black text-emerald-400">{stats.totalCapacitados}</div>
-            <p className="text-xs text-slate-500 mt-1">Presenças registradas</p>
+            <p className="text-xs text-slate-500 mt-1">{t.registeredPresences}</p>
           </div>
         </div>
 
         <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
           <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-            <h3 className="text-slate-400 font-medium text-sm">Avanço Global</h3>
+            <h3 className="text-slate-400 font-medium text-sm">{t.globalProgress}</h3>
             <div className="p-2 bg-sky-900/30 rounded-lg"><Target className="h-4 w-4 text-sky-400" /></div>
           </div>
           <div>
@@ -549,12 +555,12 @@ export default function OnePageDashboard() {
 
         <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
           <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-            <h3 className="text-slate-400 font-medium text-sm">Turmas Ativas</h3>
+            <h3 className="text-slate-400 font-medium text-sm">{t.activeClasses}</h3>
             <div className="p-2 bg-amber-900/30 rounded-lg"><Activity className="h-4 w-4 text-amber-400" /></div>
           </div>
           <div>
             <div className="text-3xl font-black text-amber-400">{stats.turmasAtivas}</div>
-            <p className="text-xs text-slate-500 mt-1">Em andamento ou agendadas</p>
+            <p className="text-xs text-slate-500 mt-1">{t.inProgressOrScheduled}</p>
           </div>
         </div>
       </div>
@@ -565,12 +571,12 @@ export default function OnePageDashboard() {
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <UploadCloud className="h-5 w-5 text-emerald-400" /> Upload de Planilha PT
           </h3>
-          <p className="text-sm text-slate-400">Faça o upload da planilha Excel (PT_Digital...) para gerar os gráficos.</p>
+          <p className="text-sm text-slate-400">{t.uploadLignia}</p>
         </div>
         <div className="flex items-center gap-4">
           {lastSyncTime && (
             <span className="text-slate-400 text-sm">
-              Última atualização: <strong className="text-white">{lastSyncTime}</strong>
+              {t.lastUpdate} <strong className="text-white">{lastSyncTime}</strong>
             </span>
           )}
           <div className="relative">
@@ -636,7 +642,7 @@ export default function OnePageDashboard() {
           ) : (
           <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col items-center justify-center w-full h-full min-h-[300px] max-w-4xl mx-auto">
              <UploadCloud className="h-12 w-12 text-slate-700 mb-4" />
-             <p className="text-slate-500 font-medium text-center">Faça o upload da planilha<br/>para visualizar os dados.</p>
+             <p className="text-slate-500 font-medium text-center">{t.uploadLignia}</p>
           </div>
         )}
       </div>
@@ -663,7 +669,7 @@ export default function OnePageDashboard() {
                     <h3 className="text-white font-bold flex items-center gap-2">
                         <QrCode className="h-4 w-4 text-emerald-400" /> Acesso Lignia
                     </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">Escaneie o QR Code com a câmera do seu celular ou clique no link abaixo para acessar a Plataforma Digital de PT.</p>
+                    <p className="text-xs text-slate-400 leading-relaxed">{t.scanQrCode}</p>
                     <a href="https://competitividad.cmpc-innovation.com/pt_digital" target="_blank" className="text-sky-400 text-xs font-bold hover:underline break-all mt-1">
                         competitividad.cmpc-innovation.com/pt_digital
                     </a>
@@ -680,11 +686,11 @@ export default function OnePageDashboard() {
                     <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-500 uppercase tracking-tight">
                         {filterCurso}
                     </h2>
-                    <p className="text-xs text-sky-500 uppercase tracking-widest mt-1 font-bold">Curso Filtrado</p>
+                    <p className="text-xs text-sky-500 uppercase tracking-widest mt-1 font-bold">{t.filteredCourse}</p>
                  </div>
               )}
-              <h3 className="text-lg font-bold text-white">Avanço de Treinamentos por Área</h3>
-            <p className="text-sm text-slate-400">Progresso separado por Operação e Manutenção</p>
+              <h3 className="text-lg font-bold text-white">{t.progressByArea}</h3>
+            <p className="text-sm text-slate-400">{t.progressSep}</p>
           </div>
           <div className="p-6 space-y-8">
             

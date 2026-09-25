@@ -16,6 +16,26 @@ export interface Translations {
   logout: string;
   user: string;
 
+  // OnePage Dashboard
+  allCourses: string;
+  allCountries: string;
+  brazil: string;
+  chile: string;
+  totalExpected: string;
+  colabsInTarget: string;
+  totalTrained: string;
+  registeredPresences: string;
+  globalProgress: string;
+  activeClasses: string;
+  inProgressOrScheduled: string;
+  uploadLignia: string;
+  lastUpdate: string;
+  filteredCourse: string;
+  progressByArea: string;
+  progressSep: string;
+  scanQrCode: string;
+  statusAndComments: string;
+
   // Dashboard Page
   dashSubtitle: string;
   activeTrainings: string;
@@ -76,6 +96,24 @@ export const translations: Record<Language, Translations> = {
     logout: "Sair",
     user: "Usuário",
 
+    allCourses: "Todos os Cursos",
+    allCountries: "Todos os Países",
+    brazil: "Brasil",
+    chile: "Chile",
+    totalExpected: "Total Esperado",
+    colabsInTarget: "Colaboradores em públicos-alvo",
+    totalTrained: "Total Capacitados",
+    registeredPresences: "Presenças registradas",
+    globalProgress: "Avanço Global",
+    activeClasses: "Turmas Ativas",
+    inProgressOrScheduled: "Em andamento ou agendadas",
+    uploadLignia: "Faça o upload da planilha para visualizar os dados.",
+    lastUpdate: "Última atualização:",
+    filteredCourse: "Curso Filtrado",
+    progressByArea: "Avanço de Treinamentos por Área",
+    progressSep: "Progresso separado por Operação e Manutenção",
+    scanQrCode: "Escaneie o QR Code com a câmera do celular ou clique no link abaixo para acessar a Plataforma.",
+    statusAndComments: "Status e Comentários Gerais",
     dashSubtitle: "Visão geral do sistema de treinamentos CMPC.",
     activeTrainings: "Treinamentos Ativos",
     roomsCreated: "Salas criadas no sistema",
@@ -132,6 +170,24 @@ export const translations: Record<Language, Translations> = {
     logout: "Salir",
     user: "Usuario",
 
+    allCourses: "Todos los Cursos",
+    allCountries: "Todos los Países",
+    brazil: "Brasil",
+    chile: "Chile",
+    totalExpected: "Total Esperado",
+    colabsInTarget: "Colaboradores en públicos objetivo",
+    totalTrained: "Total Capacitados",
+    registeredPresences: "Asistencias registradas",
+    globalProgress: "Avance Global",
+    activeClasses: "Clases Activas",
+    inProgressOrScheduled: "En curso o programadas",
+    uploadLignia: "Cargue la planilla Excel para generar los gráficos.",
+    lastUpdate: "Última actualización:",
+    filteredCourse: "Curso Filtrado",
+    progressByArea: "Avance de Capacitaciones por Área",
+    progressSep: "Progreso separado por Operación y Mantenimiento",
+    scanQrCode: "Escanee el código QR con la cámara de su celular o haga clic en el enlace para acceder a la Plataforma.",
+    statusAndComments: "Estado y Comentarios Generales",
     dashSubtitle: "Visión general del sistema de capacitaciones CMPC.",
     activeTrainings: "Capacitaciones Activas",
     roomsCreated: "Salas creadas en el sistema",
@@ -152,7 +208,7 @@ export const translations: Record<Language, Translations> = {
     loading: "Cargando...",
     noRecent: "No se encontró ninguna capacitación reciente.",
 
-    regTitle: "REGISTRO DE ASISTENCIA EN CAPACITACIÓN",
+    regTitle: "REGISTRO DE ASISTENCIA EN CAPACITACION",
     regSubtitle: "Control en la Nube (NFC / QR / Manual)",
     searchLabel: "Ingrese su NOMBRE, DOCUMENTO o MATRÍCULA:",
     searchPlaceholder: "Ej: 19802051-6 o Juan Silva...",
