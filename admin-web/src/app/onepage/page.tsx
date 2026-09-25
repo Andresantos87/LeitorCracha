@@ -41,10 +41,15 @@ export default function OnePageDashboard() {
         }
     }, []);
 
-    // Salvar sempre que editar
+    // Salvar no DB com delay
+    const handleComentarioBlur = (e: any) => {
+        fetch('/api/onepage', {
+            method: 'POST',
+            body: JSON.stringify({ comentarios: e.target.value })
+        }).catch(console.error);
+    };
     const handleComentarioChange = (e: any) => {
         setComentarios(e.target.value);
-        localStorage.setItem("pt_dashboard_comentarios", e.target.value);
     };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,7 +84,16 @@ export default function OnePageDashboard() {
             return !isBlacklisted && isValidStatus;
         });
         
-        setPtRawData(cleanedData);
+        const miniData = cleanedData.map(r => ({
+          'Planta': r['Planta'],
+          'Área de operación': r['Área de operación'] || r['?rea de operacin'],
+          'Fecha de inicio': r['Fecha de inicio'] || r['Fecha de creacin'] || r['Data de Incio'] || r['Data de Início']
+      }));
+      setPtRawData(miniData);
+      fetch('/api/onepage', {
+          method: 'POST',
+          body: JSON.stringify({ ptRawData: miniData })
+      }).catch(console.error);
       setLastSyncTime(new Date().toLocaleTimeString());
     };
     reader.readAsBinaryString(file);
@@ -166,6 +180,8 @@ export default function OnePageDashboard() {
     return monthNames.map(mes => ({ mes, pt: countsByMonth[mes] }))
         .filter(d => d.pt > 0 || monthNames.indexOf(d.mes) <= new Date().getMonth());
   }, [ptRawData, filtroPlantaPt, filtroAreaPt]);
+
+  const isPTSelected = !filterCurso || filterCurso.toUpperCase().includes('PT') || filterCurso.toUpperCase().includes('TRABALHO') || filterCurso.toUpperCase().includes('PERMISS');
 
   const filteredPtAreaChartData = useMemo(() => {
     if (ptRawData.length === 0) return [];
@@ -635,7 +651,7 @@ export default function OnePageDashboard() {
                 <textarea ref={comentariosRef} 
                     className="w-full bg-slate-800/80 hover:bg-slate-800 border-2 border-slate-700 hover:border-slate-600 rounded-xl p-4 text-slate-300 text-sm resize-none outline-none focus:border-sky-500 focus:bg-slate-900 transition-all min-h-[120px] pdf-textarea cursor-text shadow-inner overflow-hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                     value={comentarios}
-                    onChange={handleComentarioChange}
+                    onChange={handleComentarioChange} onBlur={handleComentarioBlur}
                     placeholder="Digite aqui as informações gerais, status de RCs, etc..."
                 />
             </div>
