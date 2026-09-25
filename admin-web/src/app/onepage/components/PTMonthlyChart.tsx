@@ -176,7 +176,7 @@ export default function PTMonthlyChart({ monthlyData = [], ptRawData = [], filtr
         <text x={x + width / 2} y={y - 32} fill="#ffffff" style={{ textShadow: "0px 2px 4px rgba(0,0,0,0.8)" }} textAnchor="middle" fontSize={16} fontWeight="bold">
           {value}
         </text>
-        {metaInfo > 0 && (
+        {metaInfo > 0 && !selectedMonth && (
           <>
             <rect 
               x={x + width / 2 - 25} 
@@ -218,7 +218,7 @@ export default function PTMonthlyChart({ monthlyData = [], ptRawData = [], filtr
           <p className="text-white font-bold mb-2">{label}</p>
           <p className="text-blue-400 text-sm">{t.ptsDone}: <strong className="text-white">{barData.realPt || 0}</strong></p>
           
-          {metaInfo > 0 && (
+          {metaInfo > 0 && !selectedMonth && (
              <>
                <div className="h-px w-full bg-slate-700 my-2" />
                <p className="text-slate-400 text-sm">{t.monthlyGoal}: <strong className="text-white">{metaInfo}</strong></p>
@@ -301,13 +301,13 @@ export default function PTMonthlyChart({ monthlyData = [], ptRawData = [], filtr
               tickLine={false}
               axisLine={false}
               dx={-10}
-              domain={[0, dataMax => Math.ceil(Math.max(dataMax, metaInfo) * 1.25)]}
+              domain={[0, dataMax => selectedMonth ? Math.max(10, Math.ceil(dataMax * 1.25)) : Math.ceil(Math.max(dataMax, metaInfo) * 1.25)]}
             />
               
             
             <Tooltip content={<CustomTooltip />} cursor={{ fill: '#334155', opacity: 0.4 }} />
             
-            <Bar yAxisId="left" dataKey="metaMensalVal" name="Meta" fill="#1e293b" radius={[4, 4, 0, 0]} maxBarSize={65} />
+            {!selectedMonth && <Bar yAxisId="left" dataKey="metaMensalVal" name="Meta" fill="#1e293b" radius={[4, 4, 0, 0]} maxBarSize={65} />}
             
             <Bar 
   yAxisId="left" 
