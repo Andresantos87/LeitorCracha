@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import ConfirmModal from '@/components/ConfirmModal';
 import toast from 'react-hot-toast';
-import { Plus, Trash2, Shield, User, ShieldAlert } from "lucide-react";
+import { Plus, Trash2, Shield, User, ShieldAlert, FolderKey } from "lucide-react";
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<any[]>([]);
@@ -11,9 +11,20 @@ export default function UsuariosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ nome: '', email: '', password: '', role: 'leitor' });
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [isPermModalOpen, setIsPermModalOpen] = useState(false);
+  const [selectedUserForPerm, setSelectedUserForPerm] = useState<any>(null);
+  const [pastas, setPastas] = useState<any[]>([]);
+  const [userPastas, setUserPastas] = useState<string[]>([]);
 
   useEffect(() => {
     carregarUsuarios();
+    fetch('/api/auth').then(r => r.json()).then(j => {
+      if (j.success && j.session) setCurrentUserEmail(j.session.email);
+    }).catch(()=>{});
+    fetch('/api/treinamentos?t=' + Date.now()).then(r => r.json()).then(j => {
+      if (j.success) setPastas(j.data.filter((d: any) => d.isFolder));
+    }).catch(()=>{});
   }, []);
 
   const carregarUsuarios = async () => {
@@ -36,6 +47,24 @@ export default function UsuariosPage() {
     setIsSubmitting(false);
     setIsModalOpen(false);
     setFormData({ nome: '', email: '', password: '', role: 'leitor' });
+    carregarUsuarios();
+  };
+
+  const openPermModal = (user: any) => {
+    setSelectedUserForPerm(user);
+    setUserPastas(user.cursos_permitidos || []);
+    setIsPermModalOpen(true);
+  };
+
+  const savePerms = async () => {
+    setIsSubmitting(true);
+    await fetch('/api/usuarios/permissoes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: selectedUserForPerm.id, cursos_permitidos: userPastas })
+    });
+    setIsSubmitting(false);
+    setIsPermModalOpen(false);
     carregarUsuarios();
   };
 
@@ -97,7 +126,16 @@ export default function UsuariosPage() {
                 <td className="px-6 py-4 font-medium text-white">{u.nome}</td>
                 <td className="px-6 py-4 text-slate-400">{u.email}</td>
                 <td className="px-6 py-4">{getRoleBadge(u.role)}</td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-6 py-4 text-right space-x-2 flex items-center justify-end">
+                  {currentUserEmail === 'andre.santos@cmpc.com' && (
+                    <button 
+                      onClick={() => openPermModal(u)}
+                      className="p-2 text-slate-400 hover:text-sky-400 hover:bg-sky-900/20 rounded-lg transition-colors inline-block"
+                      title="Permissões de Visibilidade (Pastas)"
+                    >
+                      <FolderKey className="h-4 w-4" />
+                    </button>
+                  )}
                   <button 
                     onClick={() => excluirUsuario(u.id, u.email)}
                     className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors inline-block"
@@ -183,6 +221,50 @@ export default function UsuariosPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {isPermModalOpen && selectedUserForPerm && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-white mb-2">Visibilidade de Cursos</h3>
+            <p className="text-sm text-slate-400 mb-6">Selecione quais pastas o usuǭrio <strong className="text-white">{selectedUserForPerm.email}</strong> pode acessar. Se nada estiver marcado, ele verǭ todos se for Admin/Gestor (comportamento antigo), ou nada se ativarmos o bloqueio estrito.</p>
+            
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto mb-6 pr-2 custom-scrollbar">
+              {pastas.map(p => (
+                <label key={p.id} className="flex items-center gap-3 p-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer border border-slate-700/50 transition-colors">
+                  <input 
+                    type="checkbox"
+                    checked={userPastas.includes(p.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) setUserPastas([...userPastas, p.id]);
+                      else setUserPastas(userPastas.filter(id => id !== p.id));
+                    }}
+                    className="w-5 h-5 rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-slate-200 font-medium">{p.nome}</span>
+                    <span className="text-slate-500 text-xs">{p.turmas?.length || 0} turmas internas conectadas</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-end space-x-3">
+              <button 
+                onClick={() => setIsPermModalOpen(false)}
+                className="px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={savePerms}
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                {isSubmitting ? 'Salvando...' : 'Salvar Permissões'}
+              </button>
+            </div>
           </div>
         </div>
       )}

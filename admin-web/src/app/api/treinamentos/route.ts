@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, getCountFromServer, doc, getDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, getCountFromServer, doc, getDoc, where } from "firebase/firestore";
+import { cookies } from "next/headers";
+import { decrypt } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req) {
   try {
     const q = query(collection(db, "treinamentos"), orderBy("data", "desc"));
     const snapshot = await getDocs(q);
