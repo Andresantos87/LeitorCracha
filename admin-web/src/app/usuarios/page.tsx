@@ -23,7 +23,18 @@ export default function UsuariosPage() {
       if (j.success && j.session) setCurrentUserEmail(j.session.email);
     }).catch(()=>{});
     fetch('/api/treinamentos?t=' + Date.now()).then(r => r.json()).then(j => {
-      if (j.success) setPastas(j.data.filter((d: any) => d.isFolder));
+      if (j.success) {
+        // Group by course name
+        const uniquePastasMap = new Map();
+        j.data.forEach((t: any) => {
+          const nome = t.nome || 'Sem Nome';
+          if (!uniquePastasMap.has(nome)) {
+            uniquePastasMap.set(nome, { id: nome, nome: nome, turmas: [] });
+          }
+          uniquePastasMap.get(nome).turmas.push(t);
+        });
+        setPastas(Array.from(uniquePastasMap.values()));
+      }
     }).catch(()=>{});
   }, []);
 
