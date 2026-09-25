@@ -6,7 +6,7 @@ import { ShieldAlert, LogOut } from "lucide-react";
 import { LanguageToggle } from "./LanguageToggle";
 import { useTranslation } from "@/lib/useTranslation";
 
-export function Sidebar({ role, userName }: { role?: string; userName?: string }) {
+export function Sidebar({ role, userName, allowedTabs }: { role?: string; userName?: string, allowedTabs?: string[] | null }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -24,7 +24,7 @@ export function Sidebar({ role, userName }: { role?: string; userName?: string }
     { name: t.usuarios, path: "/usuarios", roles: ["admin"] },
   ];
 
-  const navItems = allItems.filter(item => !role || item.roles.includes(role));
+  const navItems = allItems.filter(item => (!role || item.roles.includes(role)) && (!allowedTabs || allowedTabs.includes(item.path)));
 
   const handleLogout = async () => {
     await fetch("/api/auth", { method: "POST", body: JSON.stringify({ action: "logout" }) });

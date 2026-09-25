@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, LogOut } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslation";
 
-export function MobileNav({ role }: { role?: string }) {
+export function MobileNav({ role, allowedTabs }: { role?: string, allowedTabs?: string[] | null }) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -27,7 +27,7 @@ export function MobileNav({ role }: { role?: string }) {
     { name: t.usuarios, path: "/usuarios", roles: ["admin"] },
   ];
 
-  const navItems = allItems.filter(item => item.roles.includes(role));
+  const navItems = allItems.filter(item => item.roles.includes(role) && (!allowedTabs || allowedTabs.includes(item.path)));
 
   const handleLogout = async () => {
     await fetch("/api/auth", { method: "POST", body: JSON.stringify({ action: "logout" }) });

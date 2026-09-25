@@ -5,17 +5,16 @@ import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { LanguageToggle } from "./LanguageToggle";
 
-export function Navigation({ role, userName }: { role?: string; userName?: string }) {
+export function Navigation({ role, userName, allowedTabs }: { role?: string; userName?: string, allowedTabs?: string[] | null }) {
   const pathname = usePathname();
 
-  // Esconder a navegação inteira (Sidebar e Header mobile) nestas rotas
   if (pathname.startsWith("/login") || pathname.startsWith("/registrar")) {
     return null;
   }
 
   return (
     <>
-      <Sidebar role={role} userName={userName} />
+      <Sidebar role={role} userName={userName} allowedTabs={allowedTabs} />
       
       {/* Main Content Mobile Header */}
       <header className="h-16 border-b border-slate-800 flex items-center justify-between px-4 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 md:hidden">
@@ -25,7 +24,7 @@ export function Navigation({ role, userName }: { role?: string; userName?: strin
         </div>
         <div className="flex items-center gap-2">
           <LanguageToggle />
-          <MobileNav role={role} />
+          <MobileNav role={role} allowedTabs={allowedTabs} />
         </div>
       </header>
     </>

@@ -4,6 +4,8 @@ import { Inter } from 'next/font/google';
 import { Navigation } from '@/components/Navigation';
 import { getSession } from '@/lib/auth';
 import { Toaster } from 'react-hot-toast';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,13 +21,29 @@ export default async function RootLayout({
 }>) {
   const session = await getSession();
   const role = session?.role || "leitor";
+  
+  let abasPermitidas = null;
+
+  if (session?.email) {
+    if (session.email === 'andre.santos@cmpc.com') {
+      abasPermitidas = null; // Master sees all
+    } else {
+      try {
+        const uQ = query(collection(db, 'usuarios'), where('email', '==', session.email));
+        const uSnap = await getDocs(uQ);
+        if (!uSnap.empty) {
+          abasPermitidas = uSnap.docs[0].data().abas_permitidas;
+        }
+      } catch(e) {}
+    }
+  }
 
   return (
     <html lang="pt-BR">
       <body
-        className={`${inter.className} antialiased flex flex-col md:flex-row bg-[#0f172a] text-slate-100 min-h-screen`}
+        className={\`\${inter.className} antialiased flex flex-col md:flex-row bg-[#0f172a] text-slate-100 min-h-screen\`}
       >
-        <Navigation role={role} userName={session?.nome} />
+        <Navigation role={role} userName={session?.nome} allowedTabs={abasPermitidas} />
 
         {/* Main Content */}
         <main className="flex-1 flex flex-col min-h-screen overflow-hidden">

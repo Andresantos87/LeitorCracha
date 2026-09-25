@@ -16,6 +16,17 @@ export default function UsuariosPage() {
   const [selectedUserForPerm, setSelectedUserForPerm] = useState<any>(null);
   const [pastas, setPastas] = useState<any[]>([]);
   const [userPastas, setUserPastas] = useState<string[]>([]);
+  const [userAbas, setUserAbas] = useState<string[]>([]);
+  const abasDisponiveis = [
+    { path: '/', name: 'Dashboard Início' },
+    { path: '/onepage', name: 'Visão Geral (OnePage)' },
+    { path: '/treinamentos', name: 'Treinamentos' },
+    { path: '/checklists', name: 'Checklists' },
+    { path: '/calendario', name: 'Calendário' },
+    { path: '/publicos-alvo', name: 'Públicos Alvo' },
+    { path: '/agenda', name: 'Agenda' },
+    { path: '/facilitadores', name: 'Facilitadores' }
+  ];
 
   useEffect(() => {
     carregarUsuarios();
@@ -64,6 +75,7 @@ export default function UsuariosPage() {
   const openPermModal = (user: any) => {
     setSelectedUserForPerm(user);
     setUserPastas(user.cursos_permitidos || []);
+    setUserAbas(user.abas_permitidas || abasDisponiveis.map(a => a.path));
     setIsPermModalOpen(true);
   };
 
@@ -72,7 +84,7 @@ export default function UsuariosPage() {
     await fetch('/api/usuarios/permissoes', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: selectedUserForPerm.id, cursos_permitidos: userPastas })
+      body: JSON.stringify({ userId: selectedUserForPerm.id, cursos_permitidos: userPastas, abas_permitidas: userAbas })
     });
     setIsSubmitting(false);
     setIsPermModalOpen(false);
@@ -238,27 +250,54 @@ export default function UsuariosPage() {
       {isPermModalOpen && selectedUserForPerm && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-bold text-white mb-2">Visibilidade de Cursos</h3>
-            <p className="text-sm text-slate-400 mb-6">Selecione quais pastas o usuǭrio <strong className="text-white">{selectedUserForPerm.email}</strong> pode acessar. Se nada estiver marcado, ele verǭ todos se for Admin/Gestor (comportamento antigo), ou nada se ativarmos o bloqueio estrito.</p>
+            <h3 className="text-xl font-bold text-white mb-2">Permissões de Acesso</h3>
+            <p className="text-sm text-slate-400 mb-4">Gerencie as Abas e Cursos que <strong className="text-white">{selectedUserForPerm.email}</strong> pode visualizar.</p>
             
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto mb-6 pr-2 custom-scrollbar">
-              {pastas.map(p => (
-                <label key={p.id} className="flex items-center gap-3 p-3 bg-slate-800/50 hover:bg-slate-800 rounded-xl cursor-pointer border border-slate-700/50 transition-colors">
-                  <input 
-                    type="checkbox"
-                    checked={userPastas.includes(p.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) setUserPastas([...userPastas, p.id]);
-                      else setUserPastas(userPastas.filter(id => id !== p.id));
-                    }}
-                    className="w-5 h-5 rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
-                  />
-                  <div className="flex flex-col">
-                    <span className="text-slate-200 font-medium">{p.nome}</span>
-                    <span className="text-slate-500 text-xs">{p.turmas?.length || 0} turmas internas conectadas</span>
-                  </div>
-                </label>
-              ))}
+            <div className="flex flex-col md:flex-row gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar mb-6">
+              
+              <div className="flex-1 space-y-3">
+                <h4 className="font-semibold text-sky-400 border-b border-slate-700 pb-2">Menus / Abas Permitidas</h4>
+                <div className="space-y-2">
+                  {abasDisponiveis.map(a => (
+                    <label key={a.path} className="flex items-center gap-3 p-2 bg-slate-800/30 hover:bg-slate-800 rounded-lg cursor-pointer border border-slate-700/30 transition-colors">
+                      <input 
+                        type="checkbox"
+                        checked={userAbas.includes(a.path)}
+                        onChange={(e) => {
+                          if (e.target.checked) setUserAbas([...userAbas, a.path]);
+                          else setUserAbas(userAbas.filter(p => p !== a.path));
+                        }}
+                        className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                      />
+                      <span className="text-slate-200 text-sm">{a.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex-1 space-y-3">
+                <h4 className="font-semibold text-emerald-400 border-b border-slate-700 pb-2">Cursos / Pastas Liberadas</h4>
+                <div className="space-y-2">
+                  {pastas.map(p => (
+                    <label key={p.id} className="flex items-center gap-3 p-2 bg-slate-800/30 hover:bg-slate-800 rounded-lg cursor-pointer border border-slate-700/30 transition-colors">
+                      <input 
+                        type="checkbox"
+                        checked={userPastas.includes(p.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setUserPastas([...userPastas, p.id]);
+                          else setUserPastas(userPastas.filter(id => id !== p.id));
+                        }}
+                        className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-slate-200 text-sm">{p.nome}</span>
+                        <span className="text-slate-500 text-[10px]">{p.turmas?.length || 0} turmas</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
             <div className="flex items-center justify-end space-x-3">
