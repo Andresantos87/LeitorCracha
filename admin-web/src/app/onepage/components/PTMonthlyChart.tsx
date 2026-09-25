@@ -2,7 +2,6 @@
 
 import React, { useMemo } from "react";
 import { useTranslation } from "@/lib/useTranslation";
-//, { useMemo } from 'react';
 import {
   ComposedChart,
   Bar,

@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "@/lib/useTranslation";
-//, { useMemo, useState, useEffect } from 'react';
 
 interface PTAreaAdocaoChartProps {
   ptRawData: any[];
