@@ -101,7 +101,7 @@ export default function OnePageDashboard() {
         const miniData = cleanedData.map(r => ({
           'Planta': r['Planta'],
           'Área de operación': r['Área de operación'] || r['?rea de operacin'],
-          'Fecha de inicio': r['Fecha de inicio'] || r['Fecha de creacin'] || r['Data de Incio'] || r['Data de Início']
+          'Fecha de inicio': r['Fecha de actualización'] || r['Fecha de actualizaci\u00f3n'] || r['Fecha de inicio'] || r['Fecha de creación'] || r['Data de Início']
       }));
       setPtRawData(miniData);
       fetch('/api/onepage', {
