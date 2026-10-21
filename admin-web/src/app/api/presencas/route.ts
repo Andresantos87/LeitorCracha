@@ -133,13 +133,16 @@ export async function GET(req: Request) {
         presencas = snapshot.docs.map((doc: any) => {
           const p = doc.data();
           const user = findUser(p.identificador_lido || doc.id) || {};
+          const isNomeValido = p.nome && p.nome !== 'Desconhecido' && p.nome !== 'Desconhecida';
+          const isEmpresaValida = p.empresa && p.empresa !== 'Desconhecida' && p.empresa !== 'Desconhecido';
+          const isPlantaValida = p.planta && p.planta !== 'Desconhecida' && p.planta !== 'Desconhecido';
           return {
             id: doc.id,
             ...p,
-            nome: p.nome || user.nome || 'Desconhecido',
-            planta: p.planta || p.empresa || user.planta || user.empresa || 'Desconhecida',
-            empresa: p.empresa || p.planta || user.empresa || user.planta || 'Desconhecida',
-            cargo: p.cargo || user.cargo || 'Não Informado',
+            nome: isNomeValido ? p.nome : (user.nome || 'Desconhecido'),
+            planta: isPlantaValida ? p.planta : (user.planta || p.empresa || user.empresa || 'Desconhecida'),
+            empresa: isEmpresaValida ? p.empresa : (user.empresa || p.planta || user.planta || 'Desconhecida'),
+            cargo: (p.cargo && p.cargo !== 'Não Informado') ? p.cargo : (user.cargo || 'Não Informado'),
             data_registro: p.data_registro?.toDate?.()?.toISOString() || (typeof p.data_registro === 'string' ? p.data_registro : new Date().toISOString())
           };
         });

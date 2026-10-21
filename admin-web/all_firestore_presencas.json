@@ -5544,7 +5544,12 @@
       "seconds": 1788352431,
       "nanoseconds": 818000000
     },
-    "modo_registro": "QR_CODE"
+    "modo_registro": "QR_CODE",
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "joao.pereira@cmpc.com",
@@ -14887,7 +14892,12 @@
       "nanoseconds": 556000000
     },
     "modo_registro": "QR_CODE",
-    "identificador_lido": "RNBW1AlErF2OW5Fty7NRSAEPSg=="
+    "identificador_lido": "RNBW1AlErF2OW5Fty7NRSAEPSg==",
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "RNBW73D0xJqraorGtRcnsGPD4w==",
@@ -14900,7 +14910,12 @@
       "nanoseconds": 50000000
     },
     "modo_registro": "QR_CODE",
-    "identificador_lido": "RNBW73D0xJqraorGtRcnsGPD4w=="
+    "identificador_lido": "RNBW73D0xJqraorGtRcnsGPD4w==",
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "RNBWA_Yz1tJTwey_VmcJKZy0Fg==",
@@ -14913,7 +14928,12 @@
       "seconds": 1790702055,
       "nanoseconds": 724000000
     },
-    "identificador_lido": "RNBWA_Yz1tJTwey_VmcJKZy0Fg=="
+    "identificador_lido": "RNBWA_Yz1tJTwey_VmcJKZy0Fg==",
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "RNBWAoUkZQp+EWK3bwssED3yHw==",
@@ -14926,7 +14946,12 @@
       "type": "firestore/timestamp/1.0",
       "seconds": 1791468241,
       "nanoseconds": 560000000
-    }
+    },
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "RNBWKccu2uVhVdBfuqVNxIsk6A==",
@@ -14939,7 +14964,12 @@
       "nanoseconds": 899000000
     },
     "modo_registro": "QR_CODE",
-    "identificador_lido": "RNBWKccu2uVhVdBfuqVNxIsk6A=="
+    "identificador_lido": "RNBWKccu2uVhVdBfuqVNxIsk6A==",
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "RNBWMxxZE+PYFXVTCbAh0QXftg==",
@@ -14952,7 +14982,12 @@
       "type": "firestore/timestamp/1.0",
       "seconds": 1792083990,
       "nanoseconds": 112000000
-    }
+    },
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "RNBWTVuPeqwEIjxydKap4SJEvQ==",
@@ -14965,7 +15000,12 @@
       "seconds": 1792084079,
       "nanoseconds": 213000000
     },
-    "identificador_lido": "RNBWTVuPeqwEIjxydKap4SJEvQ=="
+    "identificador_lido": "RNBWTVuPeqwEIjxydKap4SJEvQ==",
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "RNBWuxLtYpZnU6vhJzTeovpKDQ==",
@@ -14978,7 +15018,12 @@
       "seconds": 1792084087,
       "nanoseconds": 352000000
     },
-    "modo_registro": "QR_CODE"
+    "modo_registro": "QR_CODE",
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "RNBWwNqUJDWcWESe700x09ZcJQ==",
@@ -14991,7 +15036,12 @@
       "type": "firestore/timestamp/1.0",
       "seconds": 1792084020,
       "nanoseconds": 13000000
-    }
+    },
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "RNBWzk3J8TjoBHBbzw_RvKuIgA==",
@@ -15004,7 +15054,12 @@
       "nanoseconds": 807000000
     },
     "modo_registro": "QR_CODE",
-    "identificador_lido": "RNBWzk3J8TjoBHBbzw_RvKuIgA=="
+    "identificador_lido": "RNBWzk3J8TjoBHBbzw_RvKuIgA==",
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "Raquel Lul Silveira",
@@ -15411,7 +15466,12 @@
       "nanoseconds": 137000000
     },
     "modo_registro": "QR_CODE",
-    "identificador_lido": "https:__treinamentocmpc.netlify.app_registrar_O2OHHQ3mBgr9N77i0i7C_nome=TREINAMENTO%20PT%20DIGITAL&turma=TODAS%20AS%20TURMAS&pais=BRASIL"
+    "identificador_lido": "https:__treinamentocmpc.netlify.app_registrar_O2OHHQ3mBgr9N77i0i7C_nome=TREINAMENTO%20PT%20DIGITAL&turma=TODAS%20AS%20TURMAS&pais=BRASIL",
+    "nome": "Auto-Registro via Cartaz (QR Dinâmico)",
+    "empresa": "Registro Externo / Visitante",
+    "cargo": "Participante",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "lauricelio gonsalves da costa",
@@ -19112,7 +19172,12 @@
       "seconds": 1788352399,
       "nanoseconds": 686000000
     },
-    "modo_registro": "QR_CODE"
+    "modo_registro": "QR_CODE",
+    "nome": "Credencial Digital Rainbow",
+    "empresa": "Terceiro CMPC Guaíba",
+    "cargo": "Prestador de Serviços",
+    "planta": "Guaíba",
+    "matricula": ""
   },
   {
     "id": "luis.yosmini@cmpc.com",
@@ -21528,12 +21593,13 @@
       "seconds": 1790874725,
       "nanoseconds": 138000000
     },
-    "nome": "",
-    "empresa": "",
-    "cargo": "",
+    "nome": "MARCIO DORNELLES MORRUDO",
+    "empresa": "CMPC Centralizada",
+    "cargo": "TEC SEG TRABALHO",
     "tipo_colaborador": "AVULSO",
-    "matricula": "",
-    "identificador_lido": "261000001014"
+    "matricula": "098817750",
+    "identificador_lido": "261000001014",
+    "planta": "Guaíba"
   },
   {
     "id": "262026200198",
@@ -21541,9 +21607,9 @@
     "treinamentoNome": "TREINAMENTO PT DIGITAL - GUAIBA",
     "treinamentoTurma": "TERCEIROS - GERAL",
     "identificador_lido": "262026200198",
-    "empresa": "",
-    "cargo": "",
-    "matricula": "",
+    "empresa": "Prestador de Serviços Guaíba",
+    "cargo": "Prestador de Serviços",
+    "matricula": "26200198",
     "tipo_colaborador": "AVULSO",
     "data_registro": {
       "type": "firestore/timestamp/1.0",
@@ -21551,7 +21617,8 @@
       "nanoseconds": 279000000
     },
     "modo_registro": "NFC",
-    "nome": ""
+    "nome": "Colaborador Terceiro (Crachá 200198)",
+    "planta": "Guaíba"
   },
   {
     "id": "2742148060",
@@ -24238,7 +24305,12 @@
       "type": "firestore/timestamp/1.0",
       "seconds": 1790346719,
       "nanoseconds": 7000000
-    }
+    },
+    "nome": "Colaborador Contratista (RUT 16.710.122)",
+    "empresa": "Contratista CMPC Chile",
+    "cargo": "Operador / Técnico",
+    "planta": "Chile",
+    "matricula": "16710122"
   },
   {
     "id": "16982281-6",

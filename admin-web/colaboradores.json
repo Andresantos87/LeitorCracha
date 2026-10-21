@@ -573,6 +573,17 @@
     "area": "MANTENIMIENTO CONVERSION",
     "isTerceiro": false
   },
+  "200198": {
+    "nome": "Colaborador Terceiro (Crachá 200198)",
+    "planta": "Guaíba",
+    "empresa": "Prestador de Serviços Guaíba",
+    "cargo": "Prestador de Serviços",
+    "matricula": "26200198",
+    "cod_cracha": "26200198",
+    "cpf": "",
+    "pais": "BRASIL",
+    "isTerceiro": true
+  },
   "951099": {
     "nome": "JULIANO RAMOS DA SILVA",
     "planta": "Guaíba",
@@ -63909,6 +63920,17 @@
     "area": "AREA TERMINACIONES",
     "isTerceiro": false
   },
+  "16710122": {
+    "nome": "Colaborador Contratista (RUT 16.710.122)",
+    "planta": "Chile",
+    "empresa": "Contratista CMPC Chile",
+    "cargo": "Operador / Técnico",
+    "matricula": "16710122",
+    "cod_cracha": "",
+    "cpf": "",
+    "pais": "CHILE",
+    "isTerceiro": true
+  },
   "16712764": {
     "nome": "GERARDO ANDRES CORTES",
     "planta": "Chile",
@@ -108456,6 +108478,17 @@
     "email": "OLIVER.BARAONAA@CMPC.COM",
     "area": "OFICINA DE OPERACIONES",
     "isTerceiro": false
+  },
+  "26200198": {
+    "nome": "Colaborador Terceiro (Crachá 200198)",
+    "planta": "Guaíba",
+    "empresa": "Prestador de Serviços Guaíba",
+    "cargo": "Prestador de Serviços",
+    "matricula": "26200198",
+    "cod_cracha": "26200198",
+    "cpf": "",
+    "pais": "BRASIL",
+    "isTerceiro": true
   },
   "26205838": {
     "nome": "FRANCISCO ALBERTO OJEDA",
@@ -243025,6 +243058,17 @@
     "area": "DIRETORIA INDUSTRIAL",
     "isTerceiro": false
   },
+  "98817750": {
+    "nome": "MARCIO DORNELLES MORRUDO",
+    "planta": "Guaíba",
+    "empresa": "CMPC Centralizada",
+    "cargo": "TEC SEG TRABALHO",
+    "matricula": "098817750",
+    "cod_cracha": "001000001014",
+    "cpf": "80494897015",
+    "pais": "BRASIL",
+    "isTerceiro": false
+  },
   "98817751": {
     "nome": "FRANCISCO RODRIGUES CAMPOS JUNIOR",
     "planta": "Guaíba",
@@ -265617,6 +265661,17 @@
     "email": "enfermagem-enc@carpelo.com.br",
     "area": "001BR0405276 - 001BR0405276",
     "isTerceiro": true
+  },
+  "1000001014": {
+    "nome": "MARCIO DORNELLES MORRUDO",
+    "planta": "Guaíba",
+    "empresa": "CMPC Centralizada",
+    "cargo": "TEC SEG TRABALHO",
+    "matricula": "098817750",
+    "cod_cracha": "001000001014",
+    "cpf": "80494897015",
+    "pais": "BRASIL",
+    "isTerceiro": false
   },
   "1000699080": {
     "nome": "JOÃO BATISTA TEODORO GARCIA",
@@ -720954,5 +721009,60 @@
     "cod_cracha": "",
     "pais": "BRASIL",
     "isTerceiro": false
+  },
+  "261000001014": {
+    "nome": "MARCIO DORNELLES MORRUDO",
+    "planta": "Guaíba",
+    "empresa": "CMPC Centralizada",
+    "cargo": "TEC SEG TRABALHO",
+    "matricula": "098817750",
+    "cod_cracha": "001000001014",
+    "cpf": "80494897015",
+    "pais": "BRASIL",
+    "isTerceiro": false
+  },
+  "001000001014": {
+    "nome": "MARCIO DORNELLES MORRUDO",
+    "planta": "Guaíba",
+    "empresa": "CMPC Centralizada",
+    "cargo": "TEC SEG TRABALHO",
+    "matricula": "098817750",
+    "cod_cracha": "001000001014",
+    "cpf": "80494897015",
+    "pais": "BRASIL",
+    "isTerceiro": false
+  },
+  "098817750": {
+    "nome": "MARCIO DORNELLES MORRUDO",
+    "planta": "Guaíba",
+    "empresa": "CMPC Centralizada",
+    "cargo": "TEC SEG TRABALHO",
+    "matricula": "098817750",
+    "cod_cracha": "001000001014",
+    "cpf": "80494897015",
+    "pais": "BRASIL",
+    "isTerceiro": false
+  },
+  "80494897015": {
+    "nome": "MARCIO DORNELLES MORRUDO",
+    "planta": "Guaíba",
+    "empresa": "CMPC Centralizada",
+    "cargo": "TEC SEG TRABALHO",
+    "matricula": "098817750",
+    "cod_cracha": "001000001014",
+    "cpf": "80494897015",
+    "pais": "BRASIL",
+    "isTerceiro": false
+  },
+  "262026200198": {
+    "nome": "Colaborador Terceiro (Crachá 200198)",
+    "planta": "Guaíba",
+    "empresa": "Prestador de Serviços Guaíba",
+    "cargo": "Prestador de Serviços",
+    "matricula": "26200198",
+    "cod_cracha": "26200198",
+    "cpf": "",
+    "pais": "BRASIL",
+    "isTerceiro": true
   }
 }

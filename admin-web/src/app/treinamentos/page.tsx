@@ -64,6 +64,25 @@ export default function Treinamentos() {
   const [presencas, setPresencas] = useState<any[]>([]);
   const [loadingPresencas, setLoadingPresencas] = useState(false);
 
+  // State para edição de presença
+  const [editPresencaModal, setEditPresencaModal] = useState<{
+    isOpen: boolean;
+    presenca: any;
+    nome: string;
+    empresa: string;
+    cargo: string;
+    matricula: string;
+    targetTreinamentoId: string;
+  }>({
+    isOpen: false,
+    presenca: null,
+    nome: '',
+    empresa: '',
+    cargo: '',
+    matricula: '',
+    targetTreinamentoId: ''
+  });
+
   // States para Checklist
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -654,6 +673,53 @@ export default function Treinamentos() {
     }
     
     setPrintPriorities(prioridades);
+  };
+
+  const abrirModalEditarPresenca = (p: any) => {
+    setEditPresencaModal({
+      isOpen: true,
+      presenca: p,
+      nome: p.nome || '',
+      empresa: p.empresa || p.planta || '',
+      cargo: p.cargo || '',
+      matricula: p.matricula || '',
+      targetTreinamentoId: selectedId || ''
+    });
+  };
+
+  const salvarEdicaoPresenca = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPresencaModal.presenca || !selectedId) return;
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/presencas/edit', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          treinamentoId: selectedId,
+          presencaId: editPresencaModal.presenca.id,
+          novoNome: editPresencaModal.nome,
+          novaEmpresa: editPresencaModal.empresa,
+          novoCargo: editPresencaModal.cargo,
+          novaMatricula: editPresencaModal.matricula,
+          novoTreinamentoId: editPresencaModal.targetTreinamentoId !== selectedId ? editPresencaModal.targetTreinamentoId : undefined
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Participante atualizado com sucesso!");
+        setEditPresencaModal(prev => ({ ...prev, isOpen: false }));
+        carregarPresencas(selectedId);
+        carregarTreinamentos();
+      } else {
+        toast.error(data.error || "Erro ao atualizar participante.");
+      }
+    } catch (err) {
+      toast.error("Erro ao salvar alterações do participante.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const excluirPresenca = async (presencaId: string) => {
@@ -2056,13 +2122,22 @@ export default function Treinamentos() {
                         </td>
                         {userRole === 'admin' && (
                           <td className="px-4 py-3 text-right">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); excluirPresenca(p.id); }}
-                              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-                              title="Remover Presença"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); abrirModalEditarPresenca(p); }}
+                                className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-indigo-900/20 rounded-lg transition-colors"
+                                title="Editar Participante"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); excluirPresenca(p.id); }}
+                                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                                title="Remover Presença"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -2941,7 +3016,125 @@ export default function Treinamentos() {
           </div>
         </div>
       )}
-      
+
+      {editPresencaModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Edit className="h-5 w-5 text-indigo-400" />
+                  Editar Dados do Participante
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 font-mono">
+                  Identificador / Crachá: {editPresencaModal.presenca?.identificador_lido || editPresencaModal.presenca?.id}
+                </p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setEditPresencaModal(prev => ({ ...prev, isOpen: false }))}
+                className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={salvarEdicaoPresenca} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Nome Completo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editPresencaModal.nome}
+                  onChange={(e) => setEditPresencaModal(prev => ({ ...prev, nome: e.target.value }))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="Ex: João da Silva"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Empresa / Planta
+                  </label>
+                  <input
+                    type="text"
+                    value={editPresencaModal.empresa}
+                    onChange={(e) => setEditPresencaModal(prev => ({ ...prev, empresa: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                    placeholder="Ex: CMPC Guaíba"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Matrícula
+                  </label>
+                  <input
+                    type="text"
+                    value={editPresencaModal.matricula}
+                    onChange={(e) => setEditPresencaModal(prev => ({ ...prev, matricula: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                    placeholder="Ex: 09881234"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Cargo / Função
+                </label>
+                <input
+                  type="text"
+                  value={editPresencaModal.cargo}
+                  onChange={(e) => setEditPresencaModal(prev => ({ ...prev, cargo: e.target.value }))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="Ex: Operador / Técnico"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Turma / Treinamento Destino
+                </label>
+                <select
+                  value={editPresencaModal.targetTreinamentoId}
+                  onChange={(e) => setEditPresencaModal(prev => ({ ...prev, targetTreinamentoId: e.target.value }))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                >
+                  {treinamentos.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.nome} - {t.turma || 'Sem Turma'} ({t.pais || 'BRASIL'})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Altere a turma caso queira transferir este participante para outro treinamento.
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditPresencaModal(prev => ({ ...prev, isOpen: false }))}
+                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 text-sm font-semibold transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold transition-all shadow-lg shadow-indigo-600/20"
+                >
+                  {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <ConfirmModal {...confirmModal} onCancel={() => setConfirmModal(prev => ({...prev, isOpen: false}))} />
     </div>
   );
