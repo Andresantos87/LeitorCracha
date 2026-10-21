@@ -20,7 +20,6 @@ export async function GET(req: any) {
     if (!force && cachedTreinamentos && (now - lastCacheTime < CACHE_TTL_MS)) {
       return NextResponse.json({ success: true, data: cachedTreinamentos, cached: true });
     }
-  try {
     const q = query(collection(db, "treinamentos"), orderBy("data", "desc"));
     const snapshot = await getDocs(q);
     
