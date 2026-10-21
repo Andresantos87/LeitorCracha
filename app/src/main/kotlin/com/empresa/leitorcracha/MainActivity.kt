@@ -829,13 +829,13 @@ class MainActivity : AppCompatActivity() {
     private suspend fun enviarParaServidor(identificadorRaw: String, modo: String) {
         val identificador = extrairRutOuIdentificador(identificadorRaw)
         
-        if (identificador.isBlank()) {
+        if (identificador.isBlank() || identificador.startsWith("http", ignoreCase = true) || identificador.startsWith("RNBW", ignoreCase = true)) {
             withContext(Dispatchers.Main) {
                 isWaitingForTag = false
                 progressBar.visibility = View.GONE
-                tvStatus.text = "Erro: QR Code não contém um ID válido!"
+                tvStatus.text = if (identificador.startsWith("http", true)) "⚠️ Não é permitido escanear o link do cartaz!" else if (identificador.startsWith("RNBW", true)) "⚠️ Token do App Rainbow não suportado offline. Use crachá ou busca manual." else "Erro: QR Code não contém um ID válido!"
                 tvStatus.setTextColor(getColor(R.color.colorError))
-                tvResult.text = "QR RAW:\n" + identificadorRaw.take(50)
+                tvResult.text = "QR Inválido para presença:\n" + identificadorRaw.take(50)
                 tvResult.visibility = View.VISIBLE
             }
             return

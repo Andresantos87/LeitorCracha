@@ -81,23 +81,6 @@ function findUser(id: string): any {
     };
   }
 
-  if (id.startsWith('RNBW')) {
-    return {
-      nome: 'Credencial Digital Rainbow',
-      empresa: 'Terceiro Guaíba',
-      cargo: 'Prestador de Serviços',
-      planta: 'Guaíba'
-    };
-  }
-  if (id.startsWith('http')) {
-    return {
-      nome: 'Registro via QR Dinâmico',
-      empresa: 'Auto-Registro',
-      cargo: 'Participante',
-      planta: 'Guaíba'
-    };
-  }
-
   const mioloA = rawDigits.length >= 10 ? rawDigits.substring(2, rawDigits.length - 2).replace(/^0+/, '') : '';
   const mioloB = rawDigits.length >= 4 ? rawDigits.substring(2).replace(/^0+/, '') : '';
   if (mioloA) match = byCracha.get(mioloA) || byMatricula.get(mioloA);
@@ -122,9 +105,13 @@ export async function GET(req: Request) {
       try {
         const diskData = JSON.parse(fs.readFileSync(DISK_CACHE_PATH, 'utf8'));
         if (Array.isArray(diskData) && diskData.length > 0) {
-          cachedPresencas = diskData;
+          const cleanData = diskData.filter((p: any) => {
+            const id = String(p.id || p.identificador_lido || '');
+            return !id.startsWith('RNBW') && !id.startsWith('http');
+          });
+          cachedPresencas = cleanData;
           lastCacheTime = now;
-          return NextResponse.json({ success: true, data: diskData, cached: true });
+          return NextResponse.json({ success: true, data: cleanData, cached: true });
         }
       } catch(e) {}
     }
@@ -160,7 +147,9 @@ export async function GET(req: Request) {
       throw dbErr;
     }
 
-    const data = presencasSnapshot.docs.map((doc: any) => {
+    const data = presencasSnapshot.docs
+      .filter((doc: any) => !doc.id.startsWith('RNBW') && !doc.id.startsWith('http'))
+      .map((doc: any) => {
       const p = doc.data();
       const treinamentoId = doc.ref.parent.parent?.id;
       

@@ -78,25 +78,7 @@ function findUser(id: string): any {
     };
   }
 
-  // 5. Credencial Rainbow App / QR Dinâmico
-  if (id.startsWith('RNBW')) {
-    return {
-      nome: 'Credencial Digital Rainbow',
-      empresa: 'Terceiro Guaíba',
-      cargo: 'Prestador de Serviços',
-      planta: 'Guaíba'
-    };
-  }
-  if (id.startsWith('http')) {
-    return {
-      nome: 'Registro via QR Dinâmico',
-      empresa: 'Auto-Registro',
-      cargo: 'Participante',
-      planta: 'Guaíba'
-    };
-  }
-
-  // 6. Miolos de crachá de 10 ou 4 dígitos
+  // 5. Miolos de crachá de 10 ou 4 dígitos
   const mioloA = rawDigits.length >= 10 ? rawDigits.substring(2, rawDigits.length - 2).replace(/^0+/, '') : '';
   const mioloB = rawDigits.length >= 4 ? rawDigits.substring(2).replace(/^0+/, '') : '';
   if (mioloA) match = byCracha.get(mioloA) || byMatricula.get(mioloA);
@@ -130,7 +112,9 @@ export async function GET(req: Request) {
 
       if (snapshot && snapshot.docs && snapshot.docs.length > 0) {
         fetchedFromFirestore = true;
-        presencas = snapshot.docs.map((doc: any) => {
+        presencas = snapshot.docs
+          .filter((doc: any) => !doc.id.startsWith('RNBW') && !doc.id.startsWith('http'))
+          .map((doc: any) => {
           const p = doc.data();
           const user = findUser(p.identificador_lido || doc.id) || {};
           const isNomeValido = p.nome && p.nome !== 'Desconhecido' && p.nome !== 'Desconhecida';
@@ -157,7 +141,8 @@ export async function GET(req: Request) {
         const backupPath = path.join(process.cwd(), 'all_firestore_presencas.json');
         if (fs.existsSync(backupPath)) {
           const allBackup = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
-          const filtered = allBackup.filter((p: any) => p.treinamentoId === treinamentoId);
+          const filtered = allBackup
+            .filter((p: any) => p.treinamentoId === treinamentoId && !String(p.id || '').startsWith('RNBW') && !String(p.id || '').startsWith('http'));
           if (filtered.length > 0) {
             presencas = filtered.map((p: any) => {
               const user = findUser(p.identificador_lido || p.id) || {};

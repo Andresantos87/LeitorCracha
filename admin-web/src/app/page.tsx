@@ -39,7 +39,11 @@ export default function Home() {
           setRankingFacilitadores(results[2].value.ranking || []);
         }
         if (results[3].status === 'fulfilled' && results[3].value?.success) {
-          setTodasPresencas(results[3].value.data || []);
+          const clean = (results[3].value.data || []).filter((p: any) => {
+            const id = String(p.id || p.identificador_lido || '');
+            return !id.startsWith('RNBW') && !id.startsWith('http');
+          });
+          setTodasPresencas(clean);
         }
       } catch (err) {
         console.error("Erro ao carregar dados do dashboard:", err);
@@ -367,9 +371,11 @@ export default function Home() {
                     const dataFormatada = p.dataRaw 
                       ? new Date(p.dataRaw).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) 
                       : '';
+                    const isIdNome = !p.identificador_lido || p.identificador_lido === p.nome || !/\d/.test(p.identificador_lido);
+                    const matriculaExibicao = isIdNome ? (p.matricula || 'Manual') : p.identificador_lido;
                     return (
                       <tr key={i} className="border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors">
-                        <td className="px-4 py-3 font-mono text-emerald-400">{p.identificador_lido}</td>
+                        <td className="px-4 py-3 font-mono text-emerald-400">{matriculaExibicao}</td>
                         <td className="px-4 py-3 font-medium text-slate-200">{p.nome}</td>
                         <td className="px-4 py-3 font-medium text-sky-300 text-xs">{cursoNome}</td>
                         <td className="px-4 py-3 text-slate-400">{p.empresa}</td>
