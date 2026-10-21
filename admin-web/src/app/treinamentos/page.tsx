@@ -127,8 +127,7 @@ export default function Treinamentos() {
       carregarPresencas(selectedId);
       const interval = setInterval(() => {
         carregarPresencas(selectedId, true);
-        carregarTreinamentos();
-      }, 4000);
+      }, 8000);
       return () => clearInterval(interval);
     } else {
       setPresencas([]);

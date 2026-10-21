@@ -6,7 +6,20 @@ import { decrypt } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req) {
+// Cache em memória de alta performance para evitar estouro de cota e delays do Firebase
+let cachedTreinamentos: any[] | null = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 25000; // 25 segundos
+
+export async function GET(req: any) {
+  try {
+    const url = new URL(req.url);
+    const force = url.searchParams.get('force') === 'true';
+    const now = Date.now();
+
+    if (!force && cachedTreinamentos && (now - lastCacheTime < CACHE_TTL_MS)) {
+      return NextResponse.json({ success: true, data: cachedTreinamentos, cached: true });
+    }
   try {
     const q = query(collection(db, "treinamentos"), orderBy("data", "desc"));
     const snapshot = await getDocs(q);
@@ -92,6 +105,8 @@ export async function GET(req) {
       treinamentos.push(...chunkResults);
     }
     
+    cachedTreinamentos = treinamentos;
+    lastCacheTime = Date.now();
     return NextResponse.json({ success: true, data: treinamentos });
   } catch (error: any) {
     console.error("ERRO GET:", error);
@@ -100,6 +115,7 @@ export async function GET(req) {
 }
 
 export async function POST(req: Request) {
+    cachedTreinamentos = null;
   try {
     const body = await req.json();
     const { nome, instrutor_email, turma, pais = 'BRASIL', planta = '', publico_alvo_id, esperado_manual, checklistTemplateId, facilitador_id, facilitador_nome, data_agendada, horario_agendado, carga_horaria, status_agenda } = body;
@@ -160,6 +176,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+    cachedTreinamentos = null;
   try {
     const session = await import("@/lib/auth").then(m => m.getSession());
     if (session && session.role !== 'admin' && session.role !== 'gestor') {

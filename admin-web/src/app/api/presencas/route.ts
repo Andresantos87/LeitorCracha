@@ -5,18 +5,33 @@ import { doc, getDoc, setDoc, deleteDoc, updateDoc, serverTimestamp, increment, 
 import fs from 'fs';
 import path from 'path';
 
-// Carrega os usuários na API (fazemos caching dinâmico igual na busca)
+// Carrega os usuários na API com Mapas indexados O(1) para altíssima performance
 let cachedUsers: Record<string, any> | null = null;
+let cachedByCracha = new Map<string, any>();
+let cachedByMatricula = new Map<string, any>();
+
 function loadUsers() {
-  if (cachedUsers) return cachedUsers;
+  if (cachedUsers) return { usersDict: cachedUsers, byCracha: cachedByCracha, byMatricula: cachedByMatricula };
   try {
     const jsonPath = path.join(process.cwd(), 'colaboradores.json');
     if (fs.existsSync(jsonPath)) {
       cachedUsers = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-      return cachedUsers;
+      cachedByCracha.clear();
+      cachedByMatricula.clear();
+      for (const [k, u] of Object.entries(cachedUsers as Record<string, any>)) {
+        if (u.cod_cracha) {
+          const cClean = String(u.cod_cracha).replace(/\D/g, '').replace(/^0+/, '');
+          if (cClean) cachedByCracha.set(cClean, u);
+        }
+        if (u.matricula) {
+          const mClean = String(u.matricula).replace(/\D/g, '').replace(/^0+/, '');
+          if (mClean) cachedByMatricula.set(mClean, u);
+        }
+      }
+      return { usersDict: cachedUsers, byCracha: cachedByCracha, byMatricula: cachedByMatricula };
     }
   } catch(e) {}
-  return {};
+  return { usersDict: {}, byCracha: new Map(), byMatricula: new Map() };
 }
 
 export async function GET(req: Request) {
@@ -31,7 +46,7 @@ export async function GET(req: Request) {
     const presencasRef = collection(db, 'treinamentos', treinamentoId, 'presencas');
     const snapshot = await getDocs(presencasRef);
 
-    const usersDict = loadUsers() || {};
+    const { usersDict, byCracha, byMatricula } = loadUsers();
 
     const presencas = snapshot.docs.map(doc => {
       const p = doc.data();
@@ -43,24 +58,9 @@ export async function GET(req: Request) {
 
         const mioloA = raw.length >= 10 ? raw.substring(2, raw.length - 2).replace(/^0+/, '') : '';
         const mioloB = raw.length >= 4 ? raw.substring(2).replace(/^0+/, '') : '';
-        const usersArray = Object.values(usersDict);
-        // Prioridade 1: Match exato por cod_cracha ou identificador
-        user = usersArray.find((u: any) => {
-          const cracha = String(u.cod_cracha || '').replace(/\D/g, '').replace(/^0+/, '');
-          const uid = String(u.identificador || '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
-          if (cracha && (cracha === raw || cracha === raw.replace(/^0+/, ''))) return true;
-          if (uid && (uid === rawClean || uid === rawNoDV)) return true;
-          return false;
-        });
 
-        // Prioridade 2: Fuzzy match por matrícula
-        if (!user) {
-          user = usersArray.find((u: any) => {
-            const mat = String(u.matricula || '').replace(/\D/g, '').replace(/^0+/, '');
-            if (mat && mat.length >= 4 && (mat === mioloA || mat === mioloB)) return true;
-            return false;
-          }) || {};
-        }
+        // Busca instantânea O(1) usando os Maps indexados
+        user = byCracha.get(rawClean) || byCracha.get(raw) || byMatricula.get(rawClean) || byMatricula.get(rawNoDV) || byMatricula.get(mioloA) || byMatricula.get(mioloB) || {};
       }
       
       return {
