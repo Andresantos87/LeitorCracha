@@ -75,15 +75,30 @@ export default function Home() {
     // Filtra presenças garantindo que o treinamentoId da presença pertence aos treinamentosFiltrados (para respeitar o filtro de Curso/Turma no topo)
     const validTreinamentoIds = new Set(treinamentosFiltrados.map(t => t.id));
     
-    todasPresencas.forEach(p => {
-      if (!validTreinamentoIds.has(p.treinamentoId)) return;
-      
-      let d = p.dataRaw;
-      if (!d) return;
-      d = String(d).split('T')[0]; 
-      
-      map[d] = (map[d] || 0) + 1;
-    });
+    if (todasPresencas && todasPresencas.length > 0) {
+      todasPresencas.forEach(p => {
+        if (!validTreinamentoIds.has(p.treinamentoId)) return;
+        
+        let d = p.dataRaw;
+        if (!d) return;
+        d = String(d).split('T')[0]; 
+        
+        map[d] = (map[d] || 0) + 1;
+      });
+    } else {
+      // Fallback Inteligente: se as presenças detalhadas não tiverem carregado ainda ou houver instabilidade no Firebase,
+      // agrupa as presenças registradas de cada treinamento pela data da turma para a linha nunca zerar
+      treinamentosFiltrados.forEach(t => {
+        const count = t._count?.registros || t.presencas_count || 0;
+        if (count > 0) {
+          let d = t.data_agendada || t.data;
+          if (d) {
+            d = String(d).split('T')[0];
+            map[d] = (map[d] || 0) + count;
+          }
+        }
+      });
+    }
 
     const today = new Date();
     today.setHours(0,0,0,0);
