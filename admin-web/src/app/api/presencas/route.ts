@@ -34,6 +34,77 @@ function loadUsers() {
   return { usersDict: {}, byCracha: new Map(), byMatricula: new Map() };
 }
 
+function findUser(id: string): any {
+  if (!id) return null;
+  const { usersDict, byCracha, byMatricula } = loadUsers();
+  if (usersDict[id]) return usersDict[id];
+
+  const rawClean = String(id).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+  const rawDigits = String(id).replace(/\D/g, '');
+  const rawNoDV = String(id).includes('-') 
+    ? String(id).split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() 
+    : rawClean;
+
+  // 1. Mapas instantâneos
+  let match = byCracha.get(rawClean) || byCracha.get(rawDigits) || byMatricula.get(rawClean) || byMatricula.get(rawNoDV);
+  if (match) return match;
+
+  // 2. Prefixo 31 (crachás RF de Guaíba / Brasil, ex: 310098818869 -> matricula 098818869)
+  if (id.startsWith('31') && id.length >= 10) {
+    const strip31 = id.substring(2).replace(/^0+/, '');
+    match = byMatricula.get(strip31) || byCracha.get(strip31);
+    if (match) return match;
+  }
+
+  // 3. RUT chileno sem hífen com DV no final (ex: 127699380 -> 12769938)
+  if (rawDigits.length === 9) {
+    const stripDV = rawDigits.substring(0, 8);
+    match = byMatricula.get(stripDV) || byCracha.get(stripDV);
+    if (match) return match;
+  }
+
+  // 4. String contendo matrícula e nome (ex: "98817141 Ianes Dadalt Mascarelo")
+  const leadingNumMatch = String(id).match(/^(\d{6,10})\s+(.+)$/);
+  if (leadingNumMatch) {
+    const numClean = leadingNumMatch[1].replace(/^0+/, '');
+    match = byMatricula.get(numClean) || byCracha.get(numClean);
+    if (match) return match;
+    return {
+      nome: leadingNumMatch[2].trim(),
+      matricula: leadingNumMatch[1],
+      empresa: 'CMPC',
+      cargo: 'Não Informado',
+      planta: 'Guaíba'
+    };
+  }
+
+  // 5. Credencial Rainbow App / QR Dinâmico
+  if (id.startsWith('RNBW')) {
+    return {
+      nome: 'Credencial Digital Rainbow',
+      empresa: 'Terceiro Guaíba',
+      cargo: 'Prestador de Serviços',
+      planta: 'Guaíba'
+    };
+  }
+  if (id.startsWith('http')) {
+    return {
+      nome: 'Registro via QR Dinâmico',
+      empresa: 'Auto-Registro',
+      cargo: 'Participante',
+      planta: 'Guaíba'
+    };
+  }
+
+  // 6. Miolos de crachá de 10 ou 4 dígitos
+  const mioloA = rawDigits.length >= 10 ? rawDigits.substring(2, rawDigits.length - 2).replace(/^0+/, '') : '';
+  const mioloB = rawDigits.length >= 4 ? rawDigits.substring(2).replace(/^0+/, '') : '';
+  if (mioloA) match = byCracha.get(mioloA) || byMatricula.get(mioloA);
+  if (!match && mioloB) match = byCracha.get(mioloB) || byMatricula.get(mioloB);
+
+  return match || null;
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -43,36 +114,70 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: 'treinamentoId é obrigatório' }, { status: 400 });
     }
 
-    const presencasRef = collection(db, 'treinamentos', treinamentoId, 'presencas');
-    const snapshot = await getDocs(presencasRef);
+    const fetchWithTimeout = (promise: Promise<any>, timeoutMs: number) => {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout Firebase")), timeoutMs))
+      ]);
+    };
 
-    const { usersDict, byCracha, byMatricula } = loadUsers();
+    let presencas: any[] = [];
+    let fetchedFromFirestore = false;
 
-    const presencas = snapshot.docs.map(doc => {
-      const p = doc.data();
-      let user = usersDict[p.identificador_lido];
-      if (!user) {
-        const raw = String(p.identificador_lido || '').replace(/\D/g, '');
-        const rawClean = String(p.identificador_lido || '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
-        const rawNoDV = String(p.identificador_lido || '').includes('-') ? String(p.identificador_lido || '').split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : rawClean;
+    try {
+      const presencasRef = collection(db, 'treinamentos', treinamentoId, 'presencas');
+      const snapshot: any = await fetchWithTimeout(getDocs(presencasRef), 2500);
 
-        const mioloA = raw.length >= 10 ? raw.substring(2, raw.length - 2).replace(/^0+/, '') : '';
-        const mioloB = raw.length >= 4 ? raw.substring(2).replace(/^0+/, '') : '';
-
-        // Busca instantânea O(1) usando os Maps indexados
-        user = byCracha.get(rawClean) || byCracha.get(raw) || byMatricula.get(rawClean) || byMatricula.get(rawNoDV) || byMatricula.get(mioloA) || byMatricula.get(mioloB) || {};
+      if (snapshot && snapshot.docs && snapshot.docs.length > 0) {
+        fetchedFromFirestore = true;
+        presencas = snapshot.docs.map((doc: any) => {
+          const p = doc.data();
+          const user = findUser(p.identificador_lido || doc.id) || {};
+          return {
+            id: doc.id,
+            ...p,
+            nome: p.nome || user.nome || 'Desconhecido',
+            planta: p.planta || p.empresa || user.planta || user.empresa || 'Desconhecida',
+            empresa: p.empresa || p.planta || user.empresa || user.planta || 'Desconhecida',
+            cargo: p.cargo || user.cargo || 'Não Informado',
+            data_registro: p.data_registro?.toDate?.()?.toISOString() || (typeof p.data_registro === 'string' ? p.data_registro : new Date().toISOString())
+          };
+        });
       }
-      
-      return {
-        id: doc.id,
-        ...p,
-        nome: p.nome || user.nome || 'Desconhecido',
-        planta: p.planta || p.empresa || user.planta || user.empresa || 'Desconhecida',
-        empresa: p.empresa || p.planta || user.empresa || user.planta || 'Desconhecida',
-        cargo: p.cargo || user.cargo || 'Não Informado',
-        data_registro: p.data_registro?.toDate()?.toISOString() || new Date().toISOString()
-      };
-    });
+    } catch (fsErr: any) {
+      console.warn("Aviso ao buscar presenças do Firestore:", fsErr.message);
+    }
+
+    // Se o Firestore falhou ou veio vazio, busca no backup local all_firestore_presencas.json
+    if (!fetchedFromFirestore || presencas.length === 0) {
+      try {
+        const backupPath = path.join(process.cwd(), 'all_firestore_presencas.json');
+        if (fs.existsSync(backupPath)) {
+          const allBackup = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+          const filtered = allBackup.filter((p: any) => p.treinamentoId === treinamentoId);
+          if (filtered.length > 0) {
+            presencas = filtered.map((p: any) => {
+              const user = findUser(p.identificador_lido || p.id) || {};
+              let dataIso = new Date().toISOString();
+              if (p.data_registro) {
+                if (typeof p.data_registro === 'string') dataIso = p.data_registro;
+                else if (p.data_registro.seconds) dataIso = new Date(p.data_registro.seconds * 1000).toISOString();
+                else if (p.data_registro._seconds) dataIso = new Date(p.data_registro._seconds * 1000).toISOString();
+              }
+              return {
+                id: p.id || p.identificador_lido,
+                ...p,
+                nome: p.nome && p.nome !== 'Desconhecido' ? p.nome : (user.nome || 'Desconhecido'),
+                planta: p.planta || p.empresa || user.planta || user.empresa || 'Desconhecida',
+                empresa: p.empresa || p.planta || user.empresa || user.planta || 'Desconhecida',
+                cargo: p.cargo || user.cargo || 'Não Informado',
+                data_registro: dataIso
+              };
+            });
+          }
+        }
+      } catch (backupErr) {}
+    }
 
     presencas.sort((a, b) => {
       const timeA = new Date(a.data_registro).getTime() || 0;
@@ -104,28 +209,8 @@ export async function POST(req: Request) {
     idLimpo = idLimpo.replace(/[\/\\#?]/g, '_').trim();
     if (!idLimpo) idLimpo = `VISITANTE_${Date.now()}`;
 
-    // Busca no arquivo de colaboradores (SAT) primeiro para saber nome, matrícula, empresa e cargo oficiais
-    const usersDict = loadUsers() || {};
-    let user = usersDict[idLimpo] || usersDict[identificador];
-    if (!user) {
-      const idClean = String(idLimpo).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
-      const idNoDV = String(idLimpo).includes('-') ? String(idLimpo).split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : idClean;
-
-      for (const [key, u] of Object.entries(usersDict)) {
-        const kClean = key.replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
-        const matClean = u.matricula ? String(u.matricula).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : '';
-        const crachaClean = u.cod_cracha ? String(u.cod_cracha).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : '';
-        
-        if (
-          kClean === idClean || kClean === idNoDV ||
-          (matClean && (matClean === idClean || matClean === idNoDV)) ||
-          (crachaClean && (crachaClean === idClean || crachaClean === idNoDV))
-        ) {
-          user = u;
-          break;
-        }
-      }
-    }
+    // Busca com resolvedor inteligente O(1)
+    const user = findUser(idLimpo) || findUser(identificador) || {};
 
     // Preparar dados preliminares para validação
     const dataToSave: any = {
@@ -139,12 +224,11 @@ export async function POST(req: Request) {
       dataToSave.planta = planta || empresa;
       dataToSave.empresa = planta || empresa;
     }
-    if (user) {
-      if (!dataToSave.nome && user.nome) dataToSave.nome = user.nome;
-      if (!dataToSave.planta && user.planta) dataToSave.planta = user.planta;
-      if (!dataToSave.empresa && (user.empresa || user.planta)) dataToSave.empresa = user.empresa || user.planta;
-      if (!dataToSave.cargo && user.cargo) dataToSave.cargo = user.cargo;
-    }
+    if (user.nome && !dataToSave.nome) dataToSave.nome = user.nome;
+    if (user.planta && !dataToSave.planta) dataToSave.planta = user.planta;
+    if ((user.empresa || user.planta) && !dataToSave.empresa) dataToSave.empresa = user.empresa || user.planta;
+    if (user.cargo && !dataToSave.cargo) dataToSave.cargo = user.cargo;
+
 
     const nomeFinal = dataToSave.nome ? String(dataToSave.nome).trim() : '';
 

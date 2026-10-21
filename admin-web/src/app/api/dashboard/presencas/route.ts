@@ -41,6 +41,71 @@ function loadUsers() {
   return { usersDict: {}, byCracha: new Map(), byMatricula: new Map() };
 }
 
+function findUser(id: string): any {
+  if (!id) return null;
+  const { usersDict, byCracha, byMatricula } = loadUsers();
+  if (usersDict[id]) return usersDict[id];
+
+  const rawClean = String(id).replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
+  const rawDigits = String(id).replace(/\D/g, '');
+  const rawNoDV = String(id).includes('-') 
+    ? String(id).split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() 
+    : rawClean;
+
+  let match = byCracha.get(rawClean) || byCracha.get(rawDigits) || byMatricula.get(rawClean) || byMatricula.get(rawNoDV);
+  if (match) return match;
+
+  if (id.startsWith('31') && id.length >= 10) {
+    const strip31 = id.substring(2).replace(/^0+/, '');
+    match = byMatricula.get(strip31) || byCracha.get(strip31);
+    if (match) return match;
+  }
+
+  if (rawDigits.length === 9) {
+    const stripDV = rawDigits.substring(0, 8);
+    match = byMatricula.get(stripDV) || byCracha.get(stripDV);
+    if (match) return match;
+  }
+
+  const leadingNumMatch = String(id).match(/^(\d{6,10})\s+(.+)$/);
+  if (leadingNumMatch) {
+    const numClean = leadingNumMatch[1].replace(/^0+/, '');
+    match = byMatricula.get(numClean) || byCracha.get(numClean);
+    if (match) return match;
+    return {
+      nome: leadingNumMatch[2].trim(),
+      matricula: leadingNumMatch[1],
+      empresa: 'CMPC',
+      cargo: 'Não Informado',
+      planta: 'Guaíba'
+    };
+  }
+
+  if (id.startsWith('RNBW')) {
+    return {
+      nome: 'Credencial Digital Rainbow',
+      empresa: 'Terceiro Guaíba',
+      cargo: 'Prestador de Serviços',
+      planta: 'Guaíba'
+    };
+  }
+  if (id.startsWith('http')) {
+    return {
+      nome: 'Registro via QR Dinâmico',
+      empresa: 'Auto-Registro',
+      cargo: 'Participante',
+      planta: 'Guaíba'
+    };
+  }
+
+  const mioloA = rawDigits.length >= 10 ? rawDigits.substring(2, rawDigits.length - 2).replace(/^0+/, '') : '';
+  const mioloB = rawDigits.length >= 4 ? rawDigits.substring(2).replace(/^0+/, '') : '';
+  if (mioloA) match = byCracha.get(mioloA) || byMatricula.get(mioloA);
+  if (!match && mioloB) match = byCracha.get(mioloB) || byMatricula.get(mioloB);
+
+  return match || null;
+}
+
 export async function GET(req: Request) {
   try {
     const now = Date.now();
@@ -95,8 +160,6 @@ export async function GET(req: Request) {
       throw dbErr;
     }
 
-    const { usersDict, byCracha, byMatricula } = loadUsers();
-    
     const data = presencasSnapshot.docs.map((doc: any) => {
       const p = doc.data();
       const treinamentoId = doc.ref.parent.parent?.id;
@@ -120,29 +183,19 @@ export async function GET(req: Request) {
         dateIso = new Date().toISOString();
       }
 
-      let user = usersDict[p.identificador_lido];
-      if (!user) {
-        const raw = String(p.identificador_lido || '').replace(/\D/g, '');
-        const rawClean = String(p.identificador_lido || '').replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase();
-        const rawNoDV = String(p.identificador_lido || '').includes('-') ? String(p.identificador_lido || '').split('-')[0].replace(/[.\-/\s]/g, '').replace(/^0+/, '').toLowerCase() : rawClean;
-
-        const mioloA = raw.length >= 10 ? raw.substring(2, raw.length - 2).replace(/^0+/, '') : '';
-        const mioloB = raw.length >= 4 ? raw.substring(2).replace(/^0+/, '') : '';
-
-        // Busca O(1) ultrarrápida
-        user = byCracha.get(rawClean) || byCracha.get(raw) || byMatricula.get(rawClean) || byMatricula.get(rawNoDV) || byMatricula.get(mioloA) || byMatricula.get(mioloB) || {};
-      }
+      const user = findUser(p.identificador_lido || doc.id) || {};
 
       return {
         id: doc.id,
         treinamentoId,
         dataRaw: dateIso,
-        nome: p.nome || user.nome || 'Desconhecido',
-        empresa: p.empresa || p.planta || user.empresa || user.planta || 'Desconhecida',
-        cargo: p.cargo || user.cargo || 'Nao Informado',
+        nome: p.nome && p.nome !== 'Desconhecido' ? p.nome : (user.nome || 'Desconhecido'),
+        empresa: p.empresa && p.empresa !== 'Desconhecida' ? p.empresa : (user.empresa || user.planta || 'Desconhecida'),
+        cargo: p.cargo && p.cargo !== 'Não Informado' ? p.cargo : (user.cargo || 'Não Informado'),
         identificador_lido: p.identificador_lido || user.matricula || user.cod_cracha || 'N/A'
       };
     });
+
 
     if (data.length > 0) {
       cachedPresencas = data;

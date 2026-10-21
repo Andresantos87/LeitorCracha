@@ -22,24 +22,27 @@ export default function Home() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [resTreinamentos, resColabs, resRanking, resPresencas] = await Promise.all([
-          fetch("/api/treinamentos"),
-          fetch("/api/colaboradores/stats"),
-          fetch("/api/facilitadores/stats"),
-          fetch("/api/dashboard/presencas")
+        const results = await Promise.allSettled([
+          fetch("/api/treinamentos").then(r => r.json()),
+          fetch("/api/colaboradores/stats").then(r => r.json()),
+          fetch("/api/facilitadores/stats").then(r => r.json()),
+          fetch("/api/dashboard/presencas").then(r => r.json())
         ]);
 
-        const jsonTreinamentos = await resTreinamentos.json();
-        const jsonColabs = await resColabs.json();
-        const jsonRanking = await resRanking.json();
-        const jsonPresencas = await resPresencas.json();
-
-        if (jsonTreinamentos.success) setTreinamentos(jsonTreinamentos.data);
-        if (jsonColabs.success) setColabStats(jsonColabs.data);
-        if (jsonRanking.success) setRankingFacilitadores(jsonRanking.ranking);
-        if (jsonPresencas.success) setTodasPresencas(jsonPresencas.data);
+        if (results[0].status === 'fulfilled' && results[0].value?.success) {
+          setTreinamentos(results[0].value.data || []);
+        }
+        if (results[1].status === 'fulfilled' && results[1].value?.success) {
+          setColabStats(results[1].value.data || null);
+        }
+        if (results[2].status === 'fulfilled' && results[2].value?.success) {
+          setRankingFacilitadores(results[2].value.ranking || []);
+        }
+        if (results[3].status === 'fulfilled' && results[3].value?.success) {
+          setTodasPresencas(results[3].value.data || []);
+        }
       } catch (err) {
-        console.error(err);
+        console.error("Erro ao carregar dados do dashboard:", err);
       } finally {
         setLoading(false);
       }
