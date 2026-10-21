@@ -52,6 +52,18 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, data: cachedPresencas, cached: true });
     }
 
+    // 2. Se temos cache completo em disco e não foi forçado, carrega direto (< 10ms)
+    if (!force && fs.existsSync(DISK_CACHE_PATH)) {
+      try {
+        const diskData = JSON.parse(fs.readFileSync(DISK_CACHE_PATH, 'utf8'));
+        if (Array.isArray(diskData) && diskData.length > 0) {
+          cachedPresencas = diskData;
+          lastCacheTime = now;
+          return NextResponse.json({ success: true, data: diskData, cached: true });
+        }
+      } catch(e) {}
+    }
+
     const fetchWithTimeout = (promise: Promise<any>, timeoutMs: number) => {
       return Promise.race([
         promise,
@@ -62,7 +74,6 @@ export async function GET(req: Request) {
     let presencasSnapshot: any = null;
     try {
       presencasSnapshot = await fetchWithTimeout(getDocs(collectionGroup(db, "presencas")), 2500);
-      // Se Firebase retornou 0 docs por causa de cota ou instabilidade, usa o cache do disco!
       if (!presencasSnapshot || presencasSnapshot.docs.length === 0) {
         if (fs.existsSync(DISK_CACHE_PATH)) {
           const diskData = JSON.parse(fs.readFileSync(DISK_CACHE_PATH, 'utf8'));
@@ -73,7 +84,6 @@ export async function GET(req: Request) {
       }
     } catch (dbErr: any) {
       console.warn("Aviso Firebase ao buscar presenças do dashboard:", dbErr.message);
-      // Se Firebase falhar (ex: timeout ou cota esgotada), recupera do cache em disco imediatamente
       if (fs.existsSync(DISK_CACHE_PATH)) {
         try {
           const diskData = JSON.parse(fs.readFileSync(DISK_CACHE_PATH, 'utf8'));
@@ -107,7 +117,7 @@ export async function GET(req: Request) {
       } else if (typeof p.data_registro === 'string' && p.data_registro.trim()) {
         dateIso = new Date(p.data_registro).toISOString();
       } else {
-        dateIso = new Date().toISOString(); // fallback
+        dateIso = new Date().toISOString();
       }
 
       let user = usersDict[p.identificador_lido];
@@ -150,7 +160,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
     console.error("Erro ao buscar presenças do dashboard:", error);
-    // Última tentativa: se tiver cache em disco, responde com ele mesmo no catch
     if (fs.existsSync(DISK_CACHE_PATH)) {
       try {
         const diskData = JSON.parse(fs.readFileSync(DISK_CACHE_PATH, 'utf8'));
