@@ -451,8 +451,6 @@ class MainActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val snapshot = db.collection("treinamentos")
-                    .orderBy("data", Query.Direction.DESCENDING)
-                    .limit(50)
                     .get()
                     .await()
                 
@@ -461,14 +459,19 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
                 
-                // Agrupa os documentos de turmas pelo Nome do Curso
-                val cursosMap = mutableMapOf<String, MutableList<com.google.firebase.firestore.DocumentSnapshot>>()
+                // Agrupa os documentos de turmas pelo Nome do Curso em ordem alfabética
+                val cursosMap = sortedMapOf<String, MutableList<com.google.firebase.firestore.DocumentSnapshot>>(String.CASE_INSENSITIVE_ORDER)
                 for (doc in snapshot.documents) {
-                    val nomeCurso = doc.getString("nome") ?: "Treinamento Sem Nome"
+                    val nomeCurso = (doc.getString("nome") ?: "Treinamento Sem Nome").trim()
                     if (!cursosMap.containsKey(nomeCurso)) {
                         cursosMap[nomeCurso] = mutableListOf()
                     }
                     cursosMap[nomeCurso]?.add(doc)
+                }
+
+                // Ordena turmas dentro de cada curso alfabeticamente
+                for (docsList in cursosMap.values) {
+                    docsList.sortBy { (it.getString("turma") ?: "").trim().lowercase() }
                 }
                 
                 withContext(Dispatchers.Main) {
