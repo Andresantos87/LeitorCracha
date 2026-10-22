@@ -59,6 +59,7 @@ export default function Treinamentos() {
   const sigCanvas = useRef<any>(null);
   const [hasSignature, setHasSignature] = useState(false);
   const [signatureView, setSignatureView] = useState<string | null>(null);
+  const [distribuindoCurso, setDistribuindoCurso] = useState<string | null>(null);
 
   // States para a lista de presenças
   const [presencas, setPresencas] = useState<any[]>([]);
@@ -1383,30 +1384,52 @@ export default function Treinamentos() {
                       <div className="flex flex-wrap items-center justify-end gap-2 md:gap-3">
                           <button 
                             type="button"
+                            disabled={distribuindoCurso === nomeCurso}
                             onClick={async (e) => {
                               e.stopPropagation();
+                              if (distribuindoCurso) return;
+                              setDistribuindoCurso(nomeCurso);
+                              const toastId = toast.loading(`Distribuindo presenças para "${nomeCurso}"...`);
                               try {
                                 const res = await fetch('/api/sync-presencas', { 
-                                method: 'POST', 
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ nomeCurso }) 
-                              });
-                              if (res.ok) {
-                                alert('Roteamento concluído para o curso: ' + nomeCurso);
-                                window.location.reload();
-                              } else {
-                                alert('Erro ao sincronizar.');
+                                  method: 'POST', 
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ nomeCurso }) 
+                                });
+                                const data = await res.json().catch(() => ({}));
+                                if (res.ok && data.success) {
+                                  toast.success(data.message || 'Distribuição concluída!', { id: toastId, duration: 4000 });
+                                  setTimeout(() => {
+                                    window.location.reload();
+                                  }, 1000);
+                                } else {
+                                  toast.error(data.error || 'Erro ao sincronizar.', { id: toastId });
+                                }
+                              } catch (e) {
+                                toast.error('Erro de conexão ao sincronizar.', { id: toastId });
+                              } finally {
+                                setDistribuindoCurso(null);
                               }
-                            } catch (e) {
-                              alert('Erro ao sincronizar.');
-                            }
-                          }}
-                          className="px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500 text-indigo-300 hover:text-white rounded-lg text-xs font-bold transition-all border border-indigo-500/30 flex items-center gap-1.5 shadow-sm"
-                          title="Distribuir presenças da Turma Geral para as turmas deste curso"
-                        >
-                          <Sparkles className="h-4 w-4" />
-                          <span className="hidden sm:inline">Distribuir</span>
-                        </button>
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 shadow-sm ${
+                              distribuindoCurso === nomeCurso
+                                ? 'bg-indigo-600/50 text-indigo-200 border-indigo-500/50 cursor-wait'
+                                : 'bg-indigo-500/20 hover:bg-indigo-500 text-indigo-300 hover:text-white border-indigo-500/30'
+                            }`}
+                            title="Distribuir presenças da Turma Geral para as turmas deste curso"
+                          >
+                            {distribuindoCurso === nomeCurso ? (
+                              <>
+                                <Clock className="h-4 w-4 animate-spin text-indigo-300" />
+                                <span className="hidden sm:inline">Distribuindo...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-4 w-4" />
+                                <span className="hidden sm:inline">Distribuir</span>
+                              </>
+                            )}
+                          </button>
                         <button
                           type="button"
                           onClick={async (e) => {
